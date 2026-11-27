@@ -47,6 +47,42 @@ public record Diagnostic(Severity severity, String code, String message, String 
     /** The code of a schema file that is not valid GraphQL syntax. */
     public static final String SCHEMA_SYNTAX_ERROR = "schema-syntax-error";
 
+    /** The code of a schema directory without a schema file that the options {@code includes} and {@code excludes} select. */
+    public static final String NO_SCHEMA_FILES = "no-schema-files";
+
+    /** The code of a type, a field, an argument, an enum value or a root operation that two places define. */
+    public static final String DUPLICATE_DEFINITION = "duplicate-definition";
+
+    /** The code of a type extension whose base definition is in no schema file. */
+    public static final String EXTENSION_WITHOUT_BASE = "extension-without-base";
+
+    /** The code of a type extension of another kind than its base definition, such as an {@code extend type} of an enum. */
+    public static final String EXTENSION_KIND_MISMATCH = "extension-kind-mismatch";
+
+    /** The code of a type that a field, an argument, a union, an interface or a root operation names and that is defined nowhere. */
+    public static final String UNKNOWN_TYPE = "unknown-type";
+
+    /** The code of a custom scalar without an entry in {@code typeMappings}. */
+    public static final String UNMAPPED_SCALAR = "unmapped-scalar";
+
+    /** The code of a type, field, argument or enum value name that is a keyword of the output language. */
+    public static final String RESERVED_NAME = "reserved-name";
+
+    /** The code of a field name that a record component or a bean property cannot have because {@code java.lang.Object} has it. */
+    public static final String OBJECT_METHOD_NAME = "object-method-name";
+
+    /** The code of two schema elements, or an element and a generated helper class, that generate the same class name. */
+    public static final String NAME_COLLISION = "name-collision";
+
+    /** The code of a field or argument whose type is a root operation type, which has no model. */
+    public static final String ROOT_TYPE_REFERENCE = "root-type-reference";
+
+    /** The code of a {@code typeMappings} entry that names no type or field of the schema. A warning. */
+    public static final String UNUSED_TYPE_MAPPING = "unused-type-mapping";
+
+    /** The code of an {@code interfaceTypes} entry that names no object type of the schema. A warning. */
+    public static final String UNUSED_INTERFACE_TYPE = "unused-interface-type";
+
     /**
      * Creates a diagnostic.
      */

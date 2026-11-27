@@ -6,15 +6,20 @@ Gradle project `:micronaut-graphql-tools-codegen`, folder `graphql-tools-codegen
 ## Purpose
 
 The code generator of the library, as a plain Java library: the Gradle plugin and the Maven plugin map their configuration one
-to one onto it and add only wiring. This module holds the entry point, the options model and the diagnostics. The schema
-model, the rules and the emitters are added to it by the generator phases, so this version produces no file yet: it checks the
-options and the schema files and reports what is wrong.
+to one onto it and add only wiring. This module holds the entry point, the options model, the diagnostics, the schema loader and
+the intermediate representation (IR). The emitters are added to it by the generator phases, so this version produces no file
+yet: it checks the options, loads the schema files, builds the IR and reports what is wrong.
 
 ## Responsibility
 
 - `GraphQLCodeGenerator`: `GraphQLCodeGenerator.builder().withSchemaFiles(..).withOutputDirectory(..).withOptions(..).build().generate()`,
-  which returns a `GenerationResult(files, diagnostics)`. It validates the options and parses each schema file with the
-  graphql-java parser.
+  which returns a `GenerationResult(files, diagnostics)`. It validates the options, loads the schema files and builds the IR
+  (`toIr()` returns it). The schema is given as files, as a directory (`withSchemaDirectory`), or by default as
+  `src/main/resources/graphql`.
+- `IrBuilder` (package `schema`; `fromDirectory`, `fromFiles`, `fromSources`): the two steps that turn schema text and `Options` into an `IrResult(ir,
+  diagnostics, skippedFiles)`. The loader reads with the graphql-java parser only and merges; the rules lower the merged
+  definitions into the IR. The packages `io.micronaut.graphql.tools.codegen.ir` and `ir.shared` hold the IR records and `IrSnapshot`, which prints an
+  IR as the text that the golden tests compare.
 - `Options`: one immutable record, the single source of truth for the options, with its Javadoc, defaults and builder. Schema
   files and the output directory are arguments of the generator builder, not options.
 - The string form of the options, `Options.toMap()` and `Options.fromMap(Map<String,String>)`. A Gradle worker that runs the
@@ -32,7 +37,8 @@ options and the schema files and reports what is wrong.
   kotlinc). `./gradlew :micronaut-graphql-tools-codegen:test -PupdateGolden` rewrites the snapshots; review the diff and commit it.
   Keep the 1k-type compile out of the unit suites.
 
-Not in this module: the Gradle plugin and the Maven plugin, the schema loader and the IR, and the emitters.
+
+Not in this module: the Gradle plugin and the Maven plugin, and the emitters.
 
 ## Options
 
@@ -67,6 +73,63 @@ string form of a map is `name.<key>`, for example `typeMappings.Date=java.time.L
 not parse, and an incomplete list, each as a diagnostic that names the option. `validate()` reports an invalid name, an empty
 `includes`, `kotlinSuspend` with a language other than Kotlin, and client mode with a language other than Java.
 
+## Schema loader and IR
+
+The IR is the only thing that the emitters see. It is a tree of immutable records, language neutral, and a pure function of the schema
+files and the options.
+
+**Loading.** With `fromDirectory`, the files are those under the directory whose path relative to it matches a glob of `includes`
+(default `**/*.graphqls` and `**/*.graphql`) and no glob of `excludes`. A glob matches the relative path with `/` separators on every
+platform: `*` stops at `/`, `**` does not, `**/` also matches no directory (so `**/*.graphqls` matches a file in the root), `?` is one
+character and `{a,b}` is an alternative. The files are sorted by the UTF-8 bytes of their relative path and a path that appears twice is read
+once, so the order of the directory listing, or of the files that a caller passes, changes nothing. Definitions keep their order
+inside a file. Every `extend` is merged after the base definitions of all files, in file order, so an extension may come before its
+base. A file that holds only operations or fragments (client documents) or only comments is skipped and listed in `skippedFiles`; it is
+not an error. A schema without a `schema` block has the roots `Query`, `Mutation` and `Subscription` when it defines `Query`, as the
+runtime and the compile-time checks decide. This loader does not call the runtime code, because the module depends on no other
+module of the library, so a change to those rules is made in both places.
+
+**Nodes.** `ModelType`, `InputType`, `EnumType`, `AbstractType` (an interface, a union, or an object type that `interfaceTypes`
+selects), `ScalarType` and `ResolverContract` (`ContractMethod`, `Argument`, `Wrapper`). Each carries the SDL name and the generated
+name side by side (`Names`), `Docs` (description and deprecation), the applied directives as a name and string arguments (without
+`@deprecated`, which is in `Docs`) and an `Origin` (relative path, line, column) that is never written into generated code. Every type
+reference (`TypeRef`) keeps its nullability exactly; primitive or boxed is a rule of the emitter. A reference is a `Builtin`, a `Mapped` external class
+(`typeMappings`, by SDL name or by `Type.field`, which replaces the named type of that field inside any list), a `Reference` to a generated
+type, or a `ListOf`. An interface that implements an interface keeps it in `implemented`. A sealed interface lists its `members`
+(the object types and interfaces that implement it, or the members of a union) and is open when it has no member or when a member is
+mapped to an external class. A model lists the unions it belongs to in `memberOf`. The root types are not models: each field of
+`Query`, `Mutation` and `Subscription` is a `ResolverContract` named by `contractNameTemplate` in `resolverPackage`, extending
+`QueryResolver`, `MutationResolver` or `SubscriptionResolver`. With `kotlinSuspend` a query or mutation method has the wrapper `SUSPEND`;
+a subscription method is wrapped in `subscriptionReturnType`. `rootContracts=false` generates none. Every list is in schema order.
+
+**Documentation.** The description is the SDL description, or with `commentsAsDescriptions` the `#` comment lines before a definition
+(a line that holds only `#` ends them), as graphql-java reads them. Neither JavaPoet nor KotlinPoet escapes comment text, so the loader
+escapes it once for every emitter: `*/` and `/*` (Kotlin nests comments), a backslash (a `\u` sequence is read inside comments), `<`, `&` and `@`
+become character references such as `&#47;`, and line endings become `\n`.
+
+**Diagnostics.** Every problem is a `Diagnostic` with a stable code, a message that names the schema element and its location
+(`path:line:column`), and the origin; one run reports all of them, in a stable order that does not depend on the order of the files given. When a diagnostic is an error the IR is empty.
+
+| Code | Severity | When |
+| --- | --- | --- |
+| `schema-file-unreadable` | error | A schema file or directory does not exist or cannot be read |
+| `no-schema-files` | error | No file under the directory matches `includes` and `excludes` |
+| `schema-syntax-error` | error | A file is not valid GraphQL |
+| `duplicate-definition` | error | A type, field, argument, enum value or root operation is defined twice; the message names both places |
+| `extension-without-base` | error | An `extend` names a type that no file defines |
+| `extension-kind-mismatch` | error | An `extend` is of another kind than its base, such as `extend type` of an enum |
+| `unknown-type` | error | A field, argument, union, interface or root operation names a type that is defined nowhere and not in `typeMappings` |
+| `unmapped-scalar` | error | A custom scalar has no `typeMappings` entry; there is no silent `String` |
+| `reserved-name` | error | A type, field, argument or enum value name is a Java keyword (and a Kotlin or Groovy keyword for that language) |
+| `object-method-name` | error | A field is named like a method of `java.lang.Object` (`clone`, `finalize`, `getClass`, `hashCode`, `notify`, `notifyAll`, `toString`, `wait`) |
+| `name-collision` | error | Two schema elements, or an element and a generated helper class (`GraphQLTypeNames`, `<Type>Names`), generate the same class; the comparison folds the case of the path, because two names such as `Foo` and `foo` overwrite each other on a case-insensitive file system |
+| `root-type-reference` | error | A field or argument has a root operation type as its type (map it with `typeMappings`) |
+| `unused-type-mapping` | warning | A `typeMappings` entry names no type or field of the schema |
+| `unused-interface-type` | warning | An `interfaceTypes` entry names no object type of the schema |
+
+The option diagnostics (`unknown-option`, `invalid-option-value`, `missing-option`, `invalid-option-combination`) are described under the
+options above. A keyword or `Object` method name is an error until a renaming rule exists; there is no renaming option yet.
+
 ## Packages
 
 Each package has a `package-info.java`. See the [API map](../CONTRIBUTING.md#api-map).
@@ -74,6 +137,9 @@ Each package has a `package-info.java`. See the [API map](../CONTRIBUTING.md#api
 | Package | Audience | Holds |
 | --- | --- | --- |
 | `io.micronaut.graphql.tools.codegen` | Public API | `GraphQLCodeGenerator`, `Options`, its enums, `OptionsResult`, `GenerationResult`, `GeneratedFile`, `Diagnostic` and `Origin` |
+| `io.micronaut.graphql.tools.codegen.schema` | Public API | `IrBuilder`, `IrResult` and `SchemaSource`; the loader and the rules are package-private |
+| `io.micronaut.graphql.tools.codegen.ir` | Public API | The IR nodes (`Ir`, `ModelType`, `InputType`, `EnumType`, `AbstractType`, `ScalarType`, `ResolverContract`, `Field`, `Argument` and the rest) and `IrSnapshot` |
+| `io.micronaut.graphql.tools.codegen.ir.shared` | Public API | The pieces of the nodes: `Names`, `Docs`, `AppliedDirective`, `TypeRef`, `BuiltinScalar`, `Coordinate`, `Operation` and `Wrapper` |
 
 ## Who uses it
 
@@ -82,8 +148,8 @@ application does not depend on it.
 
 ## Public and internal
 
-- Everything in `io.micronaut.graphql.tools.codegen` that is `public` is the API, and `api/micronaut-graphql-tools-codegen.api`
-  is its reviewed snapshot (`apiCheck`). The helpers of the string form and of the validation are package-private.
+- Everything in the packages above that is `public` is the API, and `api/micronaut-graphql-tools-codegen.api`
+  is its reviewed snapshot (`apiCheck`). The helpers of the string form, the validation, the loader and the rules are package-private.
 - The API names no Gradle, Maven, Micronaut or graphql-java type.
 
 ## Relation to other modules
@@ -107,4 +173,9 @@ Run from the repository root:
 The module compiles with `--release 17`, so the check also runs on JDK 17, and on both ends of the graphql-java range
 (`-PgraphqlJavaLeg=floor` and `-PgraphqlJavaLeg=ceiling`). `OptionsSpec` covers the defaults, the round trip of the string form
 and the diagnostics, `OptionsDocumentationSpec` checks that every option is documented with its default,
-and `GraphQLCodeGeneratorSpec` covers the entry point. `checkNoBuildToolOrRuntimeDependency` runs as part of `check`.
+and `GraphQLCodeGeneratorSpec` covers the entry point. `SchemaLoaderSpec` covers discovery, globs, sorting, de-duplication,
+skipped files and the merge errors; `IrStructureSpec` the nodes; `IrDiagnosticsSpec` each failure with its text and location;
+`IrDeterminismSpec` the identical IR for any file order and a schema of 1,000 types and 20,000 fields; `NodeTextSpec` the escaping; and
+`IrGoldenSpec` compares the IR text snapshots of the sample schema through the golden harness, in
+`src/test/resources/golden/ir-sample-default` and `ir-sample-styled`.
+`checkNoBuildToolOrRuntimeDependency` runs as part of `check`.
