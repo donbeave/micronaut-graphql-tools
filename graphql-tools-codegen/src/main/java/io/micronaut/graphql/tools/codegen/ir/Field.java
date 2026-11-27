@@ -1,0 +1,52 @@
+/*
+ * Copyright 2021-2026 original authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package io.micronaut.graphql.tools.codegen.ir;
+
+import io.micronaut.graphql.tools.codegen.Origin;
+import io.micronaut.graphql.tools.codegen.ir.shared.AppliedDirective;
+import io.micronaut.graphql.tools.codegen.ir.shared.Docs;
+import io.micronaut.graphql.tools.codegen.ir.shared.TypeRef;
+
+import java.util.List;
+import java.util.Objects;
+
+/**
+ * A field of an object or interface type.
+ *
+ * @param sdlName    the name in the schema
+ * @param name       the name in the generated code; the SDL name until a renaming rule exists
+ * @param type       the type of the field
+ * @param arguments  the arguments of the field in schema order
+ * @param docs       the description and the deprecation
+ * @param directives the applied directives, without {@code @deprecated}
+ * @param origin     where the field is defined: the file of the {@code extend} block for a field that an extension adds
+ */
+public record Field(String sdlName, String name, TypeRef type, List<Argument> arguments, Docs docs,
+                    List<AppliedDirective> directives, Origin origin) {
+
+    /**
+     * Creates a field, keeping immutable copies of the lists.
+     */
+    public Field {
+        Objects.requireNonNull(sdlName, "sdlName");
+        Objects.requireNonNull(name, "name");
+        Objects.requireNonNull(type, "type");
+        Objects.requireNonNull(docs, "docs");
+        Objects.requireNonNull(origin, "origin");
+        arguments = List.copyOf(arguments);
+        directives = List.copyOf(directives);
+    }
+}

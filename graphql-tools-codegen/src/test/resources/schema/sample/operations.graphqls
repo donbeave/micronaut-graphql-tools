@@ -1,0 +1,15 @@
+type Query {
+  "Looks up a node."
+  node(id: ID!): Node
+  products(filter: ProductFilter, first: Int = 10): [Product!]!
+  search(text: String!): [SearchResult!]!
+  oldQuery: String @deprecated
+}
+
+type Mutation {
+  addReview(input: ReviewInput!): Review!
+}
+
+type Subscription {
+  reviewAdded(productId: ID!): Review!
+}

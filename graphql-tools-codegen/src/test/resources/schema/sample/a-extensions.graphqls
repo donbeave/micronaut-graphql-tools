@@ -1,0 +1,19 @@
+extend type Product {
+  "When the product came out."
+  releasedAt: Date
+  price: Money
+}
+
+extend enum Color {
+  YELLOW
+}
+
+extend union SearchResult = Category
+
+extend input ProductFilter {
+  text: String
+}
+
+extend type Query {
+  categories: [Category!]!
+}
