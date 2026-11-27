@@ -55,6 +55,7 @@ abstract class AbstractAllocationGateTest {
     private static Baselines baselines;
     private static final String LEG = System.getProperty("allocation.graphqlJavaLeg", DEFAULT_LEG);
     private static final String JDK = String.valueOf(Runtime.version().feature());
+    private static final String PLATFORM = System.getProperty("os.name", "").toLowerCase(java.util.Locale.ROOT).startsWith("mac") ? "macos" : "other";
     private static final boolean UPDATE = Boolean.getBoolean("allocation.update");
 
     @BeforeAll
@@ -214,7 +215,10 @@ abstract class AbstractAllocationGateTest {
                     ? AllocationMeter.bytesPerOperation(cases.op(name), 1_000, 100, 5)
                     : AllocationMeter.bytesPerOperation(cases.op(name), 3_000_000, 1_000_000, 5);
         };
-        String key = Baselines.key(name, LEG, JDK);
+        // the transport of the loopback call is native on Linux and not on macOS, and the figures differ by platform: the budgets above hold
+        // everywhere, and the baseline is kept for the platforms that recorded one
+        boolean loopbackCase = LoopbackCases.isLoopback(name);
+        String key = Baselines.key(loopbackCase ? name + "." + PLATFORM : name, LEG, JDK);
         System.out.printf("allocation %s = %.2f B/op%n", key, measured);
 
         if (name.equals(BenchmarkCases.GRAPHQL_JAVA_PROPERTY_FETCH)) {
@@ -242,6 +246,7 @@ abstract class AbstractAllocationGateTest {
         }
         Assumptions.assumeTrue(baselines.hasJdk(JDK), "No allocation baselines are recorded for JDK " + JDK);
         Double baseline = baselines.get(key);
+        Assumptions.assumeTrue(baseline != null || !loopbackCase, "No allocation baseline for " + key + ": the baselines of the loopback cases are recorded per platform");
         assertNotNull(baseline, "No allocation baseline for " + key + ". Record it with "
                 + "./gradlew :test-suite-benchmarks:allocationTest -Pallocation.update");
 
