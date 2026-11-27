@@ -64,3 +64,13 @@ tasks.named<Test>("test") {
         .withPathSensitivity(PathSensitivity.RELATIVE)
         .withPropertyName("codegenSources")
 }
+
+// The golden harness (#192) reads the snapshots from the source tree and rewrites them in place with -PupdateGolden.
+val updateGolden = providers.gradleProperty("updateGolden").isPresent
+tasks.named<Test>("test") {
+    systemProperty("codegen.golden.dir", layout.projectDirectory.dir("src/test/resources/golden").asFile.absolutePath)
+    systemProperty("codegen.golden.update", updateGolden.toString())
+    if (updateGolden) {
+        outputs.upToDateWhen { false }
+    }
+}

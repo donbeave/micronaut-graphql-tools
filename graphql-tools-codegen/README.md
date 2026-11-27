@@ -14,11 +14,11 @@ yet: it checks the options, loads the schema files, builds the IR and reports wh
 
 - `GraphQLCodeGenerator`: `GraphQLCodeGenerator.builder().withSchemaFiles(..).withOutputDirectory(..).withOptions(..).build().generate()`,
   which returns a `GenerationResult(files, diagnostics)`. It validates the options, loads the schema files and builds the IR
-  (`buildIr()` returns it). The schema is given as files, as a directory (`withSchemaDirectory`), or by default as
+  (`toIr()` returns it). The schema is given as files, as a directory (`withSchemaDirectory`), or by default as
   `src/main/resources/graphql`.
-- `IrBuilder` (`fromDirectory`, `fromFiles`, `fromSources`): the two steps that turn schema text and `Options` into an `IrResult(ir,
+- `IrBuilder` (package `schema`; `fromDirectory`, `fromFiles`, `fromSources`): the two steps that turn schema text and `Options` into an `IrResult(ir,
   diagnostics, skippedFiles)`. The loader reads with the graphql-java parser only and merges; the rules lower the merged
-  definitions into the IR. The package `io.micronaut.graphql.tools.codegen.ir` holds the IR records and `IrSnapshot`, which prints an
+  definitions into the IR. The packages `io.micronaut.graphql.tools.codegen.ir` and `ir.shared` hold the IR records and `IrSnapshot`, which prints an
   IR as the text that the golden tests compare.
 - `Options`: one immutable record, the single source of truth for the options, with its Javadoc, defaults and builder. Schema
   files and the output directory are arguments of the generator builder, not options.
@@ -30,7 +30,15 @@ yet: it checks the options, loads the schema files, builds the IR and reports wh
 - The `checkNoBuildToolOrRuntimeDependency` task, part of `check`: it fails when a main classpath holds a Gradle, Maven or
   Micronaut runtime dependency, or another module of this repository.
 
-Not in this module: the Gradle plugin and the Maven plugin, the emitters and the golden harness of the emitters.
+- The golden harness, test code in `io.micronaut.graphql.tools.codegen.golden` (#192): `GoldenFiles` compares the files of a
+  case, or an IR text, with `src/test/resources/golden/<case>/`; `Determinism` checks two runs, shuffled schema orders, `\n`
+  line endings, no timestamp and a `@Generated` without a date; `InMemoryCompiler` compiles all files of a case in memory
+  (`JavaInMemoryCompiler` with javac, `GroovyInMemoryCompiler` with groovyc; a Kotlin emitter adds one `compile` method with
+  kotlinc). `./gradlew :micronaut-graphql-tools-codegen:test -PupdateGolden` rewrites the snapshots; review the diff and commit it.
+  Keep the 1k-type compile out of the unit suites.
+
+
+Not in this module: the Gradle plugin and the Maven plugin, and the emitters.
 
 ## Options
 
@@ -128,8 +136,10 @@ Each package has a `package-info.java`. See the [API map](../CONTRIBUTING.md#api
 
 | Package | Audience | Holds |
 | --- | --- | --- |
-| `io.micronaut.graphql.tools.codegen` | Public API | `GraphQLCodeGenerator`, `Options`, its enums, `OptionsResult`, `GenerationResult`, `GeneratedFile`, `Diagnostic`, `Origin`, `IrBuilder`, `IrResult` and `SchemaSource` |
-| `io.micronaut.graphql.tools.codegen.ir` | Public API | The IR records (`Ir`, `ModelType`, `InputType`, `EnumType`, `AbstractType`, `ScalarType`, `ResolverContract`, `TypeRef` and the nodes they hold) and `IrSnapshot` |
+| `io.micronaut.graphql.tools.codegen` | Public API | `GraphQLCodeGenerator`, `Options`, its enums, `OptionsResult`, `GenerationResult`, `GeneratedFile`, `Diagnostic` and `Origin` |
+| `io.micronaut.graphql.tools.codegen.schema` | Public API | `IrBuilder`, `IrResult` and `SchemaSource`; the loader and the rules are package-private |
+| `io.micronaut.graphql.tools.codegen.ir` | Public API | The IR nodes (`Ir`, `ModelType`, `InputType`, `EnumType`, `AbstractType`, `ScalarType`, `ResolverContract`, `Field`, `Argument` and the rest) and `IrSnapshot` |
+| `io.micronaut.graphql.tools.codegen.ir.shared` | Public API | The pieces of the nodes: `Names`, `Docs`, `AppliedDirective`, `TypeRef`, `BuiltinScalar`, `Coordinate`, `Operation` and `Wrapper` |
 
 ## Who uses it
 
@@ -138,7 +148,7 @@ application does not depend on it.
 
 ## Public and internal
 
-- Everything in `io.micronaut.graphql.tools.codegen` and `io.micronaut.graphql.tools.codegen.ir` that is `public` is the API, and `api/micronaut-graphql-tools-codegen.api`
+- Everything in the packages above that is `public` is the API, and `api/micronaut-graphql-tools-codegen.api`
   is its reviewed snapshot (`apiCheck`). The helpers of the string form, the validation, the loader and the rules are package-private.
 - The API names no Gradle, Maven, Micronaut or graphql-java type.
 
@@ -166,6 +176,6 @@ and the diagnostics, `OptionsDocumentationSpec` checks that every option is docu
 and `GraphQLCodeGeneratorSpec` covers the entry point. `SchemaLoaderSpec` covers discovery, globs, sorting, de-duplication,
 skipped files and the merge errors; `IrStructureSpec` the nodes; `IrDiagnosticsSpec` each failure with its text and location;
 `IrDeterminismSpec` the identical IR for any file order and a schema of 1,000 types and 20,000 fields; `NodeTextSpec` the escaping; and
-`IrGoldenSpec` compares the IR text snapshots of the sample schema in `src/test/resources/golden`
-(`./gradlew :micronaut-graphql-tools-codegen:test -Pcodegen.golden.update=true` rewrites them; review the diff).
+`IrGoldenSpec` compares the IR text snapshots of the sample schema through the golden harness, in
+`src/test/resources/golden/ir-sample-default` and `ir-sample-styled`.
 `checkNoBuildToolOrRuntimeDependency` runs as part of `check`.

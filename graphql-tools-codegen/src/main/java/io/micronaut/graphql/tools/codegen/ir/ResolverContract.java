@@ -16,6 +16,8 @@
 package io.micronaut.graphql.tools.codegen.ir;
 
 import io.micronaut.graphql.tools.codegen.Origin;
+import io.micronaut.graphql.tools.codegen.ir.shared.Names;
+import io.micronaut.graphql.tools.codegen.ir.shared.Operation;
 
 import java.util.List;
 import java.util.Objects;

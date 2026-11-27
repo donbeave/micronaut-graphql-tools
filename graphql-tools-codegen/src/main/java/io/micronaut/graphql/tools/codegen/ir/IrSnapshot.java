@@ -15,6 +15,12 @@
  */
 package io.micronaut.graphql.tools.codegen.ir;
 
+import io.micronaut.graphql.tools.codegen.ir.shared.AppliedDirective;
+import io.micronaut.graphql.tools.codegen.ir.shared.Docs;
+import io.micronaut.graphql.tools.codegen.ir.shared.Names;
+import io.micronaut.graphql.tools.codegen.ir.shared.TypeRef;
+import io.micronaut.graphql.tools.codegen.ir.shared.Wrapper;
+
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -184,7 +190,7 @@ public final class IrSnapshot {
         } else {
             text = "[" + type(((TypeRef.ListOf) type).element()) + "]";
         }
-        return type.nullable() ? text : text + "!";
+        return type.isNullable() ? text : text + "!";
     }
 
     private static String quote(String text) {

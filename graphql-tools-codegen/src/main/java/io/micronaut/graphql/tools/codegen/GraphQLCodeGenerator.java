@@ -15,6 +15,9 @@
  */
 package io.micronaut.graphql.tools.codegen;
 
+import io.micronaut.graphql.tools.codegen.schema.IrBuilder;
+import io.micronaut.graphql.tools.codegen.schema.IrResult;
+
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -34,7 +37,7 @@ import java.util.Objects;
  * }</pre>
  *
  * <p>The generator checks the options, loads the schema files and lowers them into the intermediate representation ({@link
- * #buildIr()}). Every problem is a {@link Diagnostic} in the result; nothing is thrown for the content of an option or a schema.
+ * #toIr()}). Every problem is a {@link Diagnostic} in the result; nothing is thrown for the content of an option or a schema.
  * The generator is a plain object with no Gradle, Maven or Micronaut types, so a build plugin maps its configuration onto the
  * builder and {@link Options}.</p>
  *
@@ -84,7 +87,7 @@ public final class GraphQLCodeGenerator {
      * @return the files and the diagnostics; there is no file when a diagnostic is an error
      */
     public GenerationResult generate() {
-        return new GenerationResult(List.of(), buildIr().diagnostics());
+        return new GenerationResult(List.of(), toIr().diagnostics());
     }
 
     /**
@@ -93,7 +96,7 @@ public final class GraphQLCodeGenerator {
      *
      * @return the IR and the diagnostics
      */
-    public IrResult buildIr() {
+    public IrResult toIr() {
         return schemaDirectory != null ? IrBuilder.fromDirectory(schemaDirectory, options) : IrBuilder.fromFiles(schemaFiles, options);
     }
 
