@@ -24,6 +24,9 @@ dependencies {
     annotationProcessor(graphqlToolsBom)
     implementation("io.micronaut.graphql.tools:micronaut-graphql-tools")
     annotationProcessor("io.micronaut.graphql.tools:micronaut-graphql-tools-processor")
+    // tag::client-dependency[]
+    implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-client")
+    // end::client-dependency[]
 }
 // end::dependencies[]
 
@@ -53,3 +56,29 @@ tasks.named<JavaCompile>("compileJava") {
     options.compilerArgs.add("-Amicronaut.graphql.tools.processor.checks=${providers.gradleProperty("graphqlChecks").getOrElse("true")}")
 }
 // end::checks[]
+
+// tag::client-dirs[]
+// The directories of the client schemas: each subdirectory is one schema, with its *.graphqls files and its *.graphql operations.
+val graphqlClientDirs = files("src/main/graphql/client")
+
+abstract class GraphQLClientDirs : CommandLineArgumentProvider {
+    @get:InputFiles
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val dirs: ConfigurableFileCollection
+
+    override fun asArguments() = listOf("-Amicronaut.graphql.tools.processor.client.dirs=" +
+        dirs.files.joinToString(File.pathSeparator) { it.absolutePath })
+}
+
+tasks.named<JavaCompile>("compileJava") {
+    options.compilerArgumentProviders.add(objects.newInstance<GraphQLClientDirs>().apply { dirs.from(graphqlClientDirs) })
+}
+// end::client-dirs[]
+
+// tag::client-checks[]
+// ./gradlew build -PgraphqlClientChecks=false parses and assembles the client operations without validating them: the build prints
+// one note.
+tasks.named<JavaCompile>("compileJava") {
+    options.compilerArgs.add("-Amicronaut.graphql.tools.processor.client.checks=${providers.gradleProperty("graphqlClientChecks").getOrElse("true")}")
+}
+// end::client-checks[]

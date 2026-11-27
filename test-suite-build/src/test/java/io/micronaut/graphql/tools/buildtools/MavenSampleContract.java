@@ -66,6 +66,56 @@ abstract class MavenSampleContract {
     }
 
     @Test
+    void aClientDocumentEditNeedsACleanCompile() {
+        MavenSample sample = MavenSample.copyOf(sample(), "client-drift");
+        Path operation = sample.file(Expect.CLIENT_OPERATION);
+
+        MavenSample.Result first = sample.run("verify");
+        assertEquals(0, first.exitCode(), first.output());
+        Expect.clientChecked(first.output());
+
+        Files.replace(operation, Expect.BOUND_FIELD, Expect.RENAMED_FIELD);
+        MavenSample.Result withoutClean = sample.run("verify");
+        Report.record(sample() + ": a drifted client document without clean " + (withoutClean.exitCode() == 0 ? "passes (stale)" : "fails"));
+        if (staleWithoutClean()) {
+            assertEquals(0, withoutClean.exitCode(), "the compiler does not see a client document edit:\n" + withoutClean.output());
+        } else {
+            assertNotEquals(0, withoutClean.exitCode(), withoutClean.output());
+        }
+
+        MavenSample.Result drifted = sample.run("clean", "verify");
+        assertNotEquals(0, drifted.exitCode(), drifted.output());
+        Expect.diagnostic(drifted.output(), "client-document-invalid", "example.CatalogClient#books()");
+
+        Files.replace(operation, Expect.RENAMED_FIELD, Expect.BOUND_FIELD);
+        MavenSample.Result repaired = sample.run("clean", "verify");
+        assertEquals(0, repaired.exitCode(), repaired.output());
+    }
+
+    @Test
+    void aMissingClientOptionFails() {
+        MavenSample sample = MavenSample.copyOf(sample(), "missing-client-option");
+        Files.removeTagged(sample.file("pom.xml"), "client-dirs");
+
+        MavenSample.Result failed = sample.run("verify");
+
+        assertNotEquals(0, failed.exitCode(), failed.output());
+        Expect.diagnostic(failed.output(), "client-schema-missing", "example.CatalogClient#books()");
+    }
+
+    @Test
+    void clientChecksFalsePrintsItsNoteAndPasses() {
+        MavenSample sample = MavenSample.copyOf(sample(), "client-checks-off");
+        Files.replace(sample.file(Expect.CLIENT_OPERATION), Expect.BOUND_FIELD, Expect.RENAMED_FIELD);
+
+        MavenSample.Result passed = sample.run("verify", "-Dgraphql.client.checks=false");
+
+        assertEquals(0, passed.exitCode(), passed.output());
+        Expect.clientChecksOff(passed.output());
+        assertTrue(passed.output().contains("BUILD SUCCESS"), passed.output());
+    }
+
+    @Test
     void aMissingOptionFails() {
         MavenSample sample = MavenSample.copyOf(sample(), "missing-option");
         Files.removeTagged(sample.file("pom.xml"), "schema-dirs");

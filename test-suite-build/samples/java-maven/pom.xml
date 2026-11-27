@@ -20,6 +20,10 @@
     <micronaut.graphql.tools.version>1.0.0-SNAPSHOT</micronaut.graphql.tools.version>
     <!-- mvn verify -Dgraphql.checks=false compiles without the checks -->
     <graphql.checks>true</graphql.checks>
+    <!-- tag::client-checks-property[] -->
+    <!-- mvn verify -Dgraphql.client.checks=false parses the client operations without validating them -->
+    <graphql.client.checks>true</graphql.client.checks>
+    <!-- end::client-checks-property[] -->
     <!-- tag::loose-nullability-property[] -->
     <!-- ignore (the default), warn or fail: what the checks do with a Kotlin type that is stricter than the schema type -->
     <graphql.looseNullability>ignore</graphql.looseNullability>
@@ -60,6 +64,12 @@
       <groupId>io.micronaut.graphql.tools</groupId>
       <artifactId>micronaut-graphql-tools</artifactId>
     </dependency>
+    <!-- tag::client-dependency[] -->
+    <dependency>
+      <groupId>io.micronaut.graphql.tools</groupId>
+      <artifactId>micronaut-graphql-tools-client</artifactId>
+    </dependency>
+    <!-- end::client-dependency[] -->
   </dependencies>
 
   <build>
@@ -79,6 +89,12 @@
             <!-- tag::schema-dirs[] -->
             <arg>-Amicronaut.graphql.tools.processor.schema.dirs=${project.basedir}/src/main/resources/graphql</arg>
             <!-- end::schema-dirs[] -->
+            <!-- tag::client-dirs[] -->
+            <arg>-Amicronaut.graphql.tools.processor.client.dirs=${project.basedir}/src/main/graphql/client</arg>
+            <!-- end::client-dirs[] -->
+            <!-- tag::client-checks[] -->
+            <arg>-Amicronaut.graphql.tools.processor.client.checks=${graphql.client.checks}</arg>
+            <!-- end::client-checks[] -->
             <!-- tag::checks[] -->
             <arg>-Amicronaut.graphql.tools.processor.checks=${graphql.checks}</arg>
             <!-- end::checks[] -->

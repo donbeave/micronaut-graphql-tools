@@ -31,6 +31,9 @@ dependencies {
     implementation("io.micronaut.graphql.tools:micronaut-graphql-tools")
     // The Groovy compiler loads the visitors from its compile classpath.
     compileOnly("io.micronaut.graphql.tools:micronaut-graphql-tools-processor")
+    // tag::client-dependency[]
+    implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-client")
+    // end::client-dependency[]
 }
 // end::dependencies[]
 
@@ -59,3 +62,23 @@ tasks.named<GroovyCompile>("compileGroovy") {
     options.forkOptions.jvmArgs!!.add("-Dmicronaut.graphql.tools.processor.checks=${providers.gradleProperty("graphqlChecks").getOrElse("true")}")
 }
 // end::checks[]
+
+// tag::client-dirs[]
+// The directories of the client schemas: each subdirectory is one schema, with its *.graphqls files and its *.graphql operations.
+val graphqlClientDirs = files("src/main/graphql/client")
+
+tasks.named<GroovyCompile>("compileGroovy") {
+    options.forkOptions.jvmArgs!!.add("-Dmicronaut.graphql.tools.processor.client.dirs=" +
+        graphqlClientDirs.files.joinToString(File.pathSeparator) { it.absolutePath })
+    // Gradle does not track the client documents by itself: declare them as an input, so that an edited operation reruns the task.
+    inputs.files(graphqlClientDirs).withPropertyName("graphqlClientDirs").withPathSensitivity(PathSensitivity.RELATIVE)
+}
+// end::client-dirs[]
+
+// tag::client-checks[]
+// ./gradlew build -PgraphqlClientChecks=false parses and assembles the client operations without validating them: the build prints
+// one note.
+tasks.named<GroovyCompile>("compileGroovy") {
+    options.forkOptions.jvmArgs!!.add("-Dmicronaut.graphql.tools.processor.client.checks=${providers.gradleProperty("graphqlClientChecks").getOrElse("true")}")
+}
+// end::client-checks[]

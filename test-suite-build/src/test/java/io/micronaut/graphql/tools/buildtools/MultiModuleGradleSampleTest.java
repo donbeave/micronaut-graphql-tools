@@ -40,6 +40,11 @@ class MultiModuleGradleSampleTest extends GradleSampleContract {
     private static final String GENRE = "model/src/main/java/example/model/Genre.java";
 
     @Override
+    boolean hasClient() {
+        return false;
+    }
+
+    @Override
     String sample() {
         return "multi-module-gradle";
     }

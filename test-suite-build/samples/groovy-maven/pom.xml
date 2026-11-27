@@ -21,6 +21,10 @@
     <micronaut.graphql.tools.version>1.0.0-SNAPSHOT</micronaut.graphql.tools.version>
     <!-- mvn verify -Dgraphql.checks=false compiles without the checks -->
     <graphql.checks>true</graphql.checks>
+    <!-- tag::client-checks-property[] -->
+    <!-- mvn verify -Dgraphql.client.checks=false parses the client operations without validating them -->
+    <graphql.client.checks>true</graphql.client.checks>
+    <!-- end::client-checks-property[] -->
   </properties>
 
   <repositories>
@@ -57,6 +61,12 @@
       <groupId>io.micronaut.graphql.tools</groupId>
       <artifactId>micronaut-graphql-tools</artifactId>
     </dependency>
+    <!-- tag::client-dependency[] -->
+    <dependency>
+      <groupId>io.micronaut.graphql.tools</groupId>
+      <artifactId>micronaut-graphql-tools-client</artifactId>
+    </dependency>
+    <!-- end::client-dependency[] -->
     <dependency>
       <groupId>org.apache.groovy</groupId>
       <artifactId>groovy</artifactId>
@@ -96,6 +106,18 @@
                   <name>micronaut.graphql.tools.processor.schema.dirs</name>
                   <value>${project.basedir}/src/main/resources/graphql</value>
                 </property>
+                <!-- tag::client-dirs[] -->
+                <property>
+                  <name>micronaut.graphql.tools.processor.client.dirs</name>
+                  <value>${project.basedir}/src/main/graphql/client</value>
+                </property>
+                <!-- end::client-dirs[] -->
+                <!-- tag::client-checks[] -->
+                <property>
+                  <name>micronaut.graphql.tools.processor.client.checks</name>
+                  <value>${graphql.client.checks}</value>
+                </property>
+                <!-- end::client-checks[] -->
                 <!-- tag::checks[] -->
                 <property>
                   <name>micronaut.graphql.tools.processor.checks</name>
