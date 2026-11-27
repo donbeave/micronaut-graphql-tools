@@ -63,7 +63,7 @@ The Groovy DSL is the same: `codegen { packageName = 'example' }`. Gradle 8.14 a
   `addRuntimeDependency` (default `true`) the plugin adds `micronaut-graphql-tools` (mode `SERVER`) or
   `micronaut-graphql-tools-client` (mode `CLIENT`) of that version to `implementation`.
 
-## Tests
+## Build and test
 
 - `src/test`: Spock unit tests (`./gradlew :micronaut-graphql-tools-gradle-plugin:test`, part of `check`): option parity with the
   `Options` record, the string form, the default version, the configurations and the language inference.
@@ -75,7 +75,19 @@ The Groovy DSL is the same: `codegen { packageName = 'example' }`. Gradle 8.14 a
   Groovy, KSP and kapt. Gradle 8.14 does not run on JDK 25 or newer, so on those JDKs its scenarios use a JDK 21 for the
   daemon (`JAVA_HOME_21_X64` or a toolchain) and are skipped when there is none.
 
+## Who uses it
+
+Applications and libraries that generate Java, Kotlin or Groovy sources from GraphQL schema files in a Gradle build.
+
 ## Public and internal
 
 The package `io.micronaut.graphql.tools.gradle` is public API. The generator version is pinned by the plugin version, and
 `api/micronaut-graphql-tools-gradle-plugin.api` is the reviewed snapshot of the signatures.
+
+## Relation to other modules
+
+- Compiles against `micronaut-graphql-tools-codegen` (`compileOnly`) and resolves it at build time in the consuming project;
+  the plugin's jar and POM do not depend on it.
+- Wires the options of `micronaut-graphql-tools-processor` and adds `micronaut-graphql-tools` or `micronaut-graphql-tools-client`
+  as the runtime dependency of the generated code.
+- Its version is the `projectVersion` in `gradle.properties`.
