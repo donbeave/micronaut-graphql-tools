@@ -452,6 +452,18 @@ union SearchResult = Book | Magazine
         FindingRenderer.render(small.findings()[0]).contains('fix: shorten the chain')
     }
 
+    void "a system that gives no thread with that stack builds the schema on the calling thread"() {
+        given:
+        schemaDir('books')
+
+        when:
+        def outcome = operations(true, 1L << 62).resolve(request('{ version }'))
+
+        then:
+        outcome.findings().isEmpty()
+        outcome.operation() != null
+    }
+
     void "a document over the metadata limit is client-document-too-large, and one at the limit passes"() {
         given:
         schemaDir('books')

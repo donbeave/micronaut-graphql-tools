@@ -60,20 +60,24 @@ public final class ClientSchemaBuilder {
     public static Built build(String name, List<SchemaSources.Source> sources, long stackBytes) {
         AtomicReference<GraphQLSchema> schema = new AtomicReference<>();
         AtomicReference<Throwable> failure = new AtomicReference<>();
-        Thread worker = new Thread(null, () -> {
+        Runnable task = () -> {
             try {
                 schema.set(read(sources));
             } catch (Throwable e) {
                 failure.set(e);
             }
-        }, THREAD, stackBytes);
+        };
+        Thread worker = new Thread(null, task, THREAD, stackBytes);
         worker.setDaemon(true);
-        worker.start();
         try {
+            worker.start();
             worker.join();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             return new Built(null, invalid(name, "the build of the schema was interrupted", null, null));
+        } catch (OutOfMemoryError e) {
+            // the system gave no thread with that stack (a limit on memory or on threads): build here, where an overflow is a finding too
+            task.run();
         }
         Throwable thrown = failure.get();
         if (thrown == null) {
