@@ -30,8 +30,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.regex.Pattern;
-import java.util.stream.Stream;
 
 /**
  * Finds and reads schema files. The path of a source is relative to the schema root with {@code /} separators, so the origin of a
@@ -49,26 +47,17 @@ final class SchemaFiles {
                     "The schema directory " + directory.toString().replace('\\', '/') + " does not exist or is not a directory."));
             return List.of();
         }
-        List<Pattern> include = Globs.compile(includes);
-        List<Pattern> exclude = Globs.compile(excludes);
         List<Path> files;
-        try (Stream<Path> paths = Files.walk(directory)) {
-            files = paths.filter(Files::isRegularFile).toList();
-        } catch (IOException | UncheckedIOException e) {
+        try {
+            files = SchemaFileSelector.select(directory, includes, excludes);
+        } catch (UncheckedIOException e) {
             diagnostics.add(fileProblem(Diagnostic.SCHEMA_FILE_UNREADABLE, directory.toString().replace('\\', '/'),
                     "The schema directory " + directory.toString().replace('\\', '/') + " cannot be listed: " + e.getMessage()));
             return List.of();
         }
         List<SchemaSource> sources = new ArrayList<>();
         int before = diagnostics.size();
-        Map<String, Path> selected = new TreeMap<>(SchemaLoader.UTF8_ORDER);
-        for (Path file : files) {
-            String relative = relative(directory, file);
-            if (Globs.matchesAny(include, relative) && !Globs.matchesAny(exclude, relative)) {
-                selected.put(relative, file);
-            }
-        }
-        selected.forEach((relative, file) -> read(file, relative, sources, diagnostics));
+        files.forEach(file -> read(file, relative(directory, file), sources, diagnostics));
         if (sources.isEmpty() && diagnostics.size() == before) {
             diagnostics.add(Diagnostic.optionError(Diagnostic.NO_SCHEMA_FILES, "includes",
                     "No schema file under " + directory.toString().replace('\\', '/') + " matches the option includes " + includes
@@ -105,11 +94,7 @@ final class SchemaFiles {
     }
 
     private static String relative(Path root, Path file) {
-        StringBuilder path = new StringBuilder();
-        for (Path part : root.relativize(file)) {
-            path.append(path.length() == 0 ? "" : "/").append(part);
-        }
-        return path.toString();
+        return SchemaFileSelector.relative(root, file);
     }
 
     private static Path commonParent(Collection<Path> files) {

@@ -83,6 +83,15 @@ public record Diagnostic(Severity severity, String code, String message, String 
     /** The code of an {@code interfaceTypes} entry that names no object type of the schema. A warning. */
     public static final String UNUSED_INTERFACE_TYPE = "unused-interface-type";
 
+    /** The code of a {@code typeMappings} entry {@code Type.field} for a field whose type is not a scalar. An error. */
+    public static final String FIELD_MAPPING_NOT_SCALAR = "field-mapping-not-scalar";
+
+    /** The code of a union or interface that has a member that {@code typeMappings} maps to an external class. A warning. */
+    public static final String MAPPED_MEMBER = "mapped-member";
+
+    /** The code of a problem with the type mappings that a dependency carries. A warning. */
+    public static final String DEPENDENCY_TYPE_MAPPINGS = "dependency-type-mappings";
+
     /**
      * Creates a diagnostic.
      */

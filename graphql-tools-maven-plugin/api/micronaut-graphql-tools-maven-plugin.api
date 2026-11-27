@@ -1,0 +1,4 @@
+public class io.micronaut.graphql.tools.maven.GenerateMojo extends org.apache.maven.plugin.AbstractMojo {
+  public io.micronaut.graphql.tools.maven.GenerateMojo();
+  public void execute() throws org.apache.maven.plugin.MojoExecutionException, org.apache.maven.plugin.MojoFailureException;
+}

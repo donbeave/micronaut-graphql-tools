@@ -9,11 +9,14 @@ public final class io.micronaut.graphql.tools.codegen.Diagnostic extends java.la
   public java.lang.String code();
   public java.lang.String message();
   public java.lang.String optionName();
+  public static final java.lang.String DEPENDENCY_TYPE_MAPPINGS = "dependency-type-mappings";
   public static final java.lang.String DUPLICATE_DEFINITION = "duplicate-definition";
   public static final java.lang.String EXTENSION_KIND_MISMATCH = "extension-kind-mismatch";
   public static final java.lang.String EXTENSION_WITHOUT_BASE = "extension-without-base";
+  public static final java.lang.String FIELD_MAPPING_NOT_SCALAR = "field-mapping-not-scalar";
   public static final java.lang.String INVALID_OPTION_COMBINATION = "invalid-option-combination";
   public static final java.lang.String INVALID_OPTION_VALUE = "invalid-option-value";
+  public static final java.lang.String MAPPED_MEMBER = "mapped-member";
   public static final java.lang.String MISSING_OPTION = "missing-option";
   public static final java.lang.String NAME_COLLISION = "name-collision";
   public static final java.lang.String NO_SCHEMA_FILES = "no-schema-files";
@@ -66,6 +69,7 @@ public final class io.micronaut.graphql.tools.codegen.GraphQLCodeGenerator {
 
 public static final class io.micronaut.graphql.tools.codegen.GraphQLCodeGenerator$Builder {
   public io.micronaut.graphql.tools.codegen.GraphQLCodeGenerator build();
+  public io.micronaut.graphql.tools.codegen.GraphQLCodeGenerator$Builder withDependencies(java.util.Collection<java.nio.file.Path>);
   public io.micronaut.graphql.tools.codegen.GraphQLCodeGenerator$Builder withOptions(io.micronaut.graphql.tools.codegen.Options);
   public io.micronaut.graphql.tools.codegen.GraphQLCodeGenerator$Builder withOutputDirectory(java.nio.file.Path);
   public io.micronaut.graphql.tools.codegen.GraphQLCodeGenerator$Builder withSchemaDirectory(java.nio.file.Path);
@@ -107,6 +111,7 @@ public final class io.micronaut.graphql.tools.codegen.Options extends java.lang.
   public boolean commentsAsDescriptions();
   public boolean kotlinSuspend();
   public boolean rootContracts();
+  public boolean typeMappingsFromDependencies();
   public final boolean equals(java.lang.Object);
   public final int hashCode();
   public final java.lang.String toString();
@@ -115,7 +120,7 @@ public final class io.micronaut.graphql.tools.codegen.Options extends java.lang.
   public io.micronaut.graphql.tools.codegen.ModelStyle modelStyle();
   public io.micronaut.graphql.tools.codegen.NameConstants nameConstants();
   public io.micronaut.graphql.tools.codegen.Options$Builder toBuilder();
-  public io.micronaut.graphql.tools.codegen.Options(io.micronaut.graphql.tools.codegen.Language, io.micronaut.graphql.tools.codegen.Mode, java.lang.String, java.lang.String, java.lang.String, java.lang.String, java.lang.String, io.micronaut.graphql.tools.codegen.ModelStyle, java.util.List<java.lang.String>, java.lang.String, java.lang.String, java.lang.String, boolean, java.lang.String, boolean, java.lang.String, java.util.Map<java.lang.String, java.lang.String>, io.micronaut.graphql.tools.codegen.NameConstants, java.util.List<java.lang.String>, java.util.List<java.lang.String>, boolean);
+  public io.micronaut.graphql.tools.codegen.Options(io.micronaut.graphql.tools.codegen.Language, io.micronaut.graphql.tools.codegen.Mode, java.lang.String, java.lang.String, java.lang.String, java.lang.String, java.lang.String, io.micronaut.graphql.tools.codegen.ModelStyle, java.util.List<java.lang.String>, java.lang.String, java.lang.String, java.lang.String, boolean, java.lang.String, boolean, java.lang.String, java.util.Map<java.lang.String, java.lang.String>, boolean, io.micronaut.graphql.tools.codegen.NameConstants, java.util.List<java.lang.String>, java.util.List<java.lang.String>, boolean);
   public java.lang.String contractNameTemplate();
   public java.lang.String effectiveModelPackage();
   public java.lang.String effectiveNamesPackage();
@@ -167,6 +172,7 @@ public static final class io.micronaut.graphql.tools.codegen.Options$Builder {
   public io.micronaut.graphql.tools.codegen.Options$Builder rootContracts(boolean);
   public io.micronaut.graphql.tools.codegen.Options$Builder subscriptionReturnType(java.lang.String);
   public io.micronaut.graphql.tools.codegen.Options$Builder typeMappings(java.util.Map<java.lang.String, java.lang.String>);
+  public io.micronaut.graphql.tools.codegen.Options$Builder typeMappingsFromDependencies(boolean);
   public io.micronaut.graphql.tools.codegen.Options$Builder typeNamePrefix(java.lang.String);
   public io.micronaut.graphql.tools.codegen.Options$Builder typeNameSuffix(java.lang.String);
 }
@@ -491,8 +497,11 @@ public static final class io.micronaut.graphql.tools.codegen.ir.shared.Wrapper$S
 
 public final class io.micronaut.graphql.tools.codegen.schema.IrBuilder {
   public static io.micronaut.graphql.tools.codegen.schema.IrResult fromDirectory(java.nio.file.Path, io.micronaut.graphql.tools.codegen.Options);
+  public static io.micronaut.graphql.tools.codegen.schema.IrResult fromDirectory(java.nio.file.Path, io.micronaut.graphql.tools.codegen.Options, java.util.Collection<java.nio.file.Path>);
   public static io.micronaut.graphql.tools.codegen.schema.IrResult fromFiles(java.util.Collection<java.nio.file.Path>, io.micronaut.graphql.tools.codegen.Options);
+  public static io.micronaut.graphql.tools.codegen.schema.IrResult fromFiles(java.util.Collection<java.nio.file.Path>, io.micronaut.graphql.tools.codegen.Options, java.util.Collection<java.nio.file.Path>);
   public static io.micronaut.graphql.tools.codegen.schema.IrResult fromSources(java.util.Collection<io.micronaut.graphql.tools.codegen.schema.SchemaSource>, io.micronaut.graphql.tools.codegen.Options);
+  public static io.micronaut.graphql.tools.codegen.schema.IrResult fromSources(java.util.Collection<io.micronaut.graphql.tools.codegen.schema.SchemaSource>, io.micronaut.graphql.tools.codegen.Options, java.util.Collection<java.nio.file.Path>);
 }
 
 public final class io.micronaut.graphql.tools.codegen.schema.IrResult extends java.lang.Record {
@@ -506,6 +515,15 @@ public final class io.micronaut.graphql.tools.codegen.schema.IrResult extends ja
   public java.util.List<java.lang.String> skippedFiles();
 }
 
+public final class io.micronaut.graphql.tools.codegen.schema.ScalarPresets {
+  public static final java.lang.String UPLOAD_CLASS = "io.micronaut.http.multipart.CompletedFileUpload";
+  public static java.util.Map<java.lang.String, java.lang.String> presets();
+}
+
+public final class io.micronaut.graphql.tools.codegen.schema.SchemaFileSelector {
+  public static java.util.List<java.nio.file.Path> select(java.nio.file.Path, java.util.List<java.lang.String>, java.util.List<java.lang.String>);
+}
+
 public final class io.micronaut.graphql.tools.codegen.schema.SchemaSource extends java.lang.Record {
   public final boolean equals(java.lang.Object);
   public final int hashCode();
@@ -513,4 +531,9 @@ public final class io.micronaut.graphql.tools.codegen.schema.SchemaSource extend
   public io.micronaut.graphql.tools.codegen.schema.SchemaSource(java.lang.String, java.lang.String);
   public java.lang.String path();
   public java.lang.String text();
+}
+
+public final class io.micronaut.graphql.tools.codegen.schema.TypeMappingsFile {
+  public static final java.lang.String PATH = "META-INF/micronaut-graphql-tools/type-mappings.properties";
+  public static io.micronaut.graphql.tools.codegen.GeneratedFile of(io.micronaut.graphql.tools.codegen.ir.Ir);
 }

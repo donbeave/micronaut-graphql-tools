@@ -57,6 +57,7 @@ final class OptionsForm {
         put(map, "kotlinSuspend", o.kotlinSuspend(), defaults.kotlinSuspend());
         put(map, "subscriptionReturnType", o.subscriptionReturnType(), defaults.subscriptionReturnType());
         o.typeMappings().forEach((key, value) -> map.put(TYPE_MAPPINGS + key, value));
+        put(map, "typeMappingsFromDependencies", o.typeMappingsFromDependencies(), defaults.typeMappingsFromDependencies());
         put(map, "nameConstants", o.nameConstants(), defaults.nameConstants());
         putList(map, "includes", o.includes(), defaults.includes());
         putList(map, "excludes", o.excludes(), defaults.excludes());
@@ -100,6 +101,7 @@ final class OptionsForm {
         reader.bool("kotlinSuspend", b::kotlinSuspend);
         reader.string("subscriptionReturnType", b::subscriptionReturnType);
         reader.typeMappings(b::typeMappings);
+        reader.bool("typeMappingsFromDependencies", b::typeMappingsFromDependencies);
         reader.enumValue("nameConstants", NameConstants.values(), b::nameConstants);
         reader.list("includes", b::includes);
         reader.list("excludes", b::excludes);

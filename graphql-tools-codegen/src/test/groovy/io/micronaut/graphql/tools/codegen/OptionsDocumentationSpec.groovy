@@ -49,4 +49,13 @@ class OptionsDocumentationSpec extends Specification {
         expect:
         names == Options.getRecordComponents()*.name as Set
     }
+
+    def "the README option table names every component"() {
+        given:
+        def readme = Files.readString(Paths.get(System.getProperty('codegen.readme')))
+        def table = readme.substring(readme.indexOf('| Option |'), readme.indexOf('An unmapped custom scalar'))
+
+        expect:
+        Options.getRecordComponents()*.name.every { table.contains("`${it}`") }
+    }
 }

@@ -63,8 +63,14 @@ import java.util.Objects;
  * @param subscriptionReturnType the class name of the type that a subscription method returns. Default
  *                               {@code org.reactivestreams.Publisher}.
  * @param typeMappings           the classes of custom scalars and of single fields, keyed by the SDL name ({@code Date}) or by
- *                               {@code Type.field}. Default empty; an unmapped custom scalar is a diagnostic, never a silent
- *                               {@code String}.
+ *                               {@code Type.field}. A type-level key names a scalar, or an object, enum or input type that is an
+ *                               existing class and generates nothing; {@code Type.field} maps a field whose type is a scalar, and is an
+ *                               error for a field of another kind. Default empty, plus the presets of {@code ScalarPresets}; an
+ *                               unmapped custom scalar is a diagnostic, never a silent {@code String}.
+ * @param typeMappingsFromDependencies whether the generator reads {@code META-INF/micronaut-graphql-tools/type-mappings.properties} from
+ *                               the dependency jars that the caller gives it, and applies the mappings below {@code typeMappings}.
+ *                               Default {@code true}; it has no effect without dependencies. The generator always writes the file
+ *                               for its own output.
  * @param nameConstants          which name constants are generated. Default {@code FIELDS}.
  * @param includes               the globs that select the schema files, relative to the schema root. Default
  *                               {@code **}{@code /*.graphqls} and {@code **}{@code /*.graphql}.
@@ -90,6 +96,7 @@ public record Options(
         boolean kotlinSuspend,
         String subscriptionReturnType,
         Map<String, String> typeMappings,
+        boolean typeMappingsFromDependencies,
         NameConstants nameConstants,
         List<String> includes,
         List<String> excludes,
@@ -172,7 +179,8 @@ public record Options(
                 .modelStyle(modelStyle).interfaceTypes(interfaceTypes).typeNamePrefix(typeNamePrefix)
                 .typeNameSuffix(typeNameSuffix).nullableAnnotation(nullableAnnotation).rootContracts(rootContracts)
                 .contractNameTemplate(contractNameTemplate).kotlinSuspend(kotlinSuspend)
-                .subscriptionReturnType(subscriptionReturnType).typeMappings(typeMappings).nameConstants(nameConstants)
+                .subscriptionReturnType(subscriptionReturnType).typeMappings(typeMappings)
+                .typeMappingsFromDependencies(typeMappingsFromDependencies).nameConstants(nameConstants)
                 .includes(includes).excludes(excludes).commentsAsDescriptions(commentsAsDescriptions);
     }
 
@@ -256,6 +264,7 @@ public record Options(
         private boolean kotlinSuspend;
         private String subscriptionReturnType = DEFAULT_SUBSCRIPTION_RETURN_TYPE;
         private Map<String, String> typeMappings = Map.of();
+        private boolean typeMappingsFromDependencies = true;
         private NameConstants nameConstants = NameConstants.FIELDS;
         private List<String> includes = DEFAULT_INCLUDES;
         private List<String> excludes = List.of();
@@ -452,6 +461,17 @@ public record Options(
         }
 
         /**
+         * Sets {@code typeMappingsFromDependencies}.
+         *
+         * @param value the value
+         * @return this builder
+         */
+        public Builder typeMappingsFromDependencies(boolean value) {
+            this.typeMappingsFromDependencies = value;
+            return this;
+        }
+
+        /**
          * Sets {@code nameConstants}.
          *
          * @param value the value
@@ -504,7 +524,8 @@ public record Options(
             String nullable = nullableAnnotation != null ? nullableAnnotation : defaultNullableAnnotation(mode);
             return new Options(language, mode, packageName, modelPackage, resolverPackage, namesPackage, generatedAnnotation,
                     modelStyle, interfaceTypes, typeNamePrefix, typeNameSuffix, nullable, rootContracts,
-                    contractNameTemplate, kotlinSuspend, subscriptionReturnType, typeMappings, nameConstants,
+                    contractNameTemplate, kotlinSuspend, subscriptionReturnType, typeMappings,
+                    typeMappingsFromDependencies, nameConstants,
                     includes, excludes, commentsAsDescriptions);
         }
     }

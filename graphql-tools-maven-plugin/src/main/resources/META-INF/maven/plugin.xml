@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The descriptor of the plugin, written by hand: the plugin does not use maven-plugin-plugin, so nothing generates it from the
+  annotations of GenerateMojo. @version@ is replaced by the version of the build. PluginDescriptorSpec fails when a parameter here
+  differs from an @Parameter of the mojo, or from a component of Options, in name, type, default or property.
+-->
+<plugin>
+  <name>Micronaut GraphQL Tools Maven Plugin</name>
+  <description>Generates Java, Kotlin or Groovy sources from GraphQL schema files.</description>
+  <groupId>io.micronaut.graphql.tools</groupId>
+  <artifactId>micronaut-graphql-tools-maven-plugin</artifactId>
+  <version>@version@</version>
+  <goalPrefix>graphql-tools</goalPrefix>
+  <isolatedRealm>false</isolatedRealm>
+  <inheritedByDefault>true</inheritedByDefault>
+  <mojos>
+    <mojo>
+      <goal>generate</goal>
+      <description>Generates Java, Kotlin or Groovy sources from the GraphQL schema files of a directory, under outputDirectory/language, and adds that directory to the compile source roots of the project.</description>
+      <requiresDependencyResolution>none</requiresDependencyResolution>
+      <requiresDirectInvocation>false</requiresDirectInvocation>
+      <requiresProject>true</requiresProject>
+      <requiresReports>false</requiresReports>
+      <aggregator>false</aggregator>
+      <requiresOnline>false</requiresOnline>
+      <inheritedByDefault>true</inheritedByDefault>
+      <phase>generate-sources</phase>
+      <implementation>io.micronaut.graphql.tools.maven.GenerateMojo</implementation>
+      <language>java</language>
+      <instantiationStrategy>per-lookup</instantiationStrategy>
+      <executionStrategy>once-per-session</executionStrategy>
+      <threadSafe>true</threadSafe>
+      <parameters>
+        <parameter>
+          <name>project</name>
+          <type>org.apache.maven.project.MavenProject</type>
+          <required>true</required>
+          <editable>false</editable>
+          <description>The project.</description>
+        </parameter>
+        <parameter>
+          <name>plugin</name>
+          <type>org.apache.maven.plugin.descriptor.PluginDescriptor</type>
+          <required>true</required>
+          <editable>false</editable>
+          <description>The descriptor of this plugin, whose version is part of the fingerprint of a run.</description>
+        </parameter>
+        <parameter>
+          <name>skip</name>
+          <type>boolean</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>Skips the goal.</description>
+        </parameter>
+        <parameter>
+          <name>schemaDirectory</name>
+          <type>java.io.File</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>The directory that holds the schema files.</description>
+        </parameter>
+        <parameter>
+          <name>outputDirectory</name>
+          <type>java.io.File</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>The directory that the generated sources are written under, in a subdirectory of the language.</description>
+        </parameter>
+        <parameter>
+          <name>language</name>
+          <type>java.lang.String</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>The language of the generated sources: JAVA, KOTLIN or GROOVY.</description>
+        </parameter>
+        <parameter>
+          <name>mode</name>
+          <type>java.lang.String</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>What is generated: SERVER or CLIENT.</description>
+        </parameter>
+        <parameter>
+          <name>packageName</name>
+          <type>java.lang.String</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>The package of the generated sources. Required.</description>
+        </parameter>
+        <parameter>
+          <name>modelPackage</name>
+          <type>java.lang.String</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>The package of the model types; empty means &lt;packageName&gt;.model.</description>
+        </parameter>
+        <parameter>
+          <name>resolverPackage</name>
+          <type>java.lang.String</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>The package of the resolver contracts; empty means &lt;packageName&gt;.resolver.</description>
+        </parameter>
+        <parameter>
+          <name>namesPackage</name>
+          <type>java.lang.String</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>The package of the name constants; empty means &lt;packageName&gt;.names.</description>
+        </parameter>
+        <parameter>
+          <name>generatedAnnotation</name>
+          <type>java.lang.String</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>The class name of the annotation that marks generated types; none for no annotation.</description>
+        </parameter>
+        <parameter>
+          <name>modelStyle</name>
+          <type>java.lang.String</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>The shape of a model type: RECORD or BEAN.</description>
+        </parameter>
+        <parameter>
+          <name>interfaceTypes</name>
+          <type>java.util.List</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>The SDL names of the object types that are generated as interfaces.</description>
+        </parameter>
+        <parameter>
+          <name>typeNamePrefix</name>
+          <type>java.lang.String</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>A prefix for the name of every generated type.</description>
+        </parameter>
+        <parameter>
+          <name>typeNameSuffix</name>
+          <type>java.lang.String</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>A suffix for the name of every generated type.</description>
+        </parameter>
+        <parameter>
+          <name>nullableAnnotation</name>
+          <type>java.lang.String</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>The class name of the annotation on a nullable type; the default follows the mode, none for no annotation.</description>
+        </parameter>
+        <parameter>
+          <name>rootContracts</name>
+          <type>boolean</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>Whether a resolver contract is generated for the root types.</description>
+        </parameter>
+        <parameter>
+          <name>contractNameTemplate</name>
+          <type>java.lang.String</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>The name of a resolver contract, with the placeholders {Field} and {Operation}.</description>
+        </parameter>
+        <parameter>
+          <name>kotlinSuspend</name>
+          <type>boolean</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>Whether a Kotlin contract method is suspend.</description>
+        </parameter>
+        <parameter>
+          <name>subscriptionReturnType</name>
+          <type>java.lang.String</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>The class name of the type that a subscription method returns.</description>
+        </parameter>
+        <parameter>
+          <name>typeMappings</name>
+          <type>java.util.Map</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>The classes of custom scalars and of single fields, keyed by the SDL name or by Type.field.</description>
+        </parameter>
+        <parameter>
+          <name>typeMappingsFromDependencies</name>
+          <type>boolean</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>Whether the mappings of dependency jars are read; the goal gives the generator no dependency jar yet, so it has no effect.</description>
+        </parameter>
+        <parameter>
+          <name>nameConstants</name>
+          <type>java.lang.String</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>Which name constants are generated: NONE, TYPES or FIELDS.</description>
+        </parameter>
+        <parameter>
+          <name>includes</name>
+          <type>java.util.List</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>The globs that select the schema files, relative to schemaDirectory.</description>
+        </parameter>
+        <parameter>
+          <name>excludes</name>
+          <type>java.util.List</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>The globs that remove schema files from the selection.</description>
+        </parameter>
+        <parameter>
+          <name>commentsAsDescriptions</name>
+          <type>boolean</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>Whether # comments before a definition are its description; it must match the runtime setting.</description>
+        </parameter>
+      </parameters>
+      <configuration>
+        <project implementation="org.apache.maven.project.MavenProject" default-value="${project}"/>
+        <plugin implementation="org.apache.maven.plugin.descriptor.PluginDescriptor" default-value="${plugin}"/>
+        <skip implementation="boolean" default-value="false">${micronaut.graphql.tools.codegen.skip}</skip>
+        <schemaDirectory implementation="java.io.File" default-value="${project.basedir}/src/main/resources/graphql">${micronaut.graphql.tools.codegen.schema.directory}</schemaDirectory>
+        <outputDirectory implementation="java.io.File" default-value="${project.build.directory}/generated-sources/graphql-tools">${micronaut.graphql.tools.codegen.output.directory}</outputDirectory>
+        <language implementation="java.lang.String" default-value="JAVA">${micronaut.graphql.tools.codegen.language}</language>
+        <mode implementation="java.lang.String" default-value="SERVER">${micronaut.graphql.tools.codegen.mode}</mode>
+        <packageName implementation="java.lang.String">${micronaut.graphql.tools.codegen.package.name}</packageName>
+        <modelPackage implementation="java.lang.String">${micronaut.graphql.tools.codegen.model.package}</modelPackage>
+        <resolverPackage implementation="java.lang.String">${micronaut.graphql.tools.codegen.resolver.package}</resolverPackage>
+        <namesPackage implementation="java.lang.String">${micronaut.graphql.tools.codegen.names.package}</namesPackage>
+        <generatedAnnotation implementation="java.lang.String" default-value="javax.annotation.processing.Generated">${micronaut.graphql.tools.codegen.generated.annotation}</generatedAnnotation>
+        <modelStyle implementation="java.lang.String" default-value="RECORD">${micronaut.graphql.tools.codegen.model.style}</modelStyle>
+        <interfaceTypes implementation="java.util.List"/>
+        <typeNamePrefix implementation="java.lang.String">${micronaut.graphql.tools.codegen.type.name.prefix}</typeNamePrefix>
+        <typeNameSuffix implementation="java.lang.String">${micronaut.graphql.tools.codegen.type.name.suffix}</typeNameSuffix>
+        <nullableAnnotation implementation="java.lang.String">${micronaut.graphql.tools.codegen.nullable.annotation}</nullableAnnotation>
+        <rootContracts implementation="boolean" default-value="true">${micronaut.graphql.tools.codegen.root.contracts}</rootContracts>
+        <contractNameTemplate implementation="java.lang.String" default-value="{Field}{Operation}Resolver">${micronaut.graphql.tools.codegen.contract.name.template}</contractNameTemplate>
+        <kotlinSuspend implementation="boolean" default-value="false">${micronaut.graphql.tools.codegen.kotlin.suspend}</kotlinSuspend>
+        <subscriptionReturnType implementation="java.lang.String" default-value="org.reactivestreams.Publisher">${micronaut.graphql.tools.codegen.subscription.return.type}</subscriptionReturnType>
+        <typeMappings implementation="java.util.Map"/>
+        <typeMappingsFromDependencies implementation="boolean" default-value="true">${micronaut.graphql.tools.codegen.type.mappings.from.dependencies}</typeMappingsFromDependencies>
+        <nameConstants implementation="java.lang.String" default-value="FIELDS">${micronaut.graphql.tools.codegen.name.constants}</nameConstants>
+        <includes implementation="java.util.List" default-value="**/*.graphqls,**/*.graphql">${micronaut.graphql.tools.codegen.includes}</includes>
+        <excludes implementation="java.util.List">${micronaut.graphql.tools.codegen.excludes}</excludes>
+        <commentsAsDescriptions implementation="boolean" default-value="false">${micronaut.graphql.tools.codegen.comments.as.descriptions}</commentsAsDescriptions>
+      </configuration>
+    </mojo>
+  </mojos>
+</plugin>
