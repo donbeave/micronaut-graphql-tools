@@ -520,6 +520,10 @@ public final class io.micronaut.graphql.tools.codegen.schema.ScalarPresets {
   public static java.util.Map<java.lang.String, java.lang.String> presets();
 }
 
+public final class io.micronaut.graphql.tools.codegen.schema.SchemaFileSelector {
+  public static java.util.List<java.nio.file.Path> select(java.nio.file.Path, java.util.List<java.lang.String>, java.util.List<java.lang.String>);
+}
+
 public final class io.micronaut.graphql.tools.codegen.schema.SchemaSource extends java.lang.Record {
   public final boolean equals(java.lang.Object);
   public final int hashCode();

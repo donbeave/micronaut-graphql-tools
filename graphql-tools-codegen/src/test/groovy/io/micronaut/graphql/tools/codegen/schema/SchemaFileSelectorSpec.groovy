@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.micronaut.graphql.tools.maven
+package io.micronaut.graphql.tools.codegen.schema
 
 import io.micronaut.graphql.tools.codegen.Options
 import spock.lang.Specification
@@ -23,9 +23,9 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 /**
- * Which files of the schema directory the globs select, and in which order.
+ * Which files of a schema directory the globs select, and in which order.
  */
-class SchemaFilesSpec extends Specification {
+class SchemaFileSelectorSpec extends Specification {
 
     @TempDir
     Path dir
@@ -38,7 +38,7 @@ class SchemaFilesSpec extends Specification {
     }
 
     private List<String> select(List<String> includes, List<String> excludes = []) {
-        SchemaFiles.select(dir, includes, excludes).collect { SchemaFiles.relative(dir, it) }
+        SchemaFileSelector.select(dir, includes, excludes).collect { SchemaFileSelector.relative(dir, it) }
     }
 
     def "the default globs select a file of the root and of a subdirectory, in path order"() {
@@ -57,19 +57,37 @@ class SchemaFilesSpec extends Specification {
         select(Options.DEFAULT_INCLUDES, ['draft/**', 'c.*']) == ['a.graphqls']
     }
 
-    def "an include that is not a default selects other extensions"() {
-        given:
-        touch('a.gql', 'b.graphqls')
-
-        expect:
-        select(['**/*.gql']) == ['a.gql']
-    }
-
     def "the order is the UTF-8 byte order of the relative path"() {
         given:
         touch('c.graphqls', 'Z.graphqls', 'a/x.graphqls', 'a.graphqls')
 
         expect:
         select(Options.DEFAULT_INCLUDES) == ['Z.graphqls', 'a.graphqls', 'a/x.graphqls', 'c.graphqls']
+    }
+
+    def "brackets are literal and a directory wildcard in the middle matches no directory"() {
+        given:
+        touch('a/b[1].graphqls', 'a/b1.graphqls', 'a/x/y/b1.graphqls')
+
+        expect:
+        select(['a/**/b[1].graphqls']) == ['a/b[1].graphqls']
+        select(['a/**/b1.graphqls']) == ['a/b1.graphqls', 'a/x/y/b1.graphqls']
+    }
+
+    def "an unreadable subdirectory is an UncheckedIOException"() {
+        given:
+        touch('a.graphqls', 'locked/b.graphqls')
+        def locked = dir.resolve('locked')
+        Files.setPosixFilePermissions(locked, [] as Set)
+        org.junit.Assume.assumeFalse('an owner who can list anything', Files.isReadable(locked))
+
+        when:
+        SchemaFileSelector.select(dir, Options.DEFAULT_INCLUDES, [])
+
+        then:
+        thrown(UncheckedIOException)
+
+        cleanup:
+        Files.setPosixFilePermissions(locked, java.nio.file.attribute.PosixFilePermissions.fromString('rwx------'))
     }
 }

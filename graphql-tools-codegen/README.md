@@ -178,7 +178,7 @@ Each package has a `package-info.java`. See the [API map](../CONTRIBUTING.md#api
 | Package | Audience | Holds |
 | --- | --- | --- |
 | `io.micronaut.graphql.tools.codegen` | Public API | `GraphQLCodeGenerator`, `Options`, its enums, `OptionsResult`, `GenerationResult`, `GeneratedFile`, `Diagnostic` and `Origin` |
-| `io.micronaut.graphql.tools.codegen.schema` | Public API | `IrBuilder`, `IrResult`, `SchemaSource`, `ScalarPresets` and `TypeMappingsFile`; the loader and the rules are package-private |
+| `io.micronaut.graphql.tools.codegen.schema` | Public API | `IrBuilder`, `IrResult`, `SchemaSource`, `SchemaFileSelector`, `ScalarPresets` and `TypeMappingsFile`; the loader and the rules are package-private |
 | `io.micronaut.graphql.tools.codegen.ir` | Public API | The IR nodes (`Ir`, `ModelType`, `InputType`, `EnumType`, `AbstractType`, `ScalarType`, `ResolverContract`, `Field`, `Argument` and the rest) and `IrSnapshot` |
 | `io.micronaut.graphql.tools.codegen.ir.shared` | Public API | The pieces of the nodes: `Names`, `Docs`, `AppliedDirective`, `TypeRef`, `BuiltinScalar`, `Coordinate`, `Operation` and `Wrapper` |
 

@@ -27,11 +27,11 @@ import org.gradle.workers.WorkParameters;
 public interface GenerateParameters extends WorkParameters {
 
     /**
-     * The schema files, in a stable order.
+     * The schema directories, in a stable order.
      *
-     * @return the schema files
+     * @return the schema directories
      */
-    ConfigurableFileCollection getSchemaFiles();
+    ConfigurableFileCollection getSchemaDirectories();
 
     /**
      * The directory that receives the generated sources.

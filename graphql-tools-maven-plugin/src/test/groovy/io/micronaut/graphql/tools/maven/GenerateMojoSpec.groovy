@@ -223,4 +223,52 @@ class GenerateMojoSpec extends Specification {
         cleanup:
         java.nio.file.Files.setPosixFilePermissions(file, ['OWNER_READ', 'OWNER_WRITE'].collect { java.nio.file.attribute.PosixFilePermission.valueOf(it) } as Set)
     }
+
+    def "a missing package name fails the goal even when no schema file matches"() {
+        given:
+        def built = MojoProject.create(rule, dir, '', ['src/main/resources/graphql/notes.txt': 'nothing'])
+
+        when:
+        built.mojo.execute()
+
+        then:
+        def e = thrown(MojoFailureException)
+        e.message.contains('invalid')
+        !java.nio.file.Files.exists(dir.resolve('target/generated-sources/graphql-tools'))
+    }
+
+    def "an unreadable subdirectory of the schema directory fails the goal with the diagnostic code"() {
+        given:
+        def built = MojoProject.create(rule, dir, '<packageName>example.api</packageName>',
+                ['src/main/resources/graphql/schema.graphqls': 'type Query { a: String }',
+                 'src/main/resources/graphql/locked/other.graphqls': 'type Other { a: String }'])
+        def locked = dir.resolve('src/main/resources/graphql/locked')
+        java.nio.file.Files.setPosixFilePermissions(locked, [] as Set)
+        org.junit.Assume.assumeFalse('a file owner who can list anything', java.nio.file.Files.isReadable(locked))
+
+        when:
+        built.mojo.execute()
+
+        then:
+        def e = thrown(MojoFailureException)
+        e.message.contains('[schema-file-unreadable]')
+
+        cleanup:
+        java.nio.file.Files.setPosixFilePermissions(locked, java.nio.file.attribute.PosixFilePermissions.fromString('rwx------'))
+    }
+
+    def "a bracket in a glob is a literal character and a directory wildcard matches no directory, as in the generator"() {
+        given:
+        def built = MojoProject.create(rule, dir,
+                '<packageName>example.api</packageName><includes><include>a/**/b[1].graphqls</include></includes>',
+                ['src/main/resources/graphql/a/b[1].graphqls': 'type Query { a: String }',
+                 'src/main/resources/graphql/a/x/b1.graphqls': 'this is not graphql'])
+
+        when:
+        built.mojo.execute()
+
+        then:
+        noExceptionThrown()
+        GeneratedSources.readManifest(dir.resolve('target/generated-sources/graphql-tools')) != null
+    }
 }

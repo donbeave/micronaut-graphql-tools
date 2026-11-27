@@ -20,7 +20,9 @@ build wiring is already final.
 - The generated files are written under `<outputDirectory>/<language>` (`java`, `kotlin` or `groovy`) and that directory is added
   with `project.addCompileSourceRoot`. The Kotlin compiler plugin lists the directory in `sourceDirs`, and GMavenPlus lists it in
   `sources` (the guide shows both).
-- `SchemaFiles`: the files that match `includes` and no `excludes`, in the order of their relative path.
+- The schema files: selected by `SchemaFileSelector` of the code generator, so the globs follow the generator's rules (`[` and `]` are literal,
+  `**/` also matches no directory) and the files come in the order of their relative path. The options are validated before the selection,
+  so an invalid configuration fails even when no schema file matches.
 - `GeneratedSources`: the incremental state. Maven has no up-to-date engine, so the manifest `.graphql-tools-generated` in the output
   directory holds the fingerprint of the run (schema paths and content, the canonical string form of the options, the version of
   the plugin and so of the generator) and the files it wrote. An unchanged run is skipped; a changed input or a new version
@@ -66,6 +68,6 @@ Run from the repository root:
 
 The first command compiles with `--release 17`, so it also runs on JDK 17. `GenerateMojoSpec` binds a pom `<configuration>` to the mojo
 with the Maven plugin testing harness (so it reads the hand-written `plugin.xml`) and asserts the options, the defaults and the source
-root of each language; `IncrementalRunSpec`, `GeneratedSourcesSpec` and `SchemaFilesSpec` cover the skip, the regeneration, the
-deletion of a stale file and the file selection; `PluginDescriptorSpec` is the parity of the descriptor. The second command needs `mvn` and the network: it
+root of each language; `IncrementalRunSpec` and `GeneratedSourcesSpec` cover the skip, the regeneration and the
+deletion of a stale file, and `SchemaFileSelectorSpec` of the code generator covers the file selection; `PluginDescriptorSpec` is the parity of the descriptor. The second command needs `mvn` and the network: it
 builds the samples `maven-plugin-java`, `maven-plugin-kotlin` and `maven-plugin-groovy` of `test-suite-build` with the published plugin.

@@ -37,13 +37,13 @@ The Groovy DSL is the same: `codegen { packageName = 'example' }`. Gradle 8.14 a
   `Options` record and fails when a component has no property or a property has no component. The spec also has
   `schemaDirs` (default `graphqlTools.schemaDirs`, which defaults to `src/main/resources/graphql`) and `outputDirectory`
   (default `build/generated/sources/graphqlTools/<name>`).
-- `GenerateGraphQLTask`: `@CacheableTask`. Its inputs are the schema files (relative path sensitivity, narrowed by `includes`
-  and `excludes`), the options in their string form and the generator class path; its output is the output directory. It
+- `GenerateGraphQLTask`: `@CacheableTask`. Its inputs are the schema directories (relative path sensitivity; the worker selects the files with the
+  generator's `SchemaFileSelector`, so `includes` and `excludes` follow the generator's globs), the options in their string form and the generator class path; its output is the output directory. It
   deletes and recreates the output directory before every run, so a type that the schema no longer has leaves no stale source.
   A file that the generator writes is added to the main source set of the language: the Java source set, the Groovy source set or
   the Kotlin source set (the one that the Kotlin plugin adds).
 - `GenerateAction` and `GenerateParameters`: the worker (`classLoaderIsolation`). The parameters hold files and strings only;
-  the worker reads the options with `Options.fromMap`, runs the generator and writes each generated file whose content changed. An
+  the worker reads the options with `Options.fromMap`, validates the options, selects the schema files, runs the generator and writes each generated file whose content changed. An
   error diagnostic fails the build with every message, naming the option or the schema file.
 - `CompileTimeWiring`, `SchemaDirsArguments`: pass `graphqlTools.schemaDirs` and the project directory to the processor as
   `micronaut.graphql.tools.processor.schema.dirs` and `micronaut.graphql.tools.processor.module.dir`: as `-A` options of `javac`

@@ -8,6 +8,7 @@ public abstract class io.micronaut.graphql.tools.gradle.CodegenSpec implements o
   public abstract org.gradle.api.provider.Property<java.lang.Boolean> getCommentsAsDescriptions();
   public abstract org.gradle.api.provider.Property<java.lang.Boolean> getKotlinSuspend();
   public abstract org.gradle.api.provider.Property<java.lang.Boolean> getRootContracts();
+  public abstract org.gradle.api.provider.Property<java.lang.Boolean> getTypeMappingsFromDependencies();
   public abstract org.gradle.api.provider.Property<java.lang.String> getContractNameTemplate();
   public abstract org.gradle.api.provider.Property<java.lang.String> getGeneratedAnnotation();
   public abstract org.gradle.api.provider.Property<java.lang.String> getLanguage();
@@ -36,7 +37,7 @@ public abstract class io.micronaut.graphql.tools.gradle.GenerateGraphQLTask exte
   protected abstract org.gradle.api.file.FileSystemOperations getFileSystemOperations();
   protected abstract org.gradle.workers.WorkerExecutor getWorkerExecutor();
   public abstract org.gradle.api.file.ConfigurableFileCollection getGeneratorClasspath();
-  public abstract org.gradle.api.file.ConfigurableFileCollection getSchemaFiles();
+  public abstract org.gradle.api.file.ConfigurableFileCollection getSchemaDirectories();
   public abstract org.gradle.api.file.DirectoryProperty getOutputDirectory();
   public abstract org.gradle.api.provider.MapProperty<java.lang.String, java.lang.String> getOptions();
   public io.micronaut.graphql.tools.gradle.GenerateGraphQLTask();
@@ -44,7 +45,7 @@ public abstract class io.micronaut.graphql.tools.gradle.GenerateGraphQLTask exte
 }
 
 public interface io.micronaut.graphql.tools.gradle.GenerateParameters extends org.gradle.workers.WorkParameters {
-  public abstract org.gradle.api.file.ConfigurableFileCollection getSchemaFiles();
+  public abstract org.gradle.api.file.ConfigurableFileCollection getSchemaDirectories();
   public abstract org.gradle.api.file.DirectoryProperty getOutputDirectory();
   public abstract org.gradle.api.provider.MapProperty<java.lang.String, java.lang.String> getOptions();
 }

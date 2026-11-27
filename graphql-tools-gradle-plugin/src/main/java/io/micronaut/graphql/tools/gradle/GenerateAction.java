@@ -21,16 +21,21 @@ import io.micronaut.graphql.tools.codegen.GenerationResult;
 import io.micronaut.graphql.tools.codegen.GraphQLCodeGenerator;
 import io.micronaut.graphql.tools.codegen.Options;
 import io.micronaut.graphql.tools.codegen.OptionsResult;
+import io.micronaut.graphql.tools.codegen.schema.SchemaFileSelector;
 import org.gradle.api.GradleException;
 import org.gradle.workers.WorkAction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.io.File;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 /**
@@ -48,18 +53,39 @@ public abstract class GenerateAction implements WorkAction<GenerateParameters> {
         OptionsResult parsed = Options.fromMap(parameters.getOptions().get());
         report(parsed.diagnostics());
         fail(parsed.diagnostics());
+        List<Diagnostic> validation = parsed.options().validate();
+        report(validation);
+        fail(validation);
+        List<Path> schemaFiles = selectSchemaFiles(parameters, parsed.options());
+        if (schemaFiles.isEmpty()) {
+            throw new GradleException("No GraphQL schema file found in " + parameters.getSchemaDirectories().getFiles()
+                    + " for the includes " + parsed.options().includes() + " and the excludes " + parsed.options().excludes() + ".");
+        }
         GenerationResult result = GraphQLCodeGenerator.builder()
-                .withSchemaFiles(parameters.getSchemaFiles().getFiles().stream().map(file -> file.toPath()).toList())
+                .withSchemaFiles(schemaFiles)
                 .withOutputDirectory(parameters.getOutputDirectory().get().getAsFile().toPath())
                 .withOptions(parsed.options())
                 .build()
                 .generate();
-        report(result.diagnostics());
+        report(result.diagnostics().stream().filter(diagnostic -> !validation.contains(diagnostic)).toList());
         fail(result.diagnostics());
         Path root = parameters.getOutputDirectory().get().getAsFile().toPath().toAbsolutePath().normalize();
         for (GeneratedFile file : result.files()) {
             write(root, file);
         }
+    }
+
+    private static List<Path> selectSchemaFiles(GenerateParameters parameters, Options options) {
+        List<Path> files = new ArrayList<>();
+        for (File directory : new TreeSet<>(parameters.getSchemaDirectories().getFiles())) {
+            try {
+                files.addAll(SchemaFileSelector.select(directory.toPath(), options.includes(), options.excludes()));
+            } catch (UncheckedIOException e) {
+                throw new GradleException("[" + Diagnostic.SCHEMA_FILE_UNREADABLE + "] The schema directory " + directory
+                        + " cannot be listed: " + e.getCause().getMessage(), e);
+            }
+        }
+        return files;
     }
 
     private static void report(List<Diagnostic> diagnostics) {

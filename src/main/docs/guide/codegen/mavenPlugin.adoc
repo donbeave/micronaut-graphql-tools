@@ -44,6 +44,7 @@ A parameter is a component of `Options` of the generator, with the same name and
 | `kotlinSuspend` | `micronaut.graphql.tools.codegen.kotlin.suspend` | `false`
 | `subscriptionReturnType` | `micronaut.graphql.tools.codegen.subscription.return.type` | `org.reactivestreams.Publisher`
 | `typeMappings` | none (a map) | empty
+| `typeMappingsFromDependencies` | `micronaut.graphql.tools.codegen.type.mappings.from.dependencies` | `true` (the goal gives the generator no dependency jar yet, so it has no effect)
 | `nameConstants` | `micronaut.graphql.tools.codegen.name.constants` | `FIELDS`
 | `includes` | `micronaut.graphql.tools.codegen.includes` (comma separated) | `**/*.graphqls`, `**/*.graphql`
 | `excludes` | `micronaut.graphql.tools.codegen.excludes` (comma separated) | empty

@@ -186,6 +186,13 @@
           <description>The classes of custom scalars and of single fields, keyed by the SDL name or by Type.field.</description>
         </parameter>
         <parameter>
+          <name>typeMappingsFromDependencies</name>
+          <type>boolean</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>Whether the mappings of dependency jars are read; the goal gives the generator no dependency jar yet, so it has no effect.</description>
+        </parameter>
+        <parameter>
           <name>nameConstants</name>
           <type>java.lang.String</type>
           <required>false</required>
@@ -237,6 +244,7 @@
         <kotlinSuspend implementation="boolean" default-value="false">${micronaut.graphql.tools.codegen.kotlin.suspend}</kotlinSuspend>
         <subscriptionReturnType implementation="java.lang.String" default-value="org.reactivestreams.Publisher">${micronaut.graphql.tools.codegen.subscription.return.type}</subscriptionReturnType>
         <typeMappings implementation="java.util.Map"/>
+        <typeMappingsFromDependencies implementation="boolean" default-value="true">${micronaut.graphql.tools.codegen.type.mappings.from.dependencies}</typeMappingsFromDependencies>
         <nameConstants implementation="java.lang.String" default-value="FIELDS">${micronaut.graphql.tools.codegen.name.constants}</nameConstants>
         <includes implementation="java.util.List" default-value="**/*.graphqls,**/*.graphql">${micronaut.graphql.tools.codegen.includes}</includes>
         <excludes implementation="java.util.List">${micronaut.graphql.tools.codegen.excludes}</excludes>

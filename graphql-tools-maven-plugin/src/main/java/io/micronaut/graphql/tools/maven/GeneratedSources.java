@@ -71,7 +71,7 @@ final class GeneratedSources {
         });
         update(digest, "schema");
         for (Path file : schemaFiles) {
-            update(digest, SchemaFiles.relative(schemaDirectory, file));
+            update(digest, schemaDirectory.relativize(file).toString().replace('\\', '/'));
             try {
                 byte[] content = Files.readAllBytes(file);
                 update(digest, Integer.toString(content.length));

@@ -16,17 +16,13 @@
 package io.micronaut.graphql.tools.gradle;
 
 import org.gradle.api.Named;
-import org.gradle.api.Project;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.DirectoryProperty;
-import org.gradle.api.file.FileTree;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.MapProperty;
 import org.gradle.api.provider.Property;
 
 import javax.inject.Inject;
-import java.io.File;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -203,6 +199,13 @@ public abstract class CodegenSpec implements Named {
     public abstract Property<String> getNameConstants();
 
     /**
+     * Whether the mappings of dependency jars are read. The plugin gives the generator no dependency jar yet, so it has no effect.
+     *
+     * @return the property
+     */
+    public abstract Property<Boolean> getTypeMappingsFromDependencies();
+
+    /**
      * The globs that select the schema files, relative to a schema directory.
      *
      * @return the property
@@ -247,28 +250,12 @@ public abstract class CodegenSpec implements Named {
         put(map, "kotlinSuspend", getKotlinSuspend());
         put(map, "subscriptionReturnType", getSubscriptionReturnType());
         getTypeMappings().getOrElse(Map.of()).forEach((key, value) -> map.put("typeMappings." + key, value));
+        put(map, "typeMappingsFromDependencies", getTypeMappingsFromDependencies());
         put(map, "nameConstants", getNameConstants());
         putList(map, "includes", getIncludes());
         putList(map, "excludes", getExcludes());
         put(map, "commentsAsDescriptions", getCommentsAsDescriptions());
         return map;
-    }
-
-    /**
-     * The schema files: each schema directory narrowed by {@code includes} and {@code excludes}.
-     *
-     * @param project the project that owns the file trees
-     * @return one file tree per directory
-     */
-    List<FileTree> schemaFileTrees(Project project) {
-        List<String> configured = getIncludes().getOrElse(List.of());
-        List<String> includes = configured.isEmpty() ? DEFAULT_INCLUDES : configured;
-        List<String> excludes = getExcludes().getOrElse(List.of());
-        List<FileTree> trees = new ArrayList<>();
-        for (File dir : getSchemaDirs().getFiles()) {
-            trees.add(project.fileTree(dir).matching(filter -> filter.include(includes).exclude(excludes)));
-        }
-        return trees;
     }
 
     private static void put(Map<String, String> map, String key, Property<?> property) {

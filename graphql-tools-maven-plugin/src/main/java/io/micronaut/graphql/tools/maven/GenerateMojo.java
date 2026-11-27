@@ -21,6 +21,7 @@ import io.micronaut.graphql.tools.codegen.GenerationResult;
 import io.micronaut.graphql.tools.codegen.GraphQLCodeGenerator;
 import io.micronaut.graphql.tools.codegen.Options;
 import io.micronaut.graphql.tools.codegen.OptionsResult;
+import io.micronaut.graphql.tools.codegen.schema.SchemaFileSelector;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -143,6 +144,10 @@ public class GenerateMojo extends AbstractMojo {
     @Parameter
     private Map<String, String> typeMappings;
 
+    /** Whether the mappings of dependency jars are read; the goal gives the generator no dependency jar yet, so it has no effect. */
+    @Parameter(property = PROPERTY + "type.mappings.from.dependencies", defaultValue = "true")
+    private boolean typeMappingsFromDependencies;
+
     /** Which name constants are generated: {@code NONE}, {@code TYPES} or {@code FIELDS}. */
     @Parameter(property = PROPERTY + "name.constants", defaultValue = "FIELDS")
     private String nameConstants;
@@ -172,6 +177,11 @@ public class GenerateMojo extends AbstractMojo {
             return;
         }
         Options options = options();
+        List<Diagnostic> validation = options.validate();
+        report(validation);
+        if (validation.stream().anyMatch(Diagnostic::isError)) {
+            throw new MojoFailureException("The configuration of the goal is invalid; the options are logged above.");
+        }
         Path schemaRoot = schemaDirectory.toPath();
         if (!schemaRoot.toFile().isDirectory()) {
             throw new MojoFailureException("The schema directory " + schemaRoot + " does not exist. Set schemaDirectory, or skip the goal.");
@@ -180,9 +190,10 @@ public class GenerateMojo extends AbstractMojo {
         String languageDirectory = options.language().name().toLowerCase(Locale.ROOT);
         project.addCompileSourceRoot(outputRoot.resolve(languageDirectory).toString());
 
-        List<Path> schemaFiles = SchemaFiles.select(schemaRoot, options.includes(), options.excludes());
+        List<Path> schemaFiles;
         String fingerprint;
         try {
+            schemaFiles = SchemaFileSelector.select(schemaRoot, options.includes(), options.excludes());
             fingerprint = GeneratedSources.fingerprint(generatorVersion(), options.toMap(), schemaRoot, schemaFiles);
         } catch (UncheckedIOException e) {
             String message = "[" + Diagnostic.SCHEMA_FILE_UNREADABLE + "] A schema file cannot be read: " + e.getCause().getMessage();
@@ -205,7 +216,7 @@ public class GenerateMojo extends AbstractMojo {
                 .withOptions(options)
                 .build()
                 .generate();
-        report(result.diagnostics());
+        report(result.diagnostics().stream().filter(diagnostic -> !validation.contains(diagnostic)).toList());
         if (result.hasErrors()) {
             throw new MojoFailureException("The GraphQL code generation failed with " + result.diagnostics().stream().filter(Diagnostic::isError).count()
                     + " error(s); they are logged above.");
@@ -268,6 +279,7 @@ public class GenerateMojo extends AbstractMojo {
         if (typeMappings != null) {
             typeMappings.forEach((key, value) -> map.put("typeMappings." + key, value));
         }
+        map.put("typeMappingsFromDependencies", Boolean.toString(typeMappingsFromDependencies));
         put(map, "nameConstants", nameConstants);
         putList(map, "includes", includes);
         putList(map, "excludes", excludes);

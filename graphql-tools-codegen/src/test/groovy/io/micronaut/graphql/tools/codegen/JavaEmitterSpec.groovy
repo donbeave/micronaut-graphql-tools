@@ -90,8 +90,9 @@ enum Size { SMALL, MEDIUM }
         def files = generate(write('a.graphqls', ENUMS), write('b.graphqls', EXTENSION))
 
         then:
-        files*.path() == ['com/example/model/Color.java', 'com/example/model/Size.java', 'com/example/model/package-info.java']
-        files.last().content() == 'package com.example.model;\n'
+        files*.path() == ['com/example/model/Color.java', 'com/example/model/Size.java', 'com/example/model/package-info.java',
+                          'META-INF/micronaut-graphql-tools/type-mappings.properties']
+        files.find { it.path() == 'com/example/model/package-info.java' }.content() == 'package com.example.model;\n'
     }
 
     def "a schema without an enum has no file"() {

@@ -40,7 +40,7 @@ import java.util.List;
 import java.util.TreeSet;
 
 /**
- * Generates sources from the schema files of one {@link CodegenSpec}. The task is cacheable: its inputs are the schema files, the
+ * Generates sources from the schema files of one {@link CodegenSpec}. The task is cacheable: its inputs are the schema directories, the
  * options in their string form and the generator's class path. It recreates its output directory before every run, so a type that
  * the schema no longer has leaves no stale source, and it runs the generator in a worker with its own class loader, so that the
  * generator and its dependencies stay off the build's class path.
@@ -49,13 +49,14 @@ import java.util.TreeSet;
 public abstract class GenerateGraphQLTask extends DefaultTask {
 
     /**
-     * The schema files, with the relative path under their schema directory.
+     * The schema directories. The worker selects the schema files in them with the options {@code includes} and {@code excludes},
+     * which are part of {@link #getOptions()}, so the selection uses the generator's own globs.
      *
-     * @return the schema files
+     * @return the schema directories
      */
     @InputFiles
     @PathSensitive(PathSensitivity.RELATIVE)
-    public abstract ConfigurableFileCollection getSchemaFiles();
+    public abstract ConfigurableFileCollection getSchemaDirectories();
 
     /**
      * The options in their string form, the input of {@code Options.fromMap}.
@@ -97,13 +98,13 @@ public abstract class GenerateGraphQLTask extends DefaultTask {
         } catch (IOException e) {
             throw new GradleException("Cannot create the output directory " + output, e);
         }
-        List<File> schemaFiles = new TreeSet<>(getSchemaFiles().getFiles()).stream().filter(File::isFile).toList();
-        if (schemaFiles.isEmpty()) {
-            throw new GradleException("No GraphQL schema file found. Put the schema in src/main/resources/graphql or set graphqlTools.schemaDirs.");
+        List<File> schemaDirectories = new TreeSet<>(getSchemaDirectories().getFiles()).stream().filter(File::isDirectory).toList();
+        if (schemaDirectories.isEmpty()) {
+            throw new GradleException("No GraphQL schema directory found. Put the schema in src/main/resources/graphql or set graphqlTools.schemaDirs.");
         }
         WorkQueue queue = getWorkerExecutor().classLoaderIsolation(spec -> spec.getClasspath().from(getGeneratorClasspath()));
         queue.submit(GenerateAction.class, parameters -> {
-            parameters.getSchemaFiles().setFrom(schemaFiles);
+            parameters.getSchemaDirectories().setFrom(schemaDirectories);
             parameters.getOutputDirectory().set(getOutputDirectory());
             parameters.getOptions().set(getOptions());
         });

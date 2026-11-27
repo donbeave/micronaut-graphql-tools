@@ -101,7 +101,7 @@ public class GraphQLToolsPlugin implements Plugin<Project> {
         project.getTasks().register(taskName(spec.getName()), GenerateGraphQLTask.class, task -> {
             task.setDescription("Generates sources from the GraphQL schema files of the spec '" + spec.getName() + "'.");
             task.setGroup("build");
-            task.getSchemaFiles().from(project.provider(() -> spec.schemaFileTrees(project)));
+            task.getSchemaDirectories().from(spec.getSchemaDirs());
             task.getOptions().set(project.provider(spec::toOptionMap));
             task.getGeneratorClasspath().from(project.getConfigurations().named(CODEGEN_CLASSPATH_CONFIGURATION));
             task.getOutputDirectory().set(spec.getOutputDirectory());

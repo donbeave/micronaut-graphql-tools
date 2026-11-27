@@ -287,4 +287,39 @@ class GenerateTaskFunctionalSpec extends PluginFunctionalSpec {
         where:
         gradle << GRADLE_VERSIONS
     }
+
+    @Unroll
+    def "the globs are the generator's globs: a bracket is literal and a directory wildcard matches no directory on Gradle #gradle"() {
+        given:
+        settings()
+        schema('type Query { a: String }', 'src/main/resources/graphql/a/b[1].graphqls')
+        schema('this is not graphql', 'src/main/resources/graphql/a/x/b1.graphqls')
+        write('build.gradle.kts', kotlinBuild('codegen { packageName = "example"; includes = listOf("a/**/b[1].graphqls") }'))
+
+        when:
+        def result = build(gradle, 'generateGraphQL')
+
+        then:
+        result.task(':generateGraphQL').outcome == TaskOutcome.SUCCESS
+
+        where:
+        gradle << GRADLE_VERSIONS
+    }
+
+    @Unroll
+    def "a missing package name fails the task with the diagnostic of the generator on Gradle #gradle"() {
+        given:
+        settings()
+        schema()
+        write('build.gradle.kts', kotlinBuild('codegen { includes = listOf("none/**") }'))
+
+        when:
+        def result = buildAndFail(gradle, 'generateGraphQL')
+
+        then:
+        result.output.contains('[missing-option]')
+
+        where:
+        gradle << GRADLE_VERSIONS
+    }
 }
