@@ -42,8 +42,8 @@ import java.util.Objects;
  * builder and {@link Options}.</p>
  *
  * <p>The schema files are given as files ({@code withSchemaFiles}) or as a directory ({@code withSchemaDirectory}); with neither,
- * the directory {@value #DEFAULT_SCHEMA_DIRECTORY} relative to the working directory is read. This version produces no files
- * yet: the emitters arrive in later changes, and the result lists no file until they do.</p>
+ * the directory {@value #DEFAULT_SCHEMA_DIRECTORY} relative to the working directory is read. For the Java language the enums are
+ * emitted; the other types and the other languages list no file until their emitters arrive.</p>
  */
 public final class GraphQLCodeGenerator {
 
@@ -84,10 +84,16 @@ public final class GraphQLCodeGenerator {
     /**
      * Checks the options and the schema files, and generates the files.
      *
-     * @return the files and the diagnostics; there is no file when a diagnostic is an error
+     * @return the files and the diagnostics; there is no file when a diagnostic is an error, and none for a language whose emitter
+     *         does not exist yet
      */
     public GenerationResult generate() {
-        return new GenerationResult(List.of(), toIr().diagnostics());
+        IrResult result = toIr();
+        if (result.hasErrors()) {
+            return new GenerationResult(List.of(), result.diagnostics());
+        }
+        List<GeneratedFile> files = options.language() == Language.JAVA ? new JavaEmitter().emit(result.ir(), options) : List.of();
+        return new GenerationResult(files, result.diagnostics());
     }
 
     /**
