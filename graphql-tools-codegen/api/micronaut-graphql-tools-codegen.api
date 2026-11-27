@@ -9,12 +9,24 @@ public final class io.micronaut.graphql.tools.codegen.Diagnostic extends java.la
   public java.lang.String code();
   public java.lang.String message();
   public java.lang.String optionName();
+  public static final java.lang.String DUPLICATE_DEFINITION = "duplicate-definition";
+  public static final java.lang.String EXTENSION_KIND_MISMATCH = "extension-kind-mismatch";
+  public static final java.lang.String EXTENSION_WITHOUT_BASE = "extension-without-base";
   public static final java.lang.String INVALID_OPTION_COMBINATION = "invalid-option-combination";
   public static final java.lang.String INVALID_OPTION_VALUE = "invalid-option-value";
   public static final java.lang.String MISSING_OPTION = "missing-option";
+  public static final java.lang.String NAME_COLLISION = "name-collision";
+  public static final java.lang.String NO_SCHEMA_FILES = "no-schema-files";
+  public static final java.lang.String OBJECT_METHOD_NAME = "object-method-name";
+  public static final java.lang.String RESERVED_NAME = "reserved-name";
+  public static final java.lang.String ROOT_TYPE_REFERENCE = "root-type-reference";
   public static final java.lang.String SCHEMA_FILE_UNREADABLE = "schema-file-unreadable";
   public static final java.lang.String SCHEMA_SYNTAX_ERROR = "schema-syntax-error";
   public static final java.lang.String UNKNOWN_OPTION = "unknown-option";
+  public static final java.lang.String UNKNOWN_TYPE = "unknown-type";
+  public static final java.lang.String UNMAPPED_SCALAR = "unmapped-scalar";
+  public static final java.lang.String UNUSED_INTERFACE_TYPE = "unused-interface-type";
+  public static final java.lang.String UNUSED_TYPE_MAPPING = "unused-type-mapping";
   public static io.micronaut.graphql.tools.codegen.Diagnostic optionError(java.lang.String, java.lang.String, java.lang.String);
 }
 
@@ -46,7 +58,9 @@ public final class io.micronaut.graphql.tools.codegen.GenerationResult extends j
 
 public final class io.micronaut.graphql.tools.codegen.GraphQLCodeGenerator {
   public io.micronaut.graphql.tools.codegen.GenerationResult generate();
+  public io.micronaut.graphql.tools.codegen.schema.IrResult toIr();
   public java.nio.file.Path getOutputDirectory();
+  public static final java.lang.String DEFAULT_SCHEMA_DIRECTORY = "src/main/resources/graphql";
   public static io.micronaut.graphql.tools.codegen.GraphQLCodeGenerator$Builder builder();
 }
 
@@ -54,6 +68,7 @@ public static final class io.micronaut.graphql.tools.codegen.GraphQLCodeGenerato
   public io.micronaut.graphql.tools.codegen.GraphQLCodeGenerator build();
   public io.micronaut.graphql.tools.codegen.GraphQLCodeGenerator$Builder withOptions(io.micronaut.graphql.tools.codegen.Options);
   public io.micronaut.graphql.tools.codegen.GraphQLCodeGenerator$Builder withOutputDirectory(java.nio.file.Path);
+  public io.micronaut.graphql.tools.codegen.GraphQLCodeGenerator$Builder withSchemaDirectory(java.nio.file.Path);
   public io.micronaut.graphql.tools.codegen.GraphQLCodeGenerator$Builder withSchemaFiles(java.nio.file.Path...);
   public io.micronaut.graphql.tools.codegen.GraphQLCodeGenerator$Builder withSchemaFiles(java.util.Collection<java.nio.file.Path>);
 }
@@ -174,4 +189,328 @@ public final class io.micronaut.graphql.tools.codegen.Origin extends java.lang.R
   public io.micronaut.graphql.tools.codegen.Origin(java.lang.String, int, int);
   public java.lang.String path();
   public java.lang.String toString();
+}
+
+public final class io.micronaut.graphql.tools.codegen.ir.AbstractType extends java.lang.Record {
+  public boolean sealed();
+  public final boolean equals(java.lang.Object);
+  public final int hashCode();
+  public final java.lang.String toString();
+  public io.micronaut.graphql.tools.codegen.Origin origin();
+  public io.micronaut.graphql.tools.codegen.ir.AbstractType$Kind kind();
+  public io.micronaut.graphql.tools.codegen.ir.AbstractType(io.micronaut.graphql.tools.codegen.ir.AbstractType$Kind, io.micronaut.graphql.tools.codegen.ir.shared.Names, io.micronaut.graphql.tools.codegen.ir.shared.Docs, java.util.List<io.micronaut.graphql.tools.codegen.ir.Field>, java.util.List<io.micronaut.graphql.tools.codegen.ir.shared.Names>, java.util.List<io.micronaut.graphql.tools.codegen.ir.shared.Names>, boolean, java.util.List<io.micronaut.graphql.tools.codegen.ir.shared.AppliedDirective>, io.micronaut.graphql.tools.codegen.Origin);
+  public io.micronaut.graphql.tools.codegen.ir.shared.Docs docs();
+  public io.micronaut.graphql.tools.codegen.ir.shared.Names names();
+  public java.util.List<io.micronaut.graphql.tools.codegen.ir.Field> fields();
+  public java.util.List<io.micronaut.graphql.tools.codegen.ir.shared.AppliedDirective> directives();
+  public java.util.List<io.micronaut.graphql.tools.codegen.ir.shared.Names> implemented();
+  public java.util.List<io.micronaut.graphql.tools.codegen.ir.shared.Names> members();
+}
+
+public static final class io.micronaut.graphql.tools.codegen.ir.AbstractType$Kind extends java.lang.Enum<io.micronaut.graphql.tools.codegen.ir.AbstractType$Kind> {
+  public static final io.micronaut.graphql.tools.codegen.ir.AbstractType$Kind INTERFACE;
+  public static final io.micronaut.graphql.tools.codegen.ir.AbstractType$Kind UNION;
+  public static final io.micronaut.graphql.tools.codegen.ir.AbstractType$Kind OBJECT;
+  public static io.micronaut.graphql.tools.codegen.ir.AbstractType$Kind valueOf(java.lang.String);
+  public static io.micronaut.graphql.tools.codegen.ir.AbstractType$Kind[] values();
+}
+
+public final class io.micronaut.graphql.tools.codegen.ir.Argument extends java.lang.Record {
+  public final boolean equals(java.lang.Object);
+  public final int hashCode();
+  public final java.lang.String toString();
+  public io.micronaut.graphql.tools.codegen.Origin origin();
+  public io.micronaut.graphql.tools.codegen.ir.Argument(java.lang.String, java.lang.String, io.micronaut.graphql.tools.codegen.ir.shared.TypeRef, java.lang.String, io.micronaut.graphql.tools.codegen.ir.shared.Docs, java.util.List<io.micronaut.graphql.tools.codegen.ir.shared.AppliedDirective>, io.micronaut.graphql.tools.codegen.Origin);
+  public io.micronaut.graphql.tools.codegen.ir.shared.Docs docs();
+  public io.micronaut.graphql.tools.codegen.ir.shared.TypeRef type();
+  public java.lang.String defaultValue();
+  public java.lang.String name();
+  public java.lang.String sdlName();
+  public java.util.List<io.micronaut.graphql.tools.codegen.ir.shared.AppliedDirective> directives();
+}
+
+public final class io.micronaut.graphql.tools.codegen.ir.ContractMethod extends java.lang.Record {
+  public final boolean equals(java.lang.Object);
+  public final int hashCode();
+  public final java.lang.String toString();
+  public io.micronaut.graphql.tools.codegen.Origin origin();
+  public io.micronaut.graphql.tools.codegen.ir.ContractMethod(java.lang.String, io.micronaut.graphql.tools.codegen.ir.shared.Coordinate, io.micronaut.graphql.tools.codegen.ir.shared.TypeRef, java.util.List<io.micronaut.graphql.tools.codegen.ir.Argument>, io.micronaut.graphql.tools.codegen.ir.shared.Wrapper, io.micronaut.graphql.tools.codegen.ir.shared.Docs, java.util.List<io.micronaut.graphql.tools.codegen.ir.shared.AppliedDirective>, io.micronaut.graphql.tools.codegen.Origin);
+  public io.micronaut.graphql.tools.codegen.ir.shared.Coordinate coordinate();
+  public io.micronaut.graphql.tools.codegen.ir.shared.Docs docs();
+  public io.micronaut.graphql.tools.codegen.ir.shared.TypeRef returns();
+  public io.micronaut.graphql.tools.codegen.ir.shared.Wrapper wrapper();
+  public java.lang.String name();
+  public java.util.List<io.micronaut.graphql.tools.codegen.ir.Argument> arguments();
+  public java.util.List<io.micronaut.graphql.tools.codegen.ir.shared.AppliedDirective> directives();
+}
+
+public final class io.micronaut.graphql.tools.codegen.ir.EnumType extends java.lang.Record {
+  public final boolean equals(java.lang.Object);
+  public final int hashCode();
+  public final java.lang.String toString();
+  public io.micronaut.graphql.tools.codegen.Origin origin();
+  public io.micronaut.graphql.tools.codegen.ir.EnumType(io.micronaut.graphql.tools.codegen.ir.shared.Names, io.micronaut.graphql.tools.codegen.ir.shared.Docs, java.util.List<io.micronaut.graphql.tools.codegen.ir.EnumValue>, java.util.List<io.micronaut.graphql.tools.codegen.ir.shared.AppliedDirective>, io.micronaut.graphql.tools.codegen.Origin);
+  public io.micronaut.graphql.tools.codegen.ir.shared.Docs docs();
+  public io.micronaut.graphql.tools.codegen.ir.shared.Names names();
+  public java.util.List<io.micronaut.graphql.tools.codegen.ir.EnumValue> values();
+  public java.util.List<io.micronaut.graphql.tools.codegen.ir.shared.AppliedDirective> directives();
+}
+
+public final class io.micronaut.graphql.tools.codegen.ir.EnumValue extends java.lang.Record {
+  public final boolean equals(java.lang.Object);
+  public final int hashCode();
+  public final java.lang.String toString();
+  public io.micronaut.graphql.tools.codegen.Origin origin();
+  public io.micronaut.graphql.tools.codegen.ir.EnumValue(java.lang.String, java.lang.String, io.micronaut.graphql.tools.codegen.ir.shared.Docs, java.util.List<io.micronaut.graphql.tools.codegen.ir.shared.AppliedDirective>, io.micronaut.graphql.tools.codegen.Origin);
+  public io.micronaut.graphql.tools.codegen.ir.shared.Docs docs();
+  public java.lang.String name();
+  public java.lang.String sdlName();
+  public java.util.List<io.micronaut.graphql.tools.codegen.ir.shared.AppliedDirective> directives();
+}
+
+public final class io.micronaut.graphql.tools.codegen.ir.Field extends java.lang.Record {
+  public final boolean equals(java.lang.Object);
+  public final int hashCode();
+  public final java.lang.String toString();
+  public io.micronaut.graphql.tools.codegen.Origin origin();
+  public io.micronaut.graphql.tools.codegen.ir.Field(java.lang.String, java.lang.String, io.micronaut.graphql.tools.codegen.ir.shared.TypeRef, java.util.List<io.micronaut.graphql.tools.codegen.ir.Argument>, io.micronaut.graphql.tools.codegen.ir.shared.Docs, java.util.List<io.micronaut.graphql.tools.codegen.ir.shared.AppliedDirective>, io.micronaut.graphql.tools.codegen.Origin);
+  public io.micronaut.graphql.tools.codegen.ir.shared.Docs docs();
+  public io.micronaut.graphql.tools.codegen.ir.shared.TypeRef type();
+  public java.lang.String name();
+  public java.lang.String sdlName();
+  public java.util.List<io.micronaut.graphql.tools.codegen.ir.Argument> arguments();
+  public java.util.List<io.micronaut.graphql.tools.codegen.ir.shared.AppliedDirective> directives();
+}
+
+public final class io.micronaut.graphql.tools.codegen.ir.InputField extends java.lang.Record {
+  public final boolean equals(java.lang.Object);
+  public final int hashCode();
+  public final java.lang.String toString();
+  public io.micronaut.graphql.tools.codegen.Origin origin();
+  public io.micronaut.graphql.tools.codegen.ir.InputField(java.lang.String, java.lang.String, io.micronaut.graphql.tools.codegen.ir.shared.TypeRef, java.lang.String, io.micronaut.graphql.tools.codegen.ir.shared.Docs, java.util.List<io.micronaut.graphql.tools.codegen.ir.shared.AppliedDirective>, io.micronaut.graphql.tools.codegen.Origin);
+  public io.micronaut.graphql.tools.codegen.ir.shared.Docs docs();
+  public io.micronaut.graphql.tools.codegen.ir.shared.TypeRef type();
+  public java.lang.String defaultValue();
+  public java.lang.String name();
+  public java.lang.String sdlName();
+  public java.util.List<io.micronaut.graphql.tools.codegen.ir.shared.AppliedDirective> directives();
+}
+
+public final class io.micronaut.graphql.tools.codegen.ir.InputType extends java.lang.Record {
+  public final boolean equals(java.lang.Object);
+  public final int hashCode();
+  public final java.lang.String toString();
+  public io.micronaut.graphql.tools.codegen.Origin origin();
+  public io.micronaut.graphql.tools.codegen.ir.InputType(io.micronaut.graphql.tools.codegen.ir.shared.Names, io.micronaut.graphql.tools.codegen.ir.shared.Docs, java.util.List<io.micronaut.graphql.tools.codegen.ir.InputField>, java.util.List<io.micronaut.graphql.tools.codegen.ir.shared.AppliedDirective>, io.micronaut.graphql.tools.codegen.Origin);
+  public io.micronaut.graphql.tools.codegen.ir.shared.Docs docs();
+  public io.micronaut.graphql.tools.codegen.ir.shared.Names names();
+  public java.util.List<io.micronaut.graphql.tools.codegen.ir.InputField> fields();
+  public java.util.List<io.micronaut.graphql.tools.codegen.ir.shared.AppliedDirective> directives();
+}
+
+public final class io.micronaut.graphql.tools.codegen.ir.Ir extends java.lang.Record {
+  public final boolean equals(java.lang.Object);
+  public final int hashCode();
+  public final java.lang.String toString();
+  public io.micronaut.graphql.tools.codegen.ir.Ir(java.util.List<io.micronaut.graphql.tools.codegen.ir.EnumType>, java.util.List<io.micronaut.graphql.tools.codegen.ir.InputType>, java.util.List<io.micronaut.graphql.tools.codegen.ir.ModelType>, java.util.List<io.micronaut.graphql.tools.codegen.ir.AbstractType>, java.util.List<io.micronaut.graphql.tools.codegen.ir.ScalarType>, java.util.List<io.micronaut.graphql.tools.codegen.ir.ResolverContract>);
+  public java.util.List<io.micronaut.graphql.tools.codegen.ir.AbstractType> abstractTypes();
+  public java.util.List<io.micronaut.graphql.tools.codegen.ir.EnumType> enums();
+  public java.util.List<io.micronaut.graphql.tools.codegen.ir.InputType> inputs();
+  public java.util.List<io.micronaut.graphql.tools.codegen.ir.ModelType> models();
+  public java.util.List<io.micronaut.graphql.tools.codegen.ir.ResolverContract> contracts();
+  public java.util.List<io.micronaut.graphql.tools.codegen.ir.ScalarType> scalars();
+  public static final io.micronaut.graphql.tools.codegen.ir.Ir EMPTY;
+}
+
+public final class io.micronaut.graphql.tools.codegen.ir.IrSnapshot {
+  public static java.lang.String print(io.micronaut.graphql.tools.codegen.ir.Ir);
+}
+
+public final class io.micronaut.graphql.tools.codegen.ir.ModelType extends java.lang.Record {
+  public final boolean equals(java.lang.Object);
+  public final int hashCode();
+  public final java.lang.String toString();
+  public io.micronaut.graphql.tools.codegen.Origin origin();
+  public io.micronaut.graphql.tools.codegen.ir.ModelType(io.micronaut.graphql.tools.codegen.ir.shared.Names, io.micronaut.graphql.tools.codegen.ir.shared.Docs, java.util.List<io.micronaut.graphql.tools.codegen.ir.Field>, java.util.List<io.micronaut.graphql.tools.codegen.ir.shared.Names>, java.util.List<io.micronaut.graphql.tools.codegen.ir.shared.Names>, java.util.List<io.micronaut.graphql.tools.codegen.ir.shared.AppliedDirective>, io.micronaut.graphql.tools.codegen.Origin);
+  public io.micronaut.graphql.tools.codegen.ir.shared.Docs docs();
+  public io.micronaut.graphql.tools.codegen.ir.shared.Names names();
+  public java.util.List<io.micronaut.graphql.tools.codegen.ir.Field> fields();
+  public java.util.List<io.micronaut.graphql.tools.codegen.ir.shared.AppliedDirective> directives();
+  public java.util.List<io.micronaut.graphql.tools.codegen.ir.shared.Names> implemented();
+  public java.util.List<io.micronaut.graphql.tools.codegen.ir.shared.Names> memberOf();
+}
+
+public final class io.micronaut.graphql.tools.codegen.ir.ResolverContract extends java.lang.Record {
+  public final boolean equals(java.lang.Object);
+  public final int hashCode();
+  public final java.lang.String toString();
+  public io.micronaut.graphql.tools.codegen.Origin origin();
+  public io.micronaut.graphql.tools.codegen.ir.ResolverContract(io.micronaut.graphql.tools.codegen.ir.shared.Operation, io.micronaut.graphql.tools.codegen.ir.shared.Names, java.lang.String, java.util.List<io.micronaut.graphql.tools.codegen.ir.ContractMethod>, io.micronaut.graphql.tools.codegen.Origin);
+  public io.micronaut.graphql.tools.codegen.ir.shared.Names names();
+  public io.micronaut.graphql.tools.codegen.ir.shared.Operation operation();
+  public java.lang.String marker();
+  public java.util.List<io.micronaut.graphql.tools.codegen.ir.ContractMethod> methods();
+}
+
+public final class io.micronaut.graphql.tools.codegen.ir.ScalarType extends java.lang.Record {
+  public final boolean equals(java.lang.Object);
+  public final int hashCode();
+  public final java.lang.String toString();
+  public io.micronaut.graphql.tools.codegen.Origin origin();
+  public io.micronaut.graphql.tools.codegen.ir.ScalarType(io.micronaut.graphql.tools.codegen.ir.shared.Names, io.micronaut.graphql.tools.codegen.ir.shared.Docs, java.lang.String, java.util.List<io.micronaut.graphql.tools.codegen.ir.shared.AppliedDirective>, io.micronaut.graphql.tools.codegen.Origin);
+  public io.micronaut.graphql.tools.codegen.ir.shared.Docs docs();
+  public io.micronaut.graphql.tools.codegen.ir.shared.Names names();
+  public java.lang.String className();
+  public java.util.List<io.micronaut.graphql.tools.codegen.ir.shared.AppliedDirective> directives();
+}
+
+public final class io.micronaut.graphql.tools.codegen.ir.shared.AppliedDirective extends java.lang.Record {
+  public final boolean equals(java.lang.Object);
+  public final int hashCode();
+  public final java.lang.String toString();
+  public io.micronaut.graphql.tools.codegen.ir.shared.AppliedDirective(java.lang.String, java.util.Map<java.lang.String, java.lang.String>);
+  public java.lang.String name();
+  public java.util.Map<java.lang.String, java.lang.String> arguments();
+}
+
+public final class io.micronaut.graphql.tools.codegen.ir.shared.BuiltinScalar extends java.lang.Enum<io.micronaut.graphql.tools.codegen.ir.shared.BuiltinScalar> {
+  public static final io.micronaut.graphql.tools.codegen.ir.shared.BuiltinScalar ID;
+  public static final io.micronaut.graphql.tools.codegen.ir.shared.BuiltinScalar STRING;
+  public static final io.micronaut.graphql.tools.codegen.ir.shared.BuiltinScalar INT;
+  public static final io.micronaut.graphql.tools.codegen.ir.shared.BuiltinScalar FLOAT;
+  public static final io.micronaut.graphql.tools.codegen.ir.shared.BuiltinScalar BOOLEAN;
+  public static io.micronaut.graphql.tools.codegen.ir.shared.BuiltinScalar valueOf(java.lang.String);
+  public static io.micronaut.graphql.tools.codegen.ir.shared.BuiltinScalar[] values();
+}
+
+public final class io.micronaut.graphql.tools.codegen.ir.shared.Coordinate extends java.lang.Record {
+  public final boolean equals(java.lang.Object);
+  public final int hashCode();
+  public io.micronaut.graphql.tools.codegen.ir.shared.Coordinate(java.lang.String, java.lang.String);
+  public java.lang.String fieldName();
+  public java.lang.String toString();
+  public java.lang.String typeName();
+}
+
+public final class io.micronaut.graphql.tools.codegen.ir.shared.Docs extends java.lang.Record {
+  public final boolean equals(java.lang.Object);
+  public final int hashCode();
+  public final java.lang.String toString();
+  public io.micronaut.graphql.tools.codegen.ir.shared.Docs$Deprecation deprecation();
+  public io.micronaut.graphql.tools.codegen.ir.shared.Docs(java.lang.String, io.micronaut.graphql.tools.codegen.ir.shared.Docs$Deprecation);
+  public java.lang.String description();
+  public static final io.micronaut.graphql.tools.codegen.ir.shared.Docs NONE;
+}
+
+public static final class io.micronaut.graphql.tools.codegen.ir.shared.Docs$Deprecation extends java.lang.Record {
+  public final boolean equals(java.lang.Object);
+  public final int hashCode();
+  public final java.lang.String toString();
+  public io.micronaut.graphql.tools.codegen.ir.shared.Docs$Deprecation(java.lang.String);
+  public java.lang.String reason();
+}
+
+public final class io.micronaut.graphql.tools.codegen.ir.shared.Names extends java.lang.Record {
+  public final boolean equals(java.lang.Object);
+  public final int hashCode();
+  public final java.lang.String toString();
+  public io.micronaut.graphql.tools.codegen.ir.shared.Names(java.lang.String, java.lang.String, java.lang.String);
+  public java.lang.String packageName();
+  public java.lang.String qualifiedName();
+  public java.lang.String sdlName();
+  public java.lang.String simpleName();
+}
+
+public final class io.micronaut.graphql.tools.codegen.ir.shared.Operation extends java.lang.Enum<io.micronaut.graphql.tools.codegen.ir.shared.Operation> {
+  public static final io.micronaut.graphql.tools.codegen.ir.shared.Operation QUERY;
+  public static final io.micronaut.graphql.tools.codegen.ir.shared.Operation MUTATION;
+  public static final io.micronaut.graphql.tools.codegen.ir.shared.Operation SUBSCRIPTION;
+  public static io.micronaut.graphql.tools.codegen.ir.shared.Operation valueOf(java.lang.String);
+  public static io.micronaut.graphql.tools.codegen.ir.shared.Operation[] values();
+}
+
+public interface io.micronaut.graphql.tools.codegen.ir.shared.TypeRef permits io.micronaut.graphql.tools.codegen.ir.shared.TypeRef$Builtin, io.micronaut.graphql.tools.codegen.ir.shared.TypeRef$ListOf, io.micronaut.graphql.tools.codegen.ir.shared.TypeRef$Mapped, io.micronaut.graphql.tools.codegen.ir.shared.TypeRef$Reference {
+  public default boolean isNullable();
+}
+
+public static final class io.micronaut.graphql.tools.codegen.ir.shared.TypeRef$Builtin extends java.lang.Record implements io.micronaut.graphql.tools.codegen.ir.shared.TypeRef {
+  public boolean nullable();
+  public final boolean equals(java.lang.Object);
+  public final int hashCode();
+  public final java.lang.String toString();
+  public io.micronaut.graphql.tools.codegen.ir.shared.BuiltinScalar scalar();
+  public io.micronaut.graphql.tools.codegen.ir.shared.TypeRef$Builtin(io.micronaut.graphql.tools.codegen.ir.shared.BuiltinScalar, boolean);
+}
+
+public static final class io.micronaut.graphql.tools.codegen.ir.shared.TypeRef$ListOf extends java.lang.Record implements io.micronaut.graphql.tools.codegen.ir.shared.TypeRef {
+  public boolean nullable();
+  public final boolean equals(java.lang.Object);
+  public final int hashCode();
+  public final java.lang.String toString();
+  public io.micronaut.graphql.tools.codegen.ir.shared.TypeRef element();
+  public io.micronaut.graphql.tools.codegen.ir.shared.TypeRef$ListOf(io.micronaut.graphql.tools.codegen.ir.shared.TypeRef, boolean);
+}
+
+public static final class io.micronaut.graphql.tools.codegen.ir.shared.TypeRef$Mapped extends java.lang.Record implements io.micronaut.graphql.tools.codegen.ir.shared.TypeRef {
+  public boolean nullable();
+  public final boolean equals(java.lang.Object);
+  public final int hashCode();
+  public final java.lang.String toString();
+  public io.micronaut.graphql.tools.codegen.ir.shared.TypeRef$Mapped(java.lang.String, boolean);
+  public java.lang.String className();
+}
+
+public static final class io.micronaut.graphql.tools.codegen.ir.shared.TypeRef$Reference extends java.lang.Record implements io.micronaut.graphql.tools.codegen.ir.shared.TypeRef {
+  public boolean nullable();
+  public final boolean equals(java.lang.Object);
+  public final int hashCode();
+  public final java.lang.String toString();
+  public io.micronaut.graphql.tools.codegen.ir.shared.Names target();
+  public io.micronaut.graphql.tools.codegen.ir.shared.TypeRef$Reference(io.micronaut.graphql.tools.codegen.ir.shared.Names, boolean);
+}
+
+public final class io.micronaut.graphql.tools.codegen.ir.shared.Wrapper extends java.lang.Record {
+  public final boolean equals(java.lang.Object);
+  public final int hashCode();
+  public final java.lang.String toString();
+  public io.micronaut.graphql.tools.codegen.ir.shared.Wrapper$Shape shape();
+  public io.micronaut.graphql.tools.codegen.ir.shared.Wrapper(io.micronaut.graphql.tools.codegen.ir.shared.Wrapper$Shape, java.lang.String);
+  public java.lang.String className();
+  public static final io.micronaut.graphql.tools.codegen.ir.shared.Wrapper PLAIN;
+  public static final io.micronaut.graphql.tools.codegen.ir.shared.Wrapper SUSPEND;
+  public static io.micronaut.graphql.tools.codegen.ir.shared.Wrapper generic(java.lang.String);
+}
+
+public static final class io.micronaut.graphql.tools.codegen.ir.shared.Wrapper$Shape extends java.lang.Enum<io.micronaut.graphql.tools.codegen.ir.shared.Wrapper$Shape> {
+  public static final io.micronaut.graphql.tools.codegen.ir.shared.Wrapper$Shape PLAIN;
+  public static final io.micronaut.graphql.tools.codegen.ir.shared.Wrapper$Shape SUSPEND;
+  public static final io.micronaut.graphql.tools.codegen.ir.shared.Wrapper$Shape GENERIC;
+  public static io.micronaut.graphql.tools.codegen.ir.shared.Wrapper$Shape valueOf(java.lang.String);
+  public static io.micronaut.graphql.tools.codegen.ir.shared.Wrapper$Shape[] values();
+}
+
+public final class io.micronaut.graphql.tools.codegen.schema.IrBuilder {
+  public static io.micronaut.graphql.tools.codegen.schema.IrResult fromDirectory(java.nio.file.Path, io.micronaut.graphql.tools.codegen.Options);
+  public static io.micronaut.graphql.tools.codegen.schema.IrResult fromFiles(java.util.Collection<java.nio.file.Path>, io.micronaut.graphql.tools.codegen.Options);
+  public static io.micronaut.graphql.tools.codegen.schema.IrResult fromSources(java.util.Collection<io.micronaut.graphql.tools.codegen.schema.SchemaSource>, io.micronaut.graphql.tools.codegen.Options);
+}
+
+public final class io.micronaut.graphql.tools.codegen.schema.IrResult extends java.lang.Record {
+  public boolean hasErrors();
+  public final boolean equals(java.lang.Object);
+  public final int hashCode();
+  public final java.lang.String toString();
+  public io.micronaut.graphql.tools.codegen.ir.Ir ir();
+  public io.micronaut.graphql.tools.codegen.schema.IrResult(io.micronaut.graphql.tools.codegen.ir.Ir, java.util.List<io.micronaut.graphql.tools.codegen.Diagnostic>, java.util.List<java.lang.String>);
+  public java.util.List<io.micronaut.graphql.tools.codegen.Diagnostic> diagnostics();
+  public java.util.List<java.lang.String> skippedFiles();
+}
+
+public final class io.micronaut.graphql.tools.codegen.schema.SchemaSource extends java.lang.Record {
+  public final boolean equals(java.lang.Object);
+  public final int hashCode();
+  public final java.lang.String toString();
+  public io.micronaut.graphql.tools.codegen.schema.SchemaSource(java.lang.String, java.lang.String);
+  public java.lang.String path();
+  public java.lang.String text();
 }

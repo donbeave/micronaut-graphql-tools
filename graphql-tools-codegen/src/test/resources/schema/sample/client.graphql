@@ -1,0 +1,6 @@
+query Products($first: Int) {
+  products(first: $first) {
+    id
+    name
+  }
+}
