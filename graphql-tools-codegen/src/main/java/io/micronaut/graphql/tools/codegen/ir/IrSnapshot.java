@@ -119,7 +119,7 @@ public final class IrSnapshot {
     private static void fields(StringBuilder out, List<Field> fields) {
         for (Field field : fields) {
             out.append("  field ").append(name(field.sdlName(), field.name())).append(": ").append(type(field.type()))
-                    .append(" @ ").append(field.origin()).append('\n');
+                    .append(field.boxed() ? " boxed" : "").append(" @ ").append(field.origin()).append('\n');
             details(out, "    ", field.docs(), field.directives());
             arguments(out, field.arguments());
         }

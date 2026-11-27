@@ -132,11 +132,16 @@ module of the library, so a change to those rules is made in both places.
 selects), `ScalarType`, `ResolverContract` (`ContractMethod`, `Argument`, `Wrapper`) and the name classes (`NameClass`, with its `NameConstant`s). Each carries the SDL name and the generated
 name side by side (`Names`), `Docs` (description and deprecation), the applied directives as a name and string arguments (without
 `@deprecated`, which is in `Docs`) and an `Origin` (relative path, line, column) that is never written into generated code. Every type
-reference (`TypeRef`) keeps its nullability exactly; primitive or boxed is a rule of the emitter. A reference is a `Builtin`, a `Mapped` external class
+reference (`TypeRef`) keeps its nullability exactly; primitive or boxed is a rule of the emitter, except that a `Field` has a `boxed` flag (below). A reference is a `Builtin`, a `Mapped` external class
 (`typeMappings`, by SDL name or by `Type.field`, which replaces the named type of that field inside any list), a `Reference` to a generated
 type, or a `ListOf`. An interface that implements an interface keeps it in `implemented`. A sealed interface lists its `members`
 (the object types and interfaces that implement it, or the members of a union) and is open when it has no member or when a member is
-mapped to an external class. A model lists the unions it belongs to in `memberOf`. The root types are not models: each field of
+mapped to an external class. A model lists the unions it belongs to in `memberOf`.
+A field that implements an interface field follows two rules, so that the generated types compile: a list whose element type the
+implementation narrows (`[Node!]!` in the interface, `[Folder!]!` in the object) keeps the element type of the interface in the IR,
+because Java generics are invariant and the generator writes no wildcards, and the diagnostic `narrowed-list-field` says so; a non-null
+`Int`, `Float` or `Boolean` that implements a nullable one has `boxed` set, because a primitive return cannot override a boxed one. A single
+narrowed value (`Node` in the interface, `Folder` in the object) is left alone, because a Java accessor may return a subtype. The root types are not models: each field of
 `Query`, `Mutation` and `Subscription` is a `ResolverContract` named by `contractNameTemplate` in `resolverPackage`, extending
 `QueryResolver`, `MutationResolver` or `SubscriptionResolver`. With `kotlinSuspend` a query or mutation method has the wrapper `SUSPEND`;
 a subscription method is wrapped in `subscriptionReturnType`. `rootContracts=false` generates none, and the fields of the root types are still validated. An `extend schema` block without a `schema` block adds its operations to the implicit roots (`Query`, `Mutation`, `Subscription`) that the files define. Every list is in schema order.
@@ -168,6 +173,8 @@ become character references such as `&#47;`, and line endings become `\n`.
 | `root-type-reference` | error | A field or argument has a root operation type as its type (map it with `typeMappings`) |
 | `field-mapping-not-scalar` | error | A `Type.field` entry of `typeMappings` names a field whose type is an object, interface, union, enum or input type |
 | `mapped-member` | warning | A union has a member, or an interface an implementing type, that `typeMappings` maps to an external class; the union or interface is not sealed |
+| `narrowed-list-field` | warning | A field implements an interface field of a list type with a narrower element type; the generated type keeps the element type of the interface, because Java generics are invariant |
+| `interface-field-conflict` | error | Two interfaces that a type implements declare one field with a different list element type, or one as a primitive-capable non-null scalar and the other as a nullable scalar, so no single Java type implements both |
 | `dependency-type-mappings` | warning | The mappings of a dependency conflict with another's, are unreadable or are not class names |
 | `unused-type-mapping` | warning | A `typeMappings` entry names no type or field of the schema |
 | `unused-interface-type` | warning | An `interfaceTypes` entry names no object type of the schema |

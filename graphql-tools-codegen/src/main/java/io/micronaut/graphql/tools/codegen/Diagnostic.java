@@ -98,6 +98,12 @@ public record Diagnostic(Severity severity, String code, String message, String 
     /** The code of a union or interface that has a member that {@code typeMappings} maps to an external class. A warning. */
     public static final String MAPPED_MEMBER = "mapped-member";
 
+    /** The code of a field that implements an interface field of a list type with another element type. A warning. */
+    public static final String NARROWED_LIST_FIELD = "narrowed-list-field";
+
+    /** The code of a field that two implemented interfaces declare with types that no single Java type can implement. An error. */
+    public static final String INTERFACE_FIELD_CONFLICT = "interface-field-conflict";
+
     /** The code of a problem with the type mappings that a dependency carries. A warning. */
     public static final String DEPENDENCY_TYPE_MAPPINGS = "dependency-type-mappings";
 
