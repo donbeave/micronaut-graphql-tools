@@ -2,10 +2,10 @@ import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 import org.gradle.api.artifacts.component.ProjectComponentIdentifier
 
 plugins {
-    id("io.micronaut.build.internal.graphql-tools-plain-module")
+    id("io.micronaut.build.internal.graphql-tools-module")
 }
 
-// The GraphQL client (#683): a runtime library for applications that call a GraphQL server. It is pure Java and compiles with
+// The GraphQL client (#683, #684): a runtime library for applications that call a GraphQL server. It is pure Java and compiles with
 // --release 17. The API names no graphql-java, graphql-tools, Jackson or Reactor type; the HTTP client and the Serde API are
 // its api dependencies, and the WebSocket and retry modules are compile-only, so an application adds them to use those parts.
 dependencies {
@@ -18,7 +18,13 @@ dependencies {
     testImplementation(mn.micronaut.inject.groovy)
     testImplementation(mn.micronaut.inject.java)
     testImplementation(mn.micronaut.http.client)
+    testImplementation(libs.jetbrains.annotations)
+    // The codec specs run on Micronaut Serialization with its JSON implementation, and no Jackson databind is on the test classpath.
+    testImplementation(mnSerde.micronaut.serde.jackson)
+    // Models.java: polymorphic results use the Jackson annotations that Micronaut Serialization reads; annotations only, no databind
+    testImplementation(mn.jackson.annotations)
     testAnnotationProcessor(mn.micronaut.inject.java)
+    testAnnotationProcessor(mnSerde.micronaut.serde.processor)
     testRuntimeOnly(mnLogging.logback.classic)
 }
 

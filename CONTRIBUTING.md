@@ -222,6 +222,7 @@ This section tells you which package holds what, which packages you may import f
 | Name the request metrics and tags of the Micrometer module | `io.micronaut.graphql.tools.micrometer` (`GraphQLMetrics`; the module `graphql-tools-micrometer`) |
 | Name the `Upload` scalar and the error code of an invalid multipart request | `io.micronaut.graphql.tools.upload` (`GraphQLUpload`; the module `graphql-tools-upload`) |
 | Name the context key of the authentication, the error codes of a secured field, and see the root fields of an operation | `io.micronaut.graphql.tools.security` (`GraphQLSecurity`, `GraphQLRootFieldsHook`; the module `graphql-tools-security`) |
+| Describe a call to a GraphQL server and read its response or its failure | `io.micronaut.graphql.tools.client` (`GraphQLRequest`, `GraphQLResponse`, `GraphQLError`) and `io.micronaut.graphql.tools.client.exceptions` (`GraphQLClientException`, `GraphQLErrorsException`, `GraphQLTransportException`; the module `graphql-tools-client`) |
 | Run a document in-process in a test and assert on the response | `io.micronaut.graphql.tools.testing` (`GraphQLTester`, `GraphQLTestRequest`, `GraphQLTestResponse`; the module `graphql-tools-testing`) |
 | Tell an omitted argument from an explicit `null` | `io.micronaut.graphql.tools.input` (`ArgumentValue`) |
 | Accept or reject a `graphql-transport-ws` connection, with attributes | `io.micronaut.graphql.tools.websocket` (`GraphQLConnectionInterceptor`, `GraphQLConnectionRequest`, `GraphQLConnectionResult`) |
@@ -242,7 +243,7 @@ When you change a public signature on purpose, run `./gradlew apiDump` (or `./gr
 
 ### Current layout
 
-This is the layout of the code now. `graphql-tools` is the library, `graphql-tools-binding` the shared binding rules, `graphql-tools-processor` the compile-time checks, `graphql-tools-scalars` the standard scalars, `graphql-tools-micrometer` the request metrics, `graphql-tools-opentelemetry` the request and field spans, `graphql-tools-upload` the file upload, `graphql-tools-security` the Micronaut Security integration, `graphql-tools-testing` the in-process tester, `graphql-tools-client` the GraphQL client (its annotations only so far), `graphql-tools-codegen` the code generator library (its options model and entry point so far), `graphql-tools-maven-plugin` the Maven plugin that runs it and `test-suite-tck` the execution-behaviour TCK of this repository. In the audience column, `Mixed` means the package holds public API and `@Internal` types, and `Internal` means every type is implementation.
+This is the layout of the code now. `graphql-tools` is the library, `graphql-tools-binding` the shared binding rules, `graphql-tools-processor` the compile-time checks, `graphql-tools-scalars` the standard scalars, `graphql-tools-micrometer` the request metrics, `graphql-tools-opentelemetry` the request and field spans, `graphql-tools-upload` the file upload, `graphql-tools-security` the Micronaut Security integration, `graphql-tools-testing` the in-process tester, `graphql-tools-client` the GraphQL client (so far its annotations and its request, response, error and exception types), `graphql-tools-codegen` the code generator library (its options model and entry point so far), `graphql-tools-maven-plugin` the Maven plugin that runs it and `test-suite-tck` the execution-behaviour TCK of this repository. In the audience column, `Mixed` means the package holds public API and `@Internal` types, and `Internal` means every type is implementation.
 
 | Package | Module | Audience | Holds |
 | --- | --- | --- | --- |
@@ -308,11 +309,11 @@ This is the layout of the code now. `graphql-tools` is the library, `graphql-too
 | `io.micronaut.graphql.tools.security.internal` | graphql-tools-security | Internal | The context contributor, the decorator and fetcher of the secured fields and the instrumentation of the hook |
 | `io.micronaut.graphql.tools.testing` | graphql-tools-testing | Public API | `GraphQLTester`, `GraphQLTestRequest` and `GraphQLTestResponse`, the in-process tester and its fluent assertions |
 | `io.micronaut.graphql.tools.testing.internal` | graphql-tools-testing | Internal | The context contributor that copies the values of a test request into the GraphQL context |
-| `io.micronaut.graphql.tools.client` | graphql-tools-client | Public API | No types yet: the root of the client API |
+| `io.micronaut.graphql.tools.client` | graphql-tools-client | Public API | `GraphQLRequest`, `GraphQLResponse`, `GraphQLError`, `OperationType`, `GraphQLMediaTypes` and `GraphQLClientAttributes`, the types of a call |
 | `io.micronaut.graphql.tools.client.annotation` | graphql-tools-client | Public API | The annotations of a client: `GraphQLClient`, `GraphQLOperation` and `GraphQLVariable` |
-| `io.micronaut.graphql.tools.client.exceptions` | graphql-tools-client | Public API | No types yet: the exceptions of a client call |
+| `io.micronaut.graphql.tools.client.exceptions` | graphql-tools-client | Public API | `GraphQLClientException` and its subclasses `GraphQLErrorsException` and `GraphQLTransportException` |
 | `io.micronaut.graphql.tools.client.internal` | graphql-tools-client | Internal | The call path, the wiring of the client beans and the metadata annotation of an operation method |
-| `io.micronaut.graphql.tools.client.internal.serde` | graphql-tools-client | Internal | The Serde codec of the response envelope |
+| `io.micronaut.graphql.tools.client.internal.serde` | graphql-tools-client | Internal | The Serde codec: the request serializer, the response envelope and the unwrapping deserializer |
 | `io.micronaut.graphql.tools.client.internal.ws` | graphql-tools-client | Internal | The WebSocket transport of the client |
 | `io.micronaut.graphql.tools.codegen` | graphql-tools-codegen | Public API | `GraphQLCodeGenerator`, `Options` and its enums, `GenerationResult`, `GeneratedFile`, `Diagnostic` and `Origin`: the entry point and the options model of the code generator |
 | `io.micronaut.graphql.tools.maven` | graphql-tools-maven-plugin | Public API | `GenerateMojo`: the `generate` goal of the Maven plugin, which Maven instantiates; the other types of the package are package-private. |
