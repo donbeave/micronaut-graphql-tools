@@ -1,0 +1,3 @@
+fragment ProfileName on Profile {
+  username
+}

@@ -17,6 +17,10 @@ stack, this module the Serde stack.
 - `src/test/java/example/client`: `GraphQLHttpClient` against the GraphQL endpoint of this application: typed and dynamic
   queries, GET, a mutation with a union, the 405 of a mutation over GET, request and field errors, `@ClientFilter(serviceId)`
   and the blocking call on an event loop and on a worker. They run in the native test too.
+- `src/test/java/example/client/LibraryClient.java` and `DeclarativeLibraryClientTest`: a declarative client (#687) of the same server. The test
+  sources are compiled with the annotation processor, which checks and compiles each operation against the schema of this application (the
+  `client.dirs` option points at `src/test/graphql/client`, whose `server` directory holds an operation file and a fragment). The test runs
+  every return type, a GET, a mutation with a union, field errors, a void method and header parameters.
 
 ## Packages
 
