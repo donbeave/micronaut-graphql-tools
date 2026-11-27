@@ -1,0 +1,85 @@
+NOTE: These artifacts are milestone previews from this repository. They are not affiliated with, and not published by, the Micronaut Foundation or the Micronaut team, even though the group id is `io.micronaut.graphql.tools`.
+
+The Gradle plugin has the id `io.micronaut.graphql.tools` and the version of the library. Nothing is published to the Gradle Plugin Portal or to Maven Central, so a build resolves the plugin from a repository that it declares in `pluginManagement`, from Maven Local, or from an included build.
+
+[[codegenGradlePluginRepository]]
+== From a repository
+
+The plugin is published to the same GitHub Packages repository as the library, with its marker artifact. GitHub Packages needs a token with the `read:packages` scope even to download a public package, so the repository carries credentials. Declare it in `settings.gradle.kts` for the plugin and in `build.gradle.kts` for the generator, because the plugin adds the generator to the project's own repositories, not to the plugin repositories. The POM of the plugin imports the Micronaut BOM, so `mavenCentral()` belongs to `pluginManagement` as well:
+
+[source,kotlin]
+----
+pluginManagement {
+    repositories {
+        maven {
+            url = uri("https://maven.pkg.github.com/donbeave/micronaut-graphql-tools")
+            credentials {
+                username = providers.gradleProperty("gpr.user").orNull ?: System.getenv("GITHUB_ACTOR")
+                password = providers.gradleProperty("gpr.key").orNull ?: System.getenv("GITHUB_TOKEN")
+            }
+        }
+        mavenCentral()
+    }
+}
+----
+
+[source,kotlin]
+----
+repositories {
+    mavenCentral()
+    maven {
+        url = uri("https://maven.pkg.github.com/donbeave/micronaut-graphql-tools")
+        credentials {
+            username = providers.gradleProperty("gpr.user").orNull ?: System.getenv("GITHUB_ACTOR")
+            password = providers.gradleProperty("gpr.key").orNull ?: System.getenv("GITHUB_TOKEN")
+        }
+        content { includeGroup("io.micronaut.graphql.tools") }
+    }
+}
+----
+
+[[codegenGradlePluginMavenLocal]]
+== From Maven Local
+
+Run `./gradlew publishToMavenLocal` in a checkout of the library. It publishes the modules of the library, the BOM, the generator, the plugin and its marker, and the Maven plugin to your machine only. Then add Maven Local to the plugin repositories and to the repositories of the project, which resolves the generator:
+
+[source,kotlin]
+----
+pluginManagement {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
+}
+----
+
+[source,kotlin]
+----
+plugins {
+    id("io.micronaut.graphql.tools") version "1.0.0-SNAPSHOT"
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+----
+
+To publish to a repository of your own, pass its location to the build with the system property `io.micronaut.publishing.uri`, and its credentials with `io.micronaut.publishing.username` and `io.micronaut.publishing.password`.
+
+[[codegenGradlePluginIncludedBuild]]
+== From an included build
+
+Include a checkout of the library twice, in `pluginManagement` for the plugin id and as an ordinary included build for the generator:
+
+[source,kotlin]
+----
+pluginManagement {
+    includeBuild("../micronaut-graphql-tools")
+}
+includeBuild("../micronaut-graphql-tools")
+----
+
+The plugin then needs no version. The plugin's default version of the generator is its own version, and Gradle substitutes the included `micronaut-graphql-tools-codegen` project for that dependency, so the generator is built from the same checkout as the plugin and never resolved from a repository.
+
+The TestKit scenarios of the plugin build each of the three ways with a sample project: `PublishingFunctionalSpec`: a repository through its marker, Maven Local filled by `publishToMavenLocal`, and the included build.
