@@ -13,14 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package placed;
+package io.micronaut.graphql.tools.binding.internal.client.method;
 
-public final class Placed {
+import io.micronaut.core.annotation.Internal;
 
-    private Placed() {
-    }
+import java.util.List;
 
-    public static String value() {
-        return "placed";
+/**
+ * One operation method of a client, as the rules of its parameters and its result see it. The adapter of the compiler builds it.
+ *
+ * @param member     where a finding is reported: {@code binary.Name#method(parameter types)}
+ * @param parameters the parameters, a Kotlin continuation excluded
+ */
+@Internal
+public record ClientMethod(String member, List<ClientParameter> parameters) {
+
+    public ClientMethod {
+        parameters = List.copyOf(parameters);
     }
 }

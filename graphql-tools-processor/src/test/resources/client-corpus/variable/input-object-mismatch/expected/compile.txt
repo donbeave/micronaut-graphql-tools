@@ -1,0 +1,3 @@
+client-variable-type example.BookClient#save(example.BookInput) inline:1:15
+client-variable-type example.BookClient#save(example.BookInput) inline:1:15
+client-variable-type example.BookClient#save(example.BookInput) inline:1:15

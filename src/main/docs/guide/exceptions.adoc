@@ -138,6 +138,10 @@ A conditional bean (`@Requires`, `@Replaces`) gets the same per-class compile-ti
 |`client-document-too-large` |failure |yes |The assembled document of a GraphQL client operation is too large to be stored in the annotation metadata.
 |`client-get-mutation` |failure |yes |A GraphQL client operation is sent with GET and is a mutation or a subscription; only a query can be sent with GET.
 |`client-retry-mutation` |failure |yes |A GraphQL client interface that declares a mutation carries a type-level retry annotation, which would repeat the mutation.
+|`client-variable-missing` |failure |yes |A GraphQL client operation declares a non-null variable without a default that no parameter of the method binds.
+|`client-variable-type` |failure |yes |The declared type of a GraphQL client parameter does not fit the type of the variable it binds.
+|`client-parameter-unbound` |failure |yes |A parameter of a GraphQL client operation method binds no variable of the operation, or two parameters bind one.
+|`client-scalar-conflict` |failure |yes |One GraphQL client maps a custom scalar to two different Java types.
 // end generated: failures
 |===
 
@@ -864,6 +868,73 @@ Each entry gives the cause, a message and the fix. The message is the text that 
 ----
 
 *Fix.* Annotate the query methods with `@Retryable` one by one, or move the mutations to an interface that carries no retry annotation.
+
+*See.* <<clientCompileTime,Client compile-time checks>>.
+
+[[example-client-variable-missing]]
+=== `client-variable-missing`
+
+*Cause.* The operation declares a variable that is non-null and has no default value (`$id: ID!`), and no parameter of the method binds it, by its name or with `@GraphQLVariable`. The server would reject the request, because the variable has no value. A nullable variable, and one with a default, need no parameter. The position is the declaration of the variable in the document.
+
+// client: variable-missing
+[source,text]
+----
+[client-variable-missing] example.BookClient#book(): the operation declares the variable $id: ID!, which is non-null and has no default, and no parameter binds it.
+    document inline:1:12
+    fix: add a parameter named id (or annotated with @GraphQLVariable("id")), give the variable a default, or make it nullable
+----
+
+*Fix.* Add a parameter named like the variable, or annotated with `@GraphQLVariable("<name>")`, give the variable a default value, or make it nullable.
+
+*See.* <<clientCompileTime,Client compile-time checks>>.
+
+[[example-client-variable-type]]
+=== `client-variable-type`
+
+*Cause.* The declared type of a parameter does not fit the type of the variable it binds. The rules compare the two level by level: a scalar is looked up in the catalog (`Int` takes `int` and `Integer`, `ID` and `String` take `String`, the date and time scalars their `java.time` class), a list needs an array or a collection, an enum needs a Java enum whose constants are all values of the schema enum (or a `String`), and an input object needs a class, a record or a data class with a property for each required field and no property that is not a field. An `Optional` or a Kotlin nullable type at a non-null variable could send `null`. A `Map` or `Object` is not checked. The position is the declaration of the variable in the document.
+
+// client: variable-type
+[source,text]
+----
+[client-variable-type] example.BookClient#book(int): the parameter id is int, and the variable type is the scalar ID, which the catalog maps to String.
+    document inline:1:12
+    fix: declare String for the parameter, or change the type of the variable
+----
+
+*Fix.* Change the declared type of the parameter or the type of the variable, as the sentence and the fix line say.
+
+*See.* <<clientCompileTime,Client compile-time checks>>.
+
+[[example-client-parameter-unbound]]
+=== `client-parameter-unbound`
+
+*Cause.* A parameter of an operation method binds no variable of the operation: it is named like a variable that the operation does not declare, it is bound by an HTTP annotation other than `@Header` and `@CookieValue`, or two parameters bind one variable. The runtime refuses such a method at its first call with `unsupported-signature`; the compile-time check reports it at the build, with or without `client.checks`, because it needs no schema.
+
+// client: parameter-unbound
+[source,text]
+----
+[client-parameter-unbound] example.BookClient#book(java.lang.String,int): the parameter limit binds the variable $limit, which the operation does not declare (it declares [$id]).
+    fix: name the variable with @GraphQLVariable, mark the parameter @Header or @CookieValue, or remove it
+----
+
+*Fix.* Name the variable with `@GraphQLVariable`, mark the parameter `@Header` or `@CookieValue`, or remove it.
+
+*See.* <<clientCompileTime,Client compile-time checks>>.
+
+[[example-client-scalar-conflict]]
+=== `client-scalar-conflict`
+
+*Cause.* One client interface reads a custom scalar (one that the catalog does not know, such as `DateTime` here) as two different Java types, in two parameters. A scalar that the catalog knows has one class. A custom scalar has no wiring on the client side: the Java type that a position declares is its mapping, and the serializer of that type converts it, so two types read one value two ways. The position is the declaration of the variable that uses the second type.
+
+// client: scalar-conflict
+[source,text]
+----
+[client-scalar-conflict] example.BookClient#atAgain(java.lang.String): the scalar DateTime is read as java.lang.String by the parameter moment, and as java.time.Instant by the parameter moment of example.BookClient#at(java.time.Instant): one client reads a scalar as one Java type.
+    document inline:1:13
+    fix: use one Java type for the scalar in the client interface
+----
+
+*Fix.* Declare one Java type for the scalar in the interface.
 
 *See.* <<clientCompileTime,Client compile-time checks>>.
 

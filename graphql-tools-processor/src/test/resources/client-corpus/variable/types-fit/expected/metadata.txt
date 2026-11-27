@@ -1,0 +1,8 @@
+BookClient#at type=query name=At payload=field variables=moment document=queryAt($moment:DateTime){at(moment:$moment)}
+BookClient#atAgain type=query name=At2 payload=field variables=moment document=queryAt2($moment:DateTime){at(moment:$moment)}
+BookClient#book type=query name=Book payload=field variables=id document=queryBook($id:ID!){book(id:$id){title}}
+BookClient#books type=query name=Books payload=field variables=genre,limit,ids,first document=queryBooks($genre:Genre,$limit:Int,$ids:[ID!],$first:Int!=10){books(genre:$genre,limit:$limit,ids:$ids,first:$first){title}}
+BookClient#genreByName type=query name=Books payload=field variables=genre,limit,ids,first document=queryBooks($genre:Genre,$limit:Int,$ids:[ID!],$first:Int!=10){books(genre:$genre,limit:$limit,ids:$ids,first:$first){title}}
+BookClient#optionalWhen type=query name=At3 payload=field variables=moment document=queryAt3($moment:DateTime){at(moment:$moment)}
+BookClient#save type=mutation name=Save payload=field variables=input document=mutationSave($input:BookInput!){save(input:$input){id}}
+BookClient#search type=query name=Search payload=field variables=filter document=querySearch($filter:BookFilter!){search(filter:$filter){title}}

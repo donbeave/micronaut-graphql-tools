@@ -108,6 +108,21 @@ enum Genre {
         !ScalarCatalog.isJavaBuiltInClass(Object)
     }
 
+    void "the catalog answers by class name for the compile-time checks, with a primitive and its wrapper as one class"() {
+        expect:
+        ScalarCatalog.isKnown('Int') && ScalarCatalog.isKnown('Instant') && !ScalarCatalog.isKnown('DateTime')
+        ScalarCatalog.acceptsClassName('Int', 'int') && ScalarCatalog.acceptsClassName('Int', 'java.lang.Integer')
+        !ScalarCatalog.acceptsClassName('Int', 'java.lang.Long')
+        ScalarCatalog.acceptsClassName('ID', 'java.lang.String') && !ScalarCatalog.acceptsClassName('ID', 'java.lang.Long')
+        ScalarCatalog.acceptsClassName('String', 'groovy.lang.GString') && !ScalarCatalog.acceptsClassName('ID', 'groovy.lang.GString')
+        ScalarCatalog.acceptsClassName('Instant', 'java.time.Instant') && !ScalarCatalog.acceptsClassName('Instant', 'java.lang.String')
+        ScalarCatalog.acceptsClassName('PositiveInt', 'int') && ScalarCatalog.acceptsClassName('PositiveInt', 'java.lang.Integer')
+        ScalarCatalog.acceptsClassName('JSON', 'java.util.Map') && ScalarCatalog.acceptsClassName('JSON', 'example.Anything')
+        !ScalarCatalog.acceptsClassName('DateTime', 'java.time.Instant')
+        ScalarCatalog.acceptedClassNames('Int') == 'Integer or int'
+        ScalarCatalog.acceptedClassNames('Instant') == 'Instant'
+    }
+
     void "a String field accepts a GString and an ID field does not"() {
         expect:
         ScalarCatalog.acceptsReturnClass('String', GString)
