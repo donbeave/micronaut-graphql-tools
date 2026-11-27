@@ -87,7 +87,7 @@ public final class ClientDocuments {
         Map<String, List<OperationDefinition>> operations = new LinkedHashMap<>();
         Map<String, List<FragmentDefinition>> fragments = new LinkedHashMap<>();
         List<Finding> problems = new ArrayList<>();
-        for (Path file : files(directories)) {
+        for (Path file : files(directories, problems)) {
             String path = file.toAbsolutePath().toString();
             String text;
             try {
@@ -139,7 +139,7 @@ public final class ClientDocuments {
         return at == null ? null : new DocumentLocation(at.getSourceName(), at.getLine(), at.getColumn());
     }
 
-    private static List<Path> files(List<Path> directories) {
+    private static List<Path> files(List<Path> directories, List<Finding> problems) {
         List<Path> files = new ArrayList<>();
         for (Path directory : directories) {
             try (Stream<Path> paths = Files.walk(directory)) {
@@ -148,8 +148,7 @@ public final class ClientDocuments {
                         .sorted()
                         .forEach(files::add);
             } catch (IOException | UncheckedIOException e) {
-                // a directory that cannot be listed has no documents; the schema reading reports the same directory
-                continue;
+                problems.add(invalid(null, "cannot list the document files in " + directory.toAbsolutePath() + ": " + e.getMessage(), null));
             }
         }
         return files;

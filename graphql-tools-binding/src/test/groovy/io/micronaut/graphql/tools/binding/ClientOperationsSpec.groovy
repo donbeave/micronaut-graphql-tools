@@ -388,6 +388,26 @@ union SearchResult = Book | Magazine
         FindingRenderer.render(several.findings()[0]).contains('[books, news]')
     }
 
+    void "a directory of documents that cannot be read is client-document-invalid, not skipped"() {
+        given:
+        def dir = schemaDir('books')
+        write(dir, 'good.graphql', 'query Good { version }')
+        def locked = Files.createDirectories(dir.resolve('locked'))
+        write(locked, 'hidden.graphql', 'query Hidden { version }')
+        locked.toFile().setReadable(false)
+        locked.toFile().setExecutable(false)
+
+        when:
+        def outcome = operations().resolve(request('Good'))
+
+        then: 'a user that can read the directory anyway (root, or a system without permissions) has nothing to show'
+        Files.isReadable(locked) || codes(outcome).contains('client-document-invalid')
+
+        cleanup:
+        locked.toFile().setReadable(true)
+        locked.toFile().setExecutable(true)
+    }
+
     void "a client directory that is listed twice is read once"() {
         given:
         def dir = schemaDir('books')
