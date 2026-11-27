@@ -15,6 +15,12 @@ dependencies {
     // an unsecured field with the security module installed is gated against the same field without it (#595); the module has
     // Micronaut Security as compile-only, so the application, here the benchmarks, supplies it
     implementation(projects.micronautGraphqlToolsSecurity)
+    // the codec of the client (#684) is gated beside the server cases; it runs on Micronaut Serialization, which the benchmarks bring
+    // here and the other cases do not use
+    implementation(projects.micronautGraphqlToolsClient)
+    implementation(mnSerde.micronaut.serde.jackson)
+    annotationProcessor(platform(libs.micronaut.platform))
+    annotationProcessor(mnSerde.micronaut.serde.processor)
     implementation(mnSecurity.micronaut.security)
     implementation(mnTracing.micronaut.tracing.opentelemetry)
     implementation(mn.micronaut.inject)

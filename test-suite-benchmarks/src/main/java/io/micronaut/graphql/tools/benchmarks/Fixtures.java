@@ -18,12 +18,17 @@ package io.micronaut.graphql.tools.benchmarks;
 import io.micronaut.core.annotation.Introspected;
 import io.micronaut.graphql.tools.annotation.GraphQLInput;
 import io.micronaut.graphql.tools.annotation.GraphQLType;
+import io.micronaut.serde.annotation.Serdeable;
 
 import java.util.List;
 
 public final class Fixtures {
 
     private Fixtures() {
+    }
+
+    @Serdeable
+    public record ClientBook(String id, String title, int pages, List<String> tags) {
     }
 
     @Introspected
