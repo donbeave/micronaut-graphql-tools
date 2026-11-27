@@ -101,6 +101,8 @@ final class Lowering {
     private final Map<String, Operation> rootTypes = new HashMap<>();
     private final Map<String, List<String>> unionsOf = new HashMap<>();
     private final Map<String, List<String>> implementers = new HashMap<>();
+    private final Map<String, List<Field>> interfaceFields = new HashMap<>();
+    private final Set<String> resolving = new HashSet<>();
     private final Set<String> selectedObjects;
     private final List<Unit> units = new ArrayList<>();
     private final Set<String> usedMappings = new HashSet<>();
@@ -443,11 +445,121 @@ final class Lowering {
     }
 
     private List<Field> fields(MergedType owner) {
+        boolean isInterface = owner.kind == Kind.INTERFACE;
+        if (isInterface) {
+            List<Field> known = interfaceFields.get(owner.name);
+            if (known != null) {
+                return known;
+            }
+            resolving.add(owner.name);
+        }
         List<Field> fields = new ArrayList<>(owner.fields.size());
         for (FieldDefinition field : owner.fields) {
             fields.add(field(owner.name, field));
         }
-        return fields;
+        List<Field> result = implementing(owner, fields);
+        if (isInterface) {
+            resolving.remove(owner.name);
+            interfaceFields.put(owner.name, result);
+        }
+        return result;
+    }
+
+    private List<Field> implementing(MergedType owner, List<Field> fields) {
+        List<MergedType> parents = new ArrayList<>();
+        for (String name : owner.implemented) {
+            MergedType parent = schema.types.get(name);
+            if (parent != null && parent.kind == Kind.INTERFACE && !resolving.contains(name)) {
+                parents.add(parent);
+            }
+        }
+        if (parents.isEmpty()) {
+            return fields;
+        }
+        List<Field> result = new ArrayList<>(fields.size());
+        for (Field field : fields) {
+            List<Declared> declared = new ArrayList<>();
+            for (MergedType parent : parents) {
+                for (Field inherited : fields(parent)) {
+                    if (inherited.sdlName().equals(field.sdlName())) {
+                        declared.add(new Declared(parent.name, inherited));
+                    }
+                }
+            }
+            result.add(declared.isEmpty() ? field : implementing(owner, field, declared));
+        }
+        return result;
+    }
+
+    private Field implementing(MergedType owner, Field field, List<Declared> declared) {
+        String coordinate = owner.name + "." + field.sdlName();
+        Declared first = declared.get(0);
+        for (Declared other : declared.subList(1, declared.size())) {
+            if (!invariantShape(first.field().type(), false).equals(invariantShape(other.field().type(), false))
+                    || primitive(first.field()) != primitive(other.field())) {
+                error(Diagnostic.INTERFACE_FIELD_CONFLICT, "The field '" + coordinate + "' (" + field.origin() + ") implements the field '"
+                        + first.owner() + "." + field.sdlName() + "' and the field '" + other.owner() + "." + field.sdlName()
+                        + "', which differ in a list element type or in a primitive against a nullable scalar. No single Java type"
+                        + " implements both. Give the two interface fields the same list element type and nullability.", field.origin());
+                return field;
+            }
+        }
+        TypeRef type = widen(field.type(), first.field().type(), false);
+        if (type != field.type()) {
+            diagnostics.add(new Diagnostic(Diagnostic.Severity.WARNING, Diagnostic.NARROWED_LIST_FIELD, "The field '" + coordinate + "' ("
+                    + field.origin() + ") narrows the list element type '" + leafName(first.field().type()) + "' of the field '"
+                    + first.owner() + "." + field.sdlName() + "' to '" + leafName(field.type()) + "'. Java generics are invariant, so"
+                    + " the generated type keeps the list of the interface, with the element type '" + leafName(first.field().type())
+                    + "'; the schema still returns the narrower objects.", null, field.origin()));
+        }
+        boolean boxed = declared.stream().anyMatch(it -> it.field().boxed() || it.field().type() instanceof TypeRef.Builtin builtin
+                && builtin.nullable());
+        boolean primitiveCapable = type instanceof TypeRef.Builtin builtin && !builtin.nullable() && isPrimitiveScalar(builtin);
+        return new Field(field.sdlName(), field.name(), type, boxed && primitiveCapable, field.arguments(), field.docs(),
+                field.directives(), field.origin());
+    }
+
+    private static boolean primitive(Field field) {
+        return field.type() instanceof TypeRef.Builtin builtin && !builtin.nullable() && isPrimitiveScalar(builtin) && !field.boxed();
+    }
+
+    private static boolean isPrimitiveScalar(TypeRef.Builtin builtin) {
+        return builtin.scalar() == BuiltinScalar.INT || builtin.scalar() == BuiltinScalar.FLOAT || builtin.scalar() == BuiltinScalar.BOOLEAN;
+    }
+
+    private static TypeRef widen(TypeRef own, TypeRef declared, boolean inList) {
+        if (own instanceof TypeRef.ListOf ownList && declared instanceof TypeRef.ListOf declaredList) {
+            TypeRef element = widen(ownList.element(), declaredList.element(), true);
+            return element == ownList.element() ? own : new TypeRef.ListOf(element, ownList.nullable());
+        }
+        if (!inList || own instanceof TypeRef.ListOf || declared instanceof TypeRef.ListOf || leafName(own).equals(leafName(declared))) {
+            return own;
+        }
+        boolean nullable = own.isNullable();
+        if (declared instanceof TypeRef.Reference reference) {
+            return new TypeRef.Reference(reference.target(), nullable);
+        } else if (declared instanceof TypeRef.Mapped mapped) {
+            return new TypeRef.Mapped(mapped.className(), nullable);
+        }
+        return own;
+    }
+
+    private static String invariantShape(TypeRef type, boolean inList) {
+        if (type instanceof TypeRef.ListOf list) {
+            return "[" + invariantShape(list.element(), true) + "]";
+        }
+        return inList ? leafName(type) : "";
+    }
+
+    private static String leafName(TypeRef type) {
+        if (type instanceof TypeRef.ListOf list) {
+            return leafName(list.element());
+        } else if (type instanceof TypeRef.Reference reference) {
+            return reference.target().sdlName();
+        } else if (type instanceof TypeRef.Mapped mapped) {
+            return mapped.className();
+        }
+        return ((TypeRef.Builtin) type).scalar().name();
     }
 
     private Field field(String owner, FieldDefinition field) {
@@ -464,7 +576,7 @@ final class Lowering {
                     text.docs(argument, argument.getDescription(), argument.getDirectives()),
                     text.directives(argument.getDirectives()), argumentOrigin));
         }
-        return new Field(field.getName(), field.getName(), ref(field.getType(), coordinate, "field '" + coordinate + "'", origin),
+        return new Field(field.getName(), field.getName(), ref(field.getType(), coordinate, "field '" + coordinate + "'", origin), false,
                 arguments, text.docs(field, field.getDescription(), field.getDirectives()), text.directives(field.getDirectives()),
                 origin);
     }
@@ -686,6 +798,9 @@ final class Lowering {
         }
         Names names = this.names.get(name);
         return new TypeRef.Reference(names != null ? names : new Names(name, options.effectiveModelPackage(), name), nullable);
+    }
+
+    private record Declared(String owner, Field field) {
     }
 
     private record Pending(NameConstant constant, String description) {
