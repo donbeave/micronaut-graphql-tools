@@ -20,6 +20,14 @@ build wiring is already final.
 - The generated files are written under `<outputDirectory>/<language>` (`java`, `kotlin` or `groovy`) and that directory is added
   with `project.addCompileSourceRoot`. The Kotlin compiler plugin lists the directory in `sourceDirs`, and GMavenPlus lists it in
   `sources` (the guide shows both).
+- Type mappings of dependencies: `@Mojo(requiresDependencyResolution = COMPILE)` and the same value in the hand-written `plugin.xml`
+  (`PluginDescriptorSpec` compares them). The goal gives the generator `project.getCompileClasspathElements()` without
+  `project.getBuild().getOutputDirectory()` (the classes of the project itself, which may hold a mappings file of an earlier build
+  and would map the module's own types to external classes), so a type that a dependency maps needs no `typeMappings` entry. With
+  `typeMappingsFromDependencies` off the generator reads none of them. The mappings file of the module is written to
+  `<outputDirectory>/resources` (a file of the manifest) and that directory is added with `project.addResource`.
+- The fingerprint of a run also holds the path of each dependency on the class path and the bytes of its mappings file (none when the
+  option is off), so a dependency whose mappings change regenerates and one whose other content changes does not.
 - The schema files: selected by `SchemaFileSelector` of the code generator, so the globs follow the generator's rules (`[` and `]` are literal,
   `**/` also matches no directory) and the files come in the order of their relative path. The options are validated before the selection,
   so an invalid configuration fails even when no schema file matches.
@@ -69,5 +77,6 @@ Run from the repository root:
 The first command compiles with `--release 17`, so it also runs on JDK 17. `GenerateMojoSpec` binds a pom `<configuration>` to the mojo
 with the Maven plugin testing harness (so it reads the hand-written `plugin.xml`) and asserts the options, the defaults and the source
 root of each language; `IncrementalRunSpec` and `GeneratedSourcesSpec` cover the skip, the regeneration and the
-deletion of a stale file, and `SchemaFileSelectorSpec` of the code generator covers the file selection; `PluginDescriptorSpec` is the parity of the descriptor. The second command needs `mvn` and the network: it
+deletion of a stale file, and `SchemaFileSelectorSpec` of the code generator covers the file selection; `PluginDescriptorSpec` is the parity of the descriptor. `GenerateMojoSpec` also covers the dependency mappings (a jar of the compile class path, the option off, the project's own classes left out) and the
+resource root. The second command needs `mvn` and the network: it
 builds the samples `maven-plugin-java`, `maven-plugin-kotlin` and `maven-plugin-groovy` of `test-suite-build` with the published plugin.

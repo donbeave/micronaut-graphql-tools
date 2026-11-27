@@ -44,7 +44,7 @@ A parameter is a component of `Options` of the generator, with the same name and
 | `kotlinSuspend` | `micronaut.graphql.tools.codegen.kotlin.suspend` | `false`
 | `subscriptionReturnType` | `micronaut.graphql.tools.codegen.subscription.return.type` | `org.reactivestreams.Publisher`
 | `typeMappings` | none (a map) | empty
-| `typeMappingsFromDependencies` | `micronaut.graphql.tools.codegen.type.mappings.from.dependencies` | `true` (the goal gives the generator no dependency jar yet, so it has no effect)
+| `typeMappingsFromDependencies` | `micronaut.graphql.tools.codegen.type.mappings.from.dependencies` | `true`
 | `nameConstants` | `micronaut.graphql.tools.codegen.name.constants` | `FIELDS`
 | `includes` | `micronaut.graphql.tools.codegen.includes` (comma separated) | `**/*.graphqls`, `**/*.graphql`
 | `excludes` | `micronaut.graphql.tools.codegen.excludes` (comma separated) | empty
@@ -89,6 +89,14 @@ Set `language` to `GROOVY`. GMavenPlus compiles the `sources` of its own configu
 ----
 include::{samples}/maven-plugin-groovy/pom.xml[tags=groovy-sources]
 ----
+
+== Type mappings of dependencies
+
+A module that depends on another module that ran the generator needs no `typeMappings` entry for the types of that module. The goal asks Maven for the compile class path of the project (`requiresDependencyResolution` is `compile`, so the goal also fails early when a dependency cannot be resolved) and gives the generator the jars and class directories on it, except the classes of the project itself. With `typeMappingsFromDependencies` on (the default) the generator reads `META-INF/micronaut-graphql-tools/type-mappings.properties` from each of them, below the `typeMappings` parameter. With `false` the dependencies are not read, and a type that the schema does not define and no `typeMappings` entry maps is the error `[unknown-type]`.
+
+The goal writes the file of the module itself to `<outputDirectory>/resources/META-INF/micronaut-graphql-tools/type-mappings.properties` and adds `<outputDirectory>/resources` to the resources of the project, so it is in the jar of the module and the modules that depend on it read it. The file lists the types that the module generates and the custom scalars it maps, and exists only when there is one.
+
+The fingerprint of a run holds, for each dependency on the compile class path, its path and the bytes of its mappings file, so a new version of a dependency that changes a mapping runs the generator again, and a dependency that changes nothing else does not. The test {tests}/MavenPluginSampleContract.java[MavenPluginSampleContract] builds each sample with a dependency jar that maps `Pet` and `Money`, and with the option off.
 
 == Incremental runs
 

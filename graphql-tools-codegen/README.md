@@ -99,8 +99,8 @@ and the generator are checked against each other, so the table follows `Standard
 **Mappings between modules.** The generator writes `META-INF/micronaut-graphql-tools/type-mappings.properties` for its own output:
 one `SdlName=qualified.ClassName` line for each type it generates and each custom scalar it maps, sorted by name, with no date, so
 the bytes only change when the mappings do (`GraphQLCodeGenerator.generate()` returns it as a `GeneratedFile`; a build plugin puts it
-in a resource directory). A module that depends on it passes the dependency jars or class directories (`withDependencies`, or the
-`dependencies` argument of `IrBuilder`), and with `typeMappingsFromDependencies` on the generator reads that file from each of
+in a resource directory; both plugins do). A module that depends on it passes the dependency jars or class directories (`withDependencies`, or the
+`dependencies` argument of `IrBuilder`; the plugins pass the compile classpath), and with `typeMappingsFromDependencies` on the generator reads that file from each of
 them. The order of precedence is the `typeMappings` option, then the dependencies, then the presets. The jars are read in the order of
 their paths and the first mapping of a name wins; two jars that map a name to different classes, an unreadable jar and a value that is
 no class name are the warning `dependency-type-mappings`.

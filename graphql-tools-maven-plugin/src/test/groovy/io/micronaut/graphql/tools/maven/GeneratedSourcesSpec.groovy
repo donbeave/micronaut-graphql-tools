@@ -132,19 +132,19 @@ class GeneratedSourcesSpec extends Specification {
     def "the fingerprint follows the version, the options, and the path and content of each schema file"() {
         given:
         def file = Files.writeString(schema.resolve('a.graphqls'), 'type Query { a: String }')
-        def base = GeneratedSources.fingerprint('1.0.0', [packageName: 'x'], schema, [file])
+        def base = GeneratedSources.fingerprint('1.0.0', [packageName: 'x'], schema, [file], [])
 
         expect:
-        base == GeneratedSources.fingerprint('1.0.0', [packageName: 'x'], schema, [file])
-        base != GeneratedSources.fingerprint('1.0.1', [packageName: 'x'], schema, [file])
-        base != GeneratedSources.fingerprint('1.0.0', [packageName: 'y'], schema, [file])
-        base != GeneratedSources.fingerprint('1.0.0', [packageName: 'x', kotlinSuspend: 'true'], schema, [file])
+        base == GeneratedSources.fingerprint('1.0.0', [packageName: 'x'], schema, [file], [])
+        base != GeneratedSources.fingerprint('1.0.1', [packageName: 'x'], schema, [file], [])
+        base != GeneratedSources.fingerprint('1.0.0', [packageName: 'y'], schema, [file], [])
+        base != GeneratedSources.fingerprint('1.0.0', [packageName: 'x', kotlinSuspend: 'true'], schema, [file], [])
 
         when:
         Files.writeString(file, 'type Query { b: String }')
 
         then:
-        base != GeneratedSources.fingerprint('1.0.0', [packageName: 'x'], schema, [file])
+        base != GeneratedSources.fingerprint('1.0.0', [packageName: 'x'], schema, [file], [])
     }
 
     def "the fingerprint tells a moved schema file and a split of the same bytes apart"() {
@@ -154,6 +154,42 @@ class GeneratedSourcesSpec extends Specification {
         def c = Files.writeString(schema.resolve('c.graphqls'), 'abc')
 
         expect:
-        GeneratedSources.fingerprint('1', [:], schema, [a, b]) != GeneratedSources.fingerprint('1', [:], schema, [c])
+        GeneratedSources.fingerprint('1', [:], schema, [a, b], []) != GeneratedSources.fingerprint('1', [:], schema, [c], [])
+    }
+
+    def "the fingerprint follows the type mappings file of a dependency jar and of a dependency directory, and not its other bytes"() {
+        given:
+        def file = Files.writeString(schema.resolve('a.graphqls'), 'type Query { a: String }')
+        def jar = out.resolve('lib.jar')
+        zip(jar, 'META-INF/micronaut-graphql-tools/type-mappings.properties', 'Pet=org.lib.Pet\n', 'a/B.class', 'one')
+        def classes = Files.createDirectories(out.resolve('classes/META-INF/micronaut-graphql-tools'))
+        Files.writeString(classes.resolve('type-mappings.properties'), 'Owner=org.dir.Owner\n')
+        def base = GeneratedSources.fingerprint('1', [:], schema, [file], [jar, out.resolve('classes')])
+
+        expect:
+        base != GeneratedSources.fingerprint('1', [:], schema, [file], [])
+        base == GeneratedSources.fingerprint('1', [:], schema, [file], [out.resolve('classes'), jar])
+
+        when:
+        zip(jar, 'META-INF/micronaut-graphql-tools/type-mappings.properties', 'Pet=org.lib.Pet\n', 'a/B.class', 'two')
+
+        then:
+        base == GeneratedSources.fingerprint('1', [:], schema, [file], [jar, out.resolve('classes')])
+
+        when:
+        zip(jar, 'META-INF/micronaut-graphql-tools/type-mappings.properties', 'Pet=org.other.Pet\n', 'a/B.class', 'two')
+
+        then:
+        base != GeneratedSources.fingerprint('1', [:], schema, [file], [jar, out.resolve('classes')])
+    }
+
+    private static void zip(Path jar, String... entries) {
+        new java.util.zip.ZipOutputStream(Files.newOutputStream(jar)).withCloseable { zip ->
+            for (int i = 0; i < entries.length; i += 2) {
+                zip.putNextEntry(new java.util.zip.ZipEntry(entries[i]))
+                zip.write(entries[i + 1].getBytes('UTF-8'))
+                zip.closeEntry()
+            }
+        }
     }
 }
