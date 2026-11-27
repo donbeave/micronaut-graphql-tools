@@ -147,6 +147,7 @@ under the same rules):
 | Contracts | `kotlinSuspend` | boolean | `false` |
 | Contracts | `subscriptionReturnType` | class name | `org.reactivestreams.Publisher` |
 | Mapping | `typeMappings` | map from SDL name or `Type.field` to a class | empty, plus built-in presets |
+| Mapping | `typeMappingsFromDependencies` | boolean | `true` |
 | Names | `nameConstants` | enum `NONE`, `TYPES`, `FIELDS` | `FIELDS` |
 | Schema | `includes`, `excludes` | list of globs | `**/*.graphqls`, `**/*.graphql`; none |
 | Schema | `commentsAsDescriptions` | boolean | `false` (must match the runtime setting) |
