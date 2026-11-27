@@ -142,7 +142,15 @@ final class NodeText {
                 case '\n' -> quoted.append("\\n");
                 case '\r' -> quoted.append("\\r");
                 case '\t' -> quoted.append("\\t");
-                default -> quoted.append(c);
+                case '\b' -> quoted.append("\\b");
+                case '\f' -> quoted.append("\\f");
+                default -> {
+                    if (c < 0x20 || c == 0x7f) {
+                        quoted.append(String.format("\\u%04x", (int) c));
+                    } else {
+                        quoted.append(c);
+                    }
+                }
             }
         }
         return quoted.append('"').toString();

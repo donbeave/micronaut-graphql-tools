@@ -18,10 +18,12 @@ package io.micronaut.graphql.tools.codegen.schema;
 import graphql.language.Definition;
 import graphql.language.Document;
 import graphql.language.EnumTypeDefinition;
+import graphql.language.FieldDefinition;
 import graphql.language.EnumTypeExtensionDefinition;
 import graphql.language.DirectiveDefinition;
 import graphql.language.InputObjectTypeDefinition;
 import graphql.language.InputObjectTypeExtensionDefinition;
+import graphql.language.InputValueDefinition;
 import graphql.language.InterfaceTypeDefinition;
 import graphql.language.InterfaceTypeExtensionDefinition;
 import graphql.language.Node;
@@ -52,6 +54,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -82,7 +85,14 @@ final class SchemaLoader {
     static Loaded load(List<SchemaSource> sources, List<Diagnostic> diagnostics) {
         SchemaLoader loader = new SchemaLoader(diagnostics);
         Map<String, SchemaSource> byPath = new LinkedHashMap<>();
-        sources.forEach(source -> byPath.putIfAbsent(source.path(), source));
+        for (SchemaSource source : sources) {
+            SchemaSource first = byPath.putIfAbsent(source.path(), source);
+            if (first != null && !first.text().equals(source.text())) {
+                diagnostics.add(new Diagnostic(Diagnostic.Severity.ERROR, Diagnostic.DUPLICATE_DEFINITION,
+                        "The schema source " + source.path() + " is given twice with different content.", null,
+                        new Origin(source.path(), 0, 0)));
+            }
+        }
         byPath.values().stream().sorted(Comparator.comparing(SchemaSource::path, UTF8_ORDER)).forEach(loader::read);
         loader.mergeExtensions();
         loader.resolveRoots();
@@ -90,14 +100,15 @@ final class SchemaLoader {
     }
 
     private void read(SchemaSource source) {
-        if (source.text().lines().map(String::strip).allMatch(line -> line.isEmpty() || line.startsWith("#"))) {
+        String text = source.text().startsWith("\uFEFF") ? source.text().substring(1) : source.text();
+        if (text.lines().map(String::strip).allMatch(line -> line.isEmpty() || line.startsWith("#"))) {
             skipped.add(source.path());
             return;
         }
         Document document;
         try {
             document = new Parser().parseDocument(ParserEnvironment.newParserEnvironment()
-                    .document(MultiSourceReader.newMultiSourceReader().string(source.text(), source.path()).build())
+                    .document(MultiSourceReader.newMultiSourceReader().string(text, source.path()).build())
                     .parserOptions(ParserOptions.getDefaultSdlParserOptions())
                     .build());
         } catch (InvalidSyntaxException e) {
@@ -196,11 +207,11 @@ final class SchemaLoader {
     private void absorb(MergedType into, TypeDefinition<?> definition) {
         into.directives.addAll(definition.getDirectives());
         if (definition instanceof ObjectTypeDefinition object) {
-            object.getFieldDefinitions().forEach(field -> declare(into, field.getName(), field, "field"));
+            object.getFieldDefinitions().forEach(field -> declareField(into, field));
             into.fields.addAll(object.getFieldDefinitions());
             names(object.getImplements(), into.implemented);
         } else if (definition instanceof InterfaceTypeDefinition type) {
-            type.getFieldDefinitions().forEach(field -> declare(into, field.getName(), field, "field"));
+            type.getFieldDefinitions().forEach(field -> declareField(into, field));
             into.fields.addAll(type.getFieldDefinitions());
             names(type.getImplements(), into.implemented);
         } else if (definition instanceof UnionTypeDefinition union) {
@@ -211,6 +222,18 @@ final class SchemaLoader {
         } else if (definition instanceof InputObjectTypeDefinition input) {
             input.getInputValueDefinitions().forEach(field -> declare(into, field.getName(), field, "field"));
             into.inputFields.addAll(input.getInputValueDefinitions());
+        }
+    }
+
+    private void declareField(MergedType into, FieldDefinition field) {
+        declare(into, field.getName(), field, "field");
+        Map<String, Node<?>> arguments = new HashMap<>();
+        for (InputValueDefinition argument : field.getInputValueDefinitions()) {
+            Node<?> first = arguments.putIfAbsent(argument.getName(), argument);
+            if (first != null) {
+                diagnostics.add(duplicate("argument", into.name + "." + field.getName() + "(" + argument.getName() + ")", origin(first),
+                        origin(argument)));
+            }
         }
     }
 

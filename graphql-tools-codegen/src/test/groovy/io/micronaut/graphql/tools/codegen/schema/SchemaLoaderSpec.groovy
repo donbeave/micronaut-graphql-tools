@@ -216,6 +216,46 @@ class SchemaLoaderSpec extends Specification {
         IrBuilder.fromDirectory(dir, OPTIONS).diagnostics().empty
     }
 
+    def "an argument that a field repeats is a diagnostic that names both places"() {
+        when:
+        def result = IrBuilder.fromSources([new SchemaSource('a.graphqls', 'type Query { f(x: Int, x: String): String }')], OPTIONS)
+
+        then:
+        result.diagnostics()*.code() == [Diagnostic.DUPLICATE_DEFINITION]
+        result.diagnostics()[0].message() == "The argument 'Query.f(x)' is defined twice: at a.graphqls:1:16 and at a.graphqls:1:24."
+    }
+
+    def "two sources with one path and different text are a diagnostic, and the same text is read once"() {
+        given:
+        def one = new SchemaSource('a.graphqls', 'type Query { a: Int }')
+        def other = new SchemaSource('a.graphqls', 'type Query { b: Int }')
+
+        expect:
+        IrBuilder.fromSources([one, one], OPTIONS).diagnostics().empty
+        IrBuilder.fromSources([one, other], OPTIONS).diagnostics()*.code() == [Diagnostic.DUPLICATE_DEFINITION]
+        IrBuilder.fromSources([other, one], OPTIONS).diagnostics()*.code() == [Diagnostic.DUPLICATE_DEFINITION]
+        IrBuilder.fromSources([one, other], OPTIONS).diagnostics()[0].message() ==
+                'The schema source a.graphqls is given twice with different content.'
+    }
+
+    def "a byte order mark in a source is dropped like in a file"() {
+        expect:
+        IrBuilder.fromSources([new SchemaSource('a.graphqls', '\uFEFFtype Query { a: String }')], OPTIONS).diagnostics().empty
+    }
+
+    def "an extend schema block adds its roots"() {
+        when:
+        def result = IrBuilder.fromSources([
+                new SchemaSource('a.graphqls', 'schema { query: Q }\ntype Q { a: Int }\ntype M { b: Int }'),
+                new SchemaSource('b.graphqls', 'extend schema { mutation: M }')], OPTIONS)
+
+        then:
+        result.diagnostics().empty
+        result.skippedFiles().empty
+        result.ir().contracts()*.names()*.sdlName() == ['Q.a', 'M.b']
+        result.ir().models().empty
+    }
+
     private Path write(String path, String text) {
         def file = dir.resolve(path)
         Files.createDirectories(file.parent)

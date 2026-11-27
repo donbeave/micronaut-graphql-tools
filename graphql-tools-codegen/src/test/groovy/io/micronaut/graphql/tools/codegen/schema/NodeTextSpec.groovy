@@ -69,4 +69,9 @@ class NodeTextSpec extends Specification {
         result.ir().models()[0].docs().description() == 'Ends *&#47; and &#92;u0041 {&#64;link X}'
         result.ir().contracts()[0].methods()[0].docs().deprecation().reason() == 'no *&#47; more'
     }
+
+    def "a string value is written in GraphQL syntax with every control character escaped"() {
+        expect:
+        NodeText.value(new graphql.language.StringValue('a"b\\c\n\r\t\b\f\u0001\u007f')) == '"a\\"b\\\\c\\n\\r\\t\\b\\f\\u0001\\u007f"'
+    }
 }
