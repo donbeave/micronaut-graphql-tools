@@ -35,13 +35,24 @@ The Groovy DSL is the same: `codegen { packageName = 'example' }`. Gradle 8.14 a
   and the string form the record has (`Property<String>` for strings and enums, `Property<Boolean>`, `ListProperty<String>`,
   `MapProperty<String, String>`); an option that is not set has the default of the generator. A spec test reads the
   `Options` record and fails when a component has no property or a property has no component. The spec also has
-  `schemaDirs` (default `graphqlTools.schemaDirs`, which defaults to `src/main/resources/graphql`) and `outputDirectory`
-  (default `build/generated/sources/graphqlTools/<name>`).
+  `schemaDirs` (default `graphqlTools.schemaDirs`, which defaults to `src/main/resources/graphql`), `outputDirectory`
+  (default `build/generated/sources/graphqlTools/<name>`) and `resourcesDirectory`.
 - `GenerateGraphQLTask`: `@CacheableTask`. Its inputs are the schema directories (relative path sensitivity; the worker selects the files with the
   generator's `SchemaFileSelector`, so `includes` and `excludes` follow the generator's globs), the options in their string form and the generator class path; its output is the output directory. It
   deletes and recreates the output directory before every run, so a type that the schema no longer has leaves no stale source.
   A file that the generator writes is added to the main source set of the language: the Java source set, the Groovy source set or
   the Kotlin source set (the one that the Kotlin plugin adds).
+- Type mappings of dependencies: the resolvable configuration `graphqlToolsDependencyClasspath` extends `implementation` and `compileOnly`
+  and asks for the jar variant (Gradle's `compileClasspath` of a project dependency is a class directory without its resources,
+  which would hide a mappings file). The task has it as `@Classpath` input `dependencyClasspath`, resolved when the task runs and
+  not when the build is configured. The worker gives the jars to the generator (`withDependencies`), which reads
+  `META-INF/micronaut-graphql-tools/type-mappings.properties` from each of them below `typeMappings`, so a type that a dependency
+  maps needs no `typeMappings` entry. With `typeMappingsFromDependencies = false` the classpath is empty, so the dependencies are
+  neither read nor an input of the task.
+- The mappings file of the module is written to `resourcesDirectory` (default `build/generated/resources/graphqlTools/<name>`, a
+  second `@OutputDirectory`, recreated on every run), which the plugin adds to the resources of the main source set, so
+  `processResources` puts it in the jar. It exists only when the module generates or maps a type. Two specs of one project write
+  the same path, so only one of them should map types.
 - `GenerateAction` and `GenerateParameters`: the worker (`classLoaderIsolation`). The parameters hold files and strings only;
   the worker reads the options with `Options.fromMap`, validates the options, selects the schema files, runs the generator and writes each generated file whose content changed. An
   error diagnostic fails the build with every message, naming the option or the schema file.
@@ -71,7 +82,8 @@ The Groovy DSL is the same: `codegen { packageName = 'example' }`. Gradle 8.14 a
   (`./gradlew :micronaut-graphql-tools-gradle-plugin:functionalTest`; it publishes the generator to `build/repo` and needs the
   network; the CI job `build tools` runs it, `check` does not). They cover the Kotlin and Groovy DSL, the generator being absent
   from the build-script and application class paths, the default version, up-to-date and build-cache behavior (second run
-  `UP-TO-DATE`, edit reruns, clean build `FROM-CACHE`), the stale output, the diagnostics, and the compile-time wiring for javac,
+  `UP-TO-DATE`, edit reruns, clean build `FROM-CACHE`), the stale output, the diagnostics, the type mappings of a dependency jar and of a project dependency (and that the option off reads
+  none), and the compile-time wiring for javac,
   Groovy, KSP and kapt. Gradle 8.14 does not run on JDK 25 or newer, so on those JDKs its scenarios use a JDK 21 for the
   daemon (`JAVA_HOME_21_X64` or a toolchain) and are skipped when there is none.
 

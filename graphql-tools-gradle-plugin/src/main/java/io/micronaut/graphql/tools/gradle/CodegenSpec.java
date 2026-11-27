@@ -72,6 +72,15 @@ public abstract class CodegenSpec implements Named {
     public abstract DirectoryProperty getOutputDirectory();
 
     /**
+     * The directory that the task writes the generated resources to, and that is added to the resources of the main source set:
+     * the type mappings file {@code META-INF/micronaut-graphql-tools/type-mappings.properties} of the module. The task recreates it
+     * before every run. The default is {@code build/generated/resources/graphqlTools/<name>}.
+     *
+     * @return the directory
+     */
+    public abstract DirectoryProperty getResourcesDirectory();
+
+    /**
      * The generated language: {@code JAVA}, {@code KOTLIN} or {@code GROOVY}. The default follows the applied Kotlin or Groovy
      * plugin, else {@code JAVA}.
      *
@@ -199,7 +208,10 @@ public abstract class CodegenSpec implements Named {
     public abstract Property<String> getNameConstants();
 
     /**
-     * Whether the mappings of dependency jars are read. The plugin gives the generator no dependency jar yet, so it has no effect.
+     * Whether the type mappings file of each dependency of the project is read. The plugin gives the generator the jars and class
+     * directories of the {@code implementation} and {@code compileOnly} dependencies (project dependencies as jars), so a type that a
+     * dependency maps needs no {@code typeMappings} entry. The default is {@code true}; with {@code false} the task does not read the
+     * dependencies, and they are not an input of the task.
      *
      * @return the property
      */

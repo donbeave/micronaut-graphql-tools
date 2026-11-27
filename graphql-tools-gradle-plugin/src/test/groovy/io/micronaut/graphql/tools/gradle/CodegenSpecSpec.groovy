@@ -30,7 +30,7 @@ import java.lang.reflect.Method
 
 class CodegenSpecSpec extends Specification {
 
-    private static final Set<String> NOT_OPTIONS = ['Name', 'SchemaDirs', 'OutputDirectory', 'Class'] as Set
+    private static final Set<String> NOT_OPTIONS = ['Name', 'SchemaDirs', 'OutputDirectory', 'ResourcesDirectory', 'Class'] as Set
 
     def "the spec has one property for each component of the Options record, and nothing else"() {
         given:

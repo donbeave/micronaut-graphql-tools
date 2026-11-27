@@ -114,4 +114,49 @@ abstract class MavenPluginSampleContract {
         assertTrue(failed.output().contains("[schema-syntax-error]"), failed.output());
         assertTrue(failed.output().contains("broken.graphqls"), failed.output());
     }
+
+    private static final String MAPPINGS = "META-INF/micronaut-graphql-tools/type-mappings.properties";
+    private static final String MAPPED_SCHEMA = "hello: String\n  pet: Pet\n  price: Money\n}\n\nscalar Money\n";
+
+    /** Adds a jar with a type mappings file as a system-scope dependency, so that it is on the compile class path, and uses its types. */
+    private static void dependOnMappingsJar(MavenSample sample) throws java.io.IOException {
+        Path jar = sample.file("libs/types.jar");
+        java.nio.file.Files.createDirectories(jar.getParent());
+        try (java.util.zip.ZipOutputStream zip = new java.util.zip.ZipOutputStream(java.nio.file.Files.newOutputStream(jar))) {
+            zip.putNextEntry(new java.util.zip.ZipEntry(MAPPINGS));
+            zip.write("Pet=org.lib.Pet\nMoney=org.lib.Money\n".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            zip.closeEntry();
+        }
+        String dependency = "<dependency><groupId>org.lib</groupId><artifactId>types</artifactId><version>1.0</version>"
+                + "<scope>system</scope><systemPath>${project.basedir}/libs/types.jar</systemPath></dependency>";
+        String pom = Files.read(sample.file("pom.xml"));
+        Files.write(sample.file("pom.xml"), pom.contains("<dependencies>")
+                ? pom.replace("<dependencies>", "<dependencies>" + dependency)
+                : pom.replace("  <build>", "  <dependencies>" + dependency + "</dependencies>\n  <build>"));
+        Files.replace(sample.file(SCHEMA), "hello: String\n}\n", MAPPED_SCHEMA);
+    }
+
+    @Test
+    void aTypeThatADependencyMapsNeedsNoTypeMappingsEntry() throws java.io.IOException {
+        MavenSample sample = MavenSample.copyOf(sample(), "dependency-mappings");
+        dependOnMappingsJar(sample);
+
+        MavenSample.Result built = sample.run("compile");
+
+        assertEquals(0, built.exitCode(), built.output());
+        assertTrue(Files.read(sample.file(GENERATED + "/resources/" + MAPPINGS)).contains("Money=org.lib.Money"), built.output());
+        assertTrue(java.nio.file.Files.isRegularFile(sample.file("target/classes/" + MAPPINGS)),
+                "the generated resource root is on the resources of the project:\n" + built.output());
+    }
+
+    @Test
+    void withTypeMappingsFromDependenciesOffTheDependenciesAreNotRead() throws java.io.IOException {
+        MavenSample sample = MavenSample.copyOf(sample(), "dependency-mappings-off");
+        dependOnMappingsJar(sample);
+
+        MavenSample.Result failed = sample.run("compile", "-Dmicronaut.graphql.tools.codegen.type.mappings.from.dependencies=false");
+
+        assertNotEquals(0, failed.exitCode(), failed.output());
+        assertTrue(failed.output().contains("[unknown-type]"), failed.output());
+    }
 }

@@ -22,6 +22,7 @@ import io.micronaut.graphql.tools.codegen.GraphQLCodeGenerator;
 import io.micronaut.graphql.tools.codegen.Options;
 import io.micronaut.graphql.tools.codegen.OptionsResult;
 import io.micronaut.graphql.tools.codegen.schema.SchemaFileSelector;
+import io.micronaut.graphql.tools.codegen.schema.TypeMappingsFile;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -29,7 +30,11 @@ import org.apache.maven.plugin.descriptor.PluginDescriptor;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.plugins.annotations.ResolutionScope;
+import org.apache.maven.model.Resource;
 import org.apache.maven.project.MavenProject;
+
+import org.apache.maven.artifact.DependencyResolutionRequiredException;
 
 import java.io.File;
 import java.io.IOException;
@@ -47,16 +52,18 @@ import java.util.Map;
  * ({@link Options#fromMap(Map)}): an enum is its constant name, a list is a list of child elements, a map is child elements named by
  * key. {@code schemaDirectory}, {@code outputDirectory} and {@code skip} belong to the plugin, as they are not options. The files are
  * written under {@code <outputDirectory>/<language>} ({@code java}, {@code kotlin} or {@code groovy}), and that directory is added to
- * the compile source roots of the project.</p>
+ * the compile source roots of the project. The type mappings file of the module is written under {@code <outputDirectory>/resources},
+ * which is added as a resource root, and the goal needs the compile class path of the project to read the mappings of the dependencies.</p>
  *
  * <p>The goal binds to {@code generate-sources} by default, but a third-party plugin cannot join the lifecycle mapping of a packaging,
  * so the project declares an {@code <execution>}.</p>
  */
-@Mojo(name = "generate", defaultPhase = LifecyclePhase.GENERATE_SOURCES, threadSafe = true)
+@Mojo(name = "generate", defaultPhase = LifecyclePhase.GENERATE_SOURCES, requiresDependencyResolution = ResolutionScope.COMPILE, threadSafe = true)
 public class GenerateMojo extends AbstractMojo {
 
     private static final String PROPERTY = "micronaut.graphql.tools.codegen.";
     private static final String NONE = "none";
+    private static final String RESOURCES = "resources";
 
     @Parameter(defaultValue = "${project}", readonly = true, required = true)
     private MavenProject project;
@@ -144,7 +151,11 @@ public class GenerateMojo extends AbstractMojo {
     @Parameter
     private Map<String, String> typeMappings;
 
-    /** Whether the mappings of dependency jars are read; the goal gives the generator no dependency jar yet, so it has no effect. */
+    /**
+     * Whether the type mappings file of each dependency is read. The goal gives the generator the jars and class directories of the
+     * compile class path of the project (not the classes of the project itself), so a type that a dependency maps needs no
+     * {@code typeMappings} entry.
+     */
     @Parameter(property = PROPERTY + "type.mappings.from.dependencies", defaultValue = "true")
     private boolean typeMappingsFromDependencies;
 
@@ -189,12 +200,16 @@ public class GenerateMojo extends AbstractMojo {
         Path outputRoot = outputDirectory.toPath().toAbsolutePath().normalize();
         String languageDirectory = options.language().name().toLowerCase(Locale.ROOT);
         project.addCompileSourceRoot(outputRoot.resolve(languageDirectory).toString());
+        Resource resources = new Resource();
+        resources.setDirectory(outputRoot.resolve(RESOURCES).toString());
+        project.addResource(resources);
+        List<Path> dependencies = typeMappingsFromDependencies ? dependencyPaths() : List.of();
 
         List<Path> schemaFiles;
         String fingerprint;
         try {
             schemaFiles = SchemaFileSelector.select(schemaRoot, options.includes(), options.excludes());
-            fingerprint = GeneratedSources.fingerprint(generatorVersion(), options.toMap(), schemaRoot, schemaFiles);
+            fingerprint = GeneratedSources.fingerprint(generatorVersion(), options.toMap(), schemaRoot, schemaFiles, dependencies);
         } catch (UncheckedIOException e) {
             String message = "[" + Diagnostic.SCHEMA_FILE_UNREADABLE + "] A schema file cannot be read: " + e.getCause().getMessage();
             getLog().error(message);
@@ -213,6 +228,7 @@ public class GenerateMojo extends AbstractMojo {
         GenerationResult result = GraphQLCodeGenerator.builder()
                 .withSchemaFiles(schemaFiles)
                 .withOutputDirectory(outputRoot.resolve(languageDirectory))
+                .withDependencies(dependencies)
                 .withOptions(options)
                 .build()
                 .generate();
@@ -223,9 +239,22 @@ public class GenerateMojo extends AbstractMojo {
         }
         Map<String, String> files = new LinkedHashMap<>();
         for (GeneratedFile file : result.files()) {
-            files.put(languageDirectory + "/" + file.path(), file.content());
+            String directory = TypeMappingsFile.PATH.equals(file.path()) ? RESOURCES : languageDirectory;
+            files.put(directory + "/" + file.path(), file.content());
         }
         reconcile(outputRoot, fingerprint, files);
+    }
+
+    private List<Path> dependencyPaths() throws MojoExecutionException {
+        try {
+            Path own = Path.of(project.getBuild().getOutputDirectory()).toAbsolutePath().normalize();
+            return project.getCompileClasspathElements().stream()
+                    .map(element -> Path.of(element).toAbsolutePath().normalize())
+                    .filter(path -> !path.equals(own))
+                    .toList();
+        } catch (DependencyResolutionRequiredException e) {
+            throw new MojoExecutionException("The compile class path of the project cannot be resolved: " + e.getMessage(), e);
+        }
     }
 
     private void reconcile(Path outputRoot, String fingerprint, Map<String, String> files) throws MojoExecutionException {
