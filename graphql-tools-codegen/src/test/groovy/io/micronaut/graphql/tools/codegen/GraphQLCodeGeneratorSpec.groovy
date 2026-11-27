@@ -99,7 +99,8 @@ class GraphQLCodeGeneratorSpec extends Specification {
 
     def "a generator that is wired wrongly fails to build"() {
         when:
-        GraphQLCodeGenerator.builder().withOutputDirectory(dir).withOptions(Options.builder().build()).build()
+        GraphQLCodeGenerator.builder().withSchemaFiles(dir.resolve('a')).withSchemaDirectory(dir).withOutputDirectory(dir)
+                .withOptions(Options.builder().build()).build()
 
         then:
         thrown(IllegalStateException)
