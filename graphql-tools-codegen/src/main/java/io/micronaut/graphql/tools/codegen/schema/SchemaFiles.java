@@ -61,12 +61,14 @@ final class SchemaFiles {
         }
         List<SchemaSource> sources = new ArrayList<>();
         int before = diagnostics.size();
+        Map<String, Path> selected = new TreeMap<>(SchemaLoader.UTF8_ORDER);
         for (Path file : files) {
             String relative = relative(directory, file);
             if (Globs.matchesAny(include, relative) && !Globs.matchesAny(exclude, relative)) {
-                read(file, relative, sources, diagnostics);
+                selected.put(relative, file);
             }
         }
+        selected.forEach((relative, file) -> read(file, relative, sources, diagnostics));
         if (sources.isEmpty() && diagnostics.size() == before) {
             diagnostics.add(Diagnostic.optionError(Diagnostic.NO_SCHEMA_FILES, "includes",
                     "No schema file under " + directory.toString().replace('\\', '/') + " matches the option includes " + includes
@@ -91,7 +93,7 @@ final class SchemaFiles {
     private static void read(Path file, String relative, List<SchemaSource> sources, List<Diagnostic> diagnostics) {
         try {
             String text = Files.readString(file, StandardCharsets.UTF_8);
-            sources.add(new SchemaSource(relative, text.startsWith("﻿") ? text.substring(1) : text));
+            sources.add(new SchemaSource(relative, text));
         } catch (IOException | RuntimeException e) {
             diagnostics.add(fileProblem(Diagnostic.SCHEMA_FILE_UNREADABLE, relative,
                     "The schema file " + relative + " cannot be read: " + e.getMessage()));

@@ -63,6 +63,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * The rules: they lower the merged definitions and the options into the IR. They apply the names, the type mappings, the
@@ -150,7 +151,7 @@ final class Lowering {
     }
 
     private void checkOptionEntries() {
-        for (String key : options.typeMappings().keySet()) {
+        for (String key : new TreeSet<>(options.typeMappings().keySet())) {
             int dot = key.indexOf('.');
             boolean known;
             if (dot < 0) {
@@ -403,9 +404,10 @@ final class Lowering {
 
     private void register(MergedType type, String kindName) {
         Names generated = names.get(type.name);
-        if (ReservedNames.isJava(generated.simpleName())) {
+        String language = ReservedNames.languageOf(options.language(), generated.simpleName());
+        if (language != null) {
             error(Diagnostic.RESERVED_NAME, "The " + kindName + " '" + type.name + "' (" + type.origin + ") cannot be generated as the class "
-                    + generated.simpleName() + ": it is a Java keyword. Rename it in the schema or set typeNamePrefix or typeNameSuffix.",
+                    + generated.simpleName() + ": it is a " + language + " keyword. Rename it in the schema or set typeNamePrefix or typeNameSuffix.",
                     type.origin);
         }
         units.add(new Unit(generated.packageName(), generated.simpleName(), "the " + kindName + " '" + type.name + "' (" + type.origin + ")",

@@ -32,6 +32,7 @@ import graphql.language.ObjectTypeExtensionDefinition;
 import graphql.language.OperationTypeDefinition;
 import graphql.language.ScalarTypeExtensionDefinition;
 import graphql.language.SchemaDefinition;
+import graphql.language.SchemaExtensionDefinition;
 import graphql.language.SourceLocation;
 import graphql.language.Type;
 import graphql.language.TypeDefinition;
@@ -55,10 +56,12 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * The loader: reads schema sources with the graphql-java parser only and merges them. The merge order is fixed so the result does
@@ -77,6 +80,7 @@ final class SchemaLoader {
     private final List<String> skipped = new ArrayList<>();
     private final List<TypeDefinition<?>> extensions = new ArrayList<>();
     private final List<SchemaDefinition> schemaDefinitions = new ArrayList<>();
+    private boolean explicitSchema;
 
     private SchemaLoader(List<Diagnostic> diagnostics) {
         this.diagnostics = diagnostics;
@@ -85,15 +89,17 @@ final class SchemaLoader {
     static Loaded load(List<SchemaSource> sources, List<Diagnostic> diagnostics) {
         SchemaLoader loader = new SchemaLoader(diagnostics);
         Map<String, SchemaSource> byPath = new LinkedHashMap<>();
+        Set<String> conflicting = new HashSet<>();
         for (SchemaSource source : sources) {
             SchemaSource first = byPath.putIfAbsent(source.path(), source);
-            if (first != null && !first.text().equals(source.text())) {
+            if (first != null && !first.text().equals(source.text()) && conflicting.add(source.path())) {
                 diagnostics.add(new Diagnostic(Diagnostic.Severity.ERROR, Diagnostic.DUPLICATE_DEFINITION,
                         "The schema source " + source.path() + " is given twice with different content.", null,
                         new Origin(source.path(), 0, 0)));
             }
         }
-        byPath.values().stream().sorted(Comparator.comparing(SchemaSource::path, UTF8_ORDER)).forEach(loader::read);
+        byPath.values().stream().filter(source -> !conflicting.contains(source.path()))
+                .sorted(Comparator.comparing(SchemaSource::path, UTF8_ORDER)).forEach(loader::read);
         loader.mergeExtensions();
         loader.resolveRoots();
         return new Loaded(loader.schema, List.copyOf(loader.skipped));
@@ -130,6 +136,7 @@ final class SchemaLoader {
                 schemaContent = true;
             } else if (definition instanceof SchemaDefinition schemaDefinition) {
                 schemaDefinitions.add(schemaDefinition);
+                explicitSchema |= !(definition instanceof SchemaExtensionDefinition);
                 schemaContent = true;
             } else if (definition instanceof DirectiveDefinition) {
                 schemaContent = true;
@@ -270,7 +277,7 @@ final class SchemaLoader {
                 }
             }
         }
-        if (!schemaDefinitions.isEmpty()) {
+        if (explicitSchema) {
             return;
         }
         MergedType query = schema.types.get("Query");

@@ -217,6 +217,25 @@ class IrDiagnosticsSpec extends Specification {
         build('type Query { when: [Long] }', OPTIONS.toBuilder().typeMappings(['Query.when': 'java.lang.Long']).build()).diagnostics().empty
     }
 
+    def "a Groovy or Kotlin keyword as a type name is an error for that language"() {
+        expect:
+        build('type Query { q: def }\ntype def { a: Int }', OPTIONS.toBuilder().language(Language.GROOVY).build()).diagnostics()*.code() ==
+                [Diagnostic.RESERVED_NAME]
+        build('type Query { q: fun }\ntype fun { a: Int }', OPTIONS.toBuilder().language(Language.KOTLIN).build()).diagnostics()[0].message().contains('is a Kotlin keyword')
+        build('type Query { q: def }\ntype def { a: Int }').diagnostics().empty
+    }
+
+    def "the unused mappings are reported in key order, whatever the order of the map"() {
+        given:
+        def forward = new LinkedHashMap([ZZ: 'a.Z', AA: 'a.A'])
+        def backward = new LinkedHashMap([AA: 'a.A', ZZ: 'a.Z'])
+
+        expect:
+        forward == backward
+        build('type Query { q: Int }', OPTIONS.toBuilder().typeMappings(forward).build()).diagnostics()*.optionName() == ['typeMappings.AA', 'typeMappings.ZZ']
+        build('type Query { q: Int }', OPTIONS.toBuilder().typeMappings(backward).build()).diagnostics()*.optionName() == ['typeMappings.AA', 'typeMappings.ZZ']
+    }
+
     def "a root operation that names a type that is not an object is an error"() {
         when:
         def result = build('schema { query: Q }\nenum Q { A }')

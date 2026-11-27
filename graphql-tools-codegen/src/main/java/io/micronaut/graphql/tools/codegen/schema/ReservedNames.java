@@ -43,10 +43,6 @@ final class ReservedNames {
     private ReservedNames() {
     }
 
-    static boolean isJava(String name) {
-        return JAVA.contains(name);
-    }
-
     /**
      * The language whose keyword the name is.
      *
