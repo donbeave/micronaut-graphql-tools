@@ -145,6 +145,9 @@ public final class ClientOperations {
             }
             if (findings.isEmpty()) {
                 ClientTypenames.Injected injected = ClientTypenames.inject(schema, operation, fragments);
+                injected.reserved().forEach(field -> findings.add(ClientDocuments.invalid(request.member(), "the alias " + ClientTypenames.TYPENAME
+                        + " is reserved: the selection of an interface or union gets the field " + ClientTypenames.TYPENAME + " for the type "
+                        + "name of its value, and this field has the same response key", ClientDocuments.location(field.getSourceLocation()))));
                 operation = injected.operation();
                 fragments = injected.fragments();
             }
@@ -227,14 +230,16 @@ public final class ClientOperations {
                     if (from != null) {
                         List<FragmentDefinition> defined = index(from, findings).fragments().get(spread.getName());
                         fragment = defined == null ? null : defined.get(0);
+                        // a directory that cannot be read may hold another definition of the fragment, so every request that reads
+                        // the documents fails, and the problem is reported once
+                        if (from.layout.documentsProblem() != null) {
+                            complete = false;
+                            continue;
+                        }
                     }
                 }
                 if (fragment == null) {
                     complete = false;
-                    // the directories that the fragment may be in cannot be read, which is reported instead of a missing fragment
-                    if (from != null && from.layout.documentsProblem() != null) {
-                        continue;
-                    }
                     findings.add(ClientDocuments.invalid(request.member(), "the operation uses the fragment " + spread.getName()
                             + ", which neither its document nor the document files of the client schema define",
                             ClientDocuments.location(spread.getSourceLocation())));

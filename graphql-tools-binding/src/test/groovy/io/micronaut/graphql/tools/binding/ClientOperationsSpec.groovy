@@ -701,4 +701,41 @@ union SearchResult = Book | Magazine
         then:
         codes(outcome) == ['client-schema-missing']
     }
+
+    void "a field aliased to the type name in an abstract selection is client-document-invalid, since the injected field would share its response key"() {
+        given:
+        schemaDir('nodes', '''
+            type Query { node(id: ID!): Node book: Book }
+            interface Node { id: ID! }
+            type Book implements Node { id: ID! title: String }
+        '''.stripIndent())
+
+        when:
+        def same = operations().resolve(request('{ node(id: "1") { __typename: id } }', '', 'nodes'))
+        def inFragment = operations().resolve(request('{ node(id: "1") { ...N } } fragment N on Node { __typename: id }', '', 'nodes'))
+        def object = operations().resolve(request('{ book { __typename: title } }', '', 'nodes'))
+
+        then:
+        codes(same) == ['client-document-invalid']
+        same.findings()[0].documentLocation().toString() == 'inline:1:19'
+        codes(inFragment) == ['client-document-invalid']
+        object.findings().isEmpty()
+    }
+
+    void "a missing client root stays fatal for every request that reads the documents of the schema server, and is reported once"() {
+        given:
+        write(server, 'schema.graphqls', SCHEMA)
+        write(clients.resolve('server'), 'ops.graphql', 'fragment Titled on Book { title }')
+        def shared = operations([clients, work.resolve('gone')], [server])
+
+        when:
+        def first = shared.resolve(request('{ book(id: "1") { ...Titled } }', '', 'server'))
+        def second = shared.resolve(request('{ book(id: "2") { ...Titled } }', '', 'server'))
+
+        then:
+        codes(first) == ['client-schema-missing']
+        first.operation() == null
+        second.operation() == null
+        codes(second) == []
+    }
 }

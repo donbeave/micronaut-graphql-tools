@@ -157,7 +157,7 @@ The assembled document holds the selected operation and the fragments it uses, d
 
 === The type name
 
-A value of an interface or a union is decoded as one of the object types that implement it, and the client chooses by the `__typename` of the value. The processor therefore puts `__typename` first in every selection set of an interface or union type that does not select it, in the operation, in an inline fragment and in a fragment, and the metadata holds the document with it. A `__typename` that the document selects without an alias or a directive is left where it is, and an aliased one does not count. A selection set of an object type is not changed. The types come from the client schema, so a compilation with `client.checks=false` adds nothing.
+A value of an interface or a union is decoded as one of the object types that implement it, and the client chooses by the `__typename` of the value. The processor therefore puts `__typename` first in every selection set of an interface or union type that does not select it, in the operation, in an inline fragment and in a fragment, and the metadata holds the document with it. A `__typename` that the document selects without an alias or a directive is left where it is, and an aliased one does not count. A field of such a selection set that is aliased to `__typename` fails with `[client-document-invalid]`, because the injected field would share its response key. A selection set of an object type is not changed. The types come from the client schema, so a compilation with `client.checks=false` adds nothing.
 
 === The HTTP method and the retry policy
 

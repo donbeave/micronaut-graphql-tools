@@ -65,31 +65,35 @@ public final class ClientTypenames {
             case MUTATION -> schema.getMutationType();
             case SUBSCRIPTION -> schema.getSubscriptionType();
         };
+        List<Field> reserved = new ArrayList<>();
         OperationDefinition changed = operation;
         if (root != null && operation.getSelectionSet() != null) {
-            changed = operation.transform(builder -> builder.selectionSet(selections(schema, operation.getSelectionSet(), root)));
+            changed = operation.transform(builder -> builder.selectionSet(selections(schema, operation.getSelectionSet(), root, reserved)));
         }
         Map<String, FragmentDefinition> changedFragments = new TreeMap<>();
         for (Map.Entry<String, FragmentDefinition> entry : fragments.entrySet()) {
             FragmentDefinition fragment = entry.getValue();
             GraphQLType type = schema.getType(fragment.getTypeCondition().getName());
             changedFragments.put(entry.getKey(), type == null ? fragment
-                    : fragment.transform(builder -> builder.selectionSet(selections(schema, fragment.getSelectionSet(), type))));
+                    : fragment.transform(builder -> builder.selectionSet(selections(schema, fragment.getSelectionSet(), type, reserved))));
         }
-        return new Injected(changed, changedFragments);
+        return new Injected(changed, changedFragments, reserved);
     }
 
-    private static SelectionSet selections(GraphQLSchema schema, SelectionSet set, GraphQLType parent) {
+    private static SelectionSet selections(GraphQLSchema schema, SelectionSet set, GraphQLType parent, List<Field> reserved) {
         List<Selection> result = new ArrayList<>();
         boolean selected = false;
         for (Selection<?> selection : set.getSelections()) {
             if (selection instanceof Field field) {
                 selected |= isTypename(field);
-                result.add(inside(schema, field, parent));
+                if (isAbstract(parent) && !field.getName().equals(TYPENAME) && TYPENAME.equals(field.getResultKey())) {
+                    reserved.add(field);
+                }
+                result.add(inside(schema, field, parent, reserved));
             } else if (selection instanceof InlineFragment fragment) {
                 GraphQLType type = fragment.getTypeCondition() == null ? parent : schema.getType(fragment.getTypeCondition().getName());
                 result.add(type == null ? fragment : fragment.transform(builder -> builder.selectionSet(selections(schema,
-                        fragment.getSelectionSet(), type))));
+                        fragment.getSelectionSet(), type, reserved))));
             } else {
                 result.add(selection);
             }
@@ -100,7 +104,7 @@ public final class ClientTypenames {
         return set.transform(builder -> builder.selections(result));
     }
 
-    private static Field inside(GraphQLSchema schema, Field field, GraphQLType parent) {
+    private static Field inside(GraphQLSchema schema, Field field, GraphQLType parent, List<Field> reserved) {
         if (field.getSelectionSet() == null || !(parent instanceof GraphQLFieldsContainer container)) {
             return field;
         }
@@ -109,7 +113,7 @@ public final class ClientTypenames {
             return field;
         }
         GraphQLType child = GraphQLTypeUtil.unwrapAll(definition.getType());
-        return field.transform(builder -> builder.selectionSet(selections(schema, field.getSelectionSet(), child)));
+        return field.transform(builder -> builder.selectionSet(selections(schema, field.getSelectionSet(), child, reserved)));
     }
 
     private static boolean isTypename(Field field) {
@@ -125,7 +129,9 @@ public final class ClientTypenames {
      *
      * @param operation the operation
      * @param fragments the fragments, by name
+     * @param reserved  the fields of an abstract selection that are aliased to {@code __typename}, whose response key the injected field
+     *                  would share
      */
-    public record Injected(OperationDefinition operation, Map<String, FragmentDefinition> fragments) {
+    public record Injected(OperationDefinition operation, Map<String, FragmentDefinition> fragments, List<Field> reserved) {
     }
 }
