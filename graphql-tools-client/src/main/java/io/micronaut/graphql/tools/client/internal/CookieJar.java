@@ -20,16 +20,20 @@ import io.micronaut.core.annotation.Nullable;
 import io.micronaut.graphql.tools.client.GraphQLSession.Cookie;
 
 import java.time.Clock;
+import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
+import java.time.temporal.ChronoField;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  * The cookies of one session, by name and path. Domain, Secure and HttpOnly are not interpreted: a session sends to one client id.
@@ -40,8 +44,10 @@ final class CookieJar {
     private static final List<DateTimeFormatter> DATE_FORMATS = List.of(
             DateTimeFormatter.RFC_1123_DATE_TIME,
             DateTimeFormatter.ofPattern("EEE, dd-MMM-yyyy HH:mm:ss zzz", Locale.ENGLISH),
-            DateTimeFormatter.ofPattern("EEE, dd-MMM-yy HH:mm:ss zzz", Locale.ENGLISH),
-            DateTimeFormatter.ofPattern("EEEE, dd-MMM-yy HH:mm:ss zzz", Locale.ENGLISH));
+            twoDigitYear("EEE, dd-MMM-"),
+            twoDigitYear("EEEE, dd-MMM-"));
+
+    private static final Pattern DELTA = Pattern.compile("-?(0|[1-9][0-9]*)");
 
     private final Clock clock;
     private final Map<String, Cookie> cookies = new LinkedHashMap<>();
@@ -147,11 +153,17 @@ final class CookieJar {
 
     @Nullable
     private static Instant maxAge(String value, Instant now) {
+        if (!DELTA.matcher(value).matches()) {
+            return null;
+        }
+        if (value.startsWith("-")) {
+            return Instant.MIN;
+        }
         try {
             long seconds = Long.parseLong(value);
-            return seconds <= 0 ? Instant.MIN : now.plusSeconds(seconds);
-        } catch (NumberFormatException | ArithmeticException e) {
-            return null;
+            return seconds == 0 ? Instant.MIN : now.plusSeconds(seconds);
+        } catch (NumberFormatException | ArithmeticException | DateTimeException e) {
+            return Instant.MAX;
         }
     }
 
@@ -165,6 +177,11 @@ final class CookieJar {
             }
         }
         return null;
+    }
+
+    private static DateTimeFormatter twoDigitYear(String prefix) {
+        return new DateTimeFormatterBuilder().appendPattern(prefix).appendValueReduced(ChronoField.YEAR, 2, 2, 1970)
+                .appendPattern(" HH:mm:ss zzz").toFormatter(Locale.ENGLISH);
     }
 
     private static String defaultPath(String requestPath) {

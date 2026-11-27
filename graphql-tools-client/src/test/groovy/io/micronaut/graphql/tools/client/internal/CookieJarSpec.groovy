@@ -115,4 +115,13 @@ class CookieJarSpec extends Specification {
         where:
         date << ['Mon, 09-Jun-2031 10:18:14 GMT', 'Mon, 09-Jun-31 10:18:14 GMT', 'Monday, 09-Jun-31 10:18:14 GMT']
     }
+
+    void "a two-digit year maps 70 to 99 into the 1900s, and the Max-Age grammar is enforced"() {
+        when:
+        jar.store(['a=1; Expires=Wed, 09-Jun-99 10:18:14 GMT', 'b=1; Max-Age=+0', 'c=1; Max-Age=00', 'd=1; Max-Age=99999999999999999999'], '/graphql')
+
+        then:
+        jar.snapshot()*.name() == ['b', 'c', 'd']
+        jar.snapshot()*.expires() == [null, null, Instant.MAX]
+    }
 }
