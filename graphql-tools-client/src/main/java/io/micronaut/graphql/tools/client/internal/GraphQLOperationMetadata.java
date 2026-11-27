@@ -51,4 +51,15 @@ public @interface GraphQLOperationMetadata {
      */
     String operationType() default "query";
 
+    /**
+     * @return the names of the variables that the operation declares, without the dollar sign, in declaration order
+     */
+    String[] variables() default {};
+
+    /**
+     * @return what the payload of the operation is: {@code field} for the value of its only root field, {@code data} for the
+     * whole {@code data} object of an operation that selects several root fields
+     */
+    String payload() default "data";
+
 }

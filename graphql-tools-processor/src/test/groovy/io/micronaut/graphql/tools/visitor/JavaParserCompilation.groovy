@@ -36,11 +36,18 @@ class JavaParserCompilation {
 
     private final Map<String, String> sources = new LinkedHashMap<>()
     private final Map<String, String> schemaFiles = new LinkedHashMap<>()
+    private final Map<String, String> clientFiles = new LinkedHashMap<>()
     private final Map<String, String> options = new LinkedHashMap<>()
     private final List<File> extraClasspath = []
 
     JavaParserCompilation schema(String path, String content) {
         schemaFiles.put(path, content)
+        return this
+    }
+
+    /** A file of the client directory, by its path under it: {@code books/schema.graphqls} is the schema {@code books}. */
+    JavaParserCompilation clientFile(String path, String content) {
+        clientFiles.put(path, content)
         return this
     }
 
@@ -70,9 +77,18 @@ class JavaParserCompilation {
             Files.writeString(file, content)
         }
         Path classes = Files.createDirectories(work.resolve('classes'))
+        Path clientDir = work.resolve('client')
+        clientFiles.each { path, content ->
+            Path file = clientDir.resolve(path)
+            Files.createDirectories(file.parent)
+            Files.writeString(file, content)
+        }
 
         Map<String, String> properties = new LinkedHashMap<>(options)
         properties.put(ProcessorOptions.SCHEMA_DIRS, schemaDir.toString())
+        if (!clientFiles.isEmpty()) {
+            properties.put(ProcessorOptions.CLIENT_DIRS, clientDir.toString())
+        }
         Properties saved = (Properties) System.properties.clone()
         JavaParser parser = null
         boolean success = true

@@ -27,6 +27,7 @@ import com.sun.source.tree.Tree
 import com.sun.source.tree.VariableTree
 import com.sun.source.util.JavacTask
 import com.sun.source.util.TreeScanner
+import io.micronaut.graphql.tools.visitor.client.GraphQLClientVisitor
 import io.micronaut.inject.visitor.TypeElementVisitor
 import spock.lang.Shared
 import spock.lang.Specification
@@ -79,6 +80,9 @@ class VisitorArchitectureSpec extends Specification {
     @Shared
     GraphQLToolsVisitor visitor = new GraphQLToolsVisitor()
 
+    @Shared
+    GraphQLClientVisitor clientVisitor = new GraphQLClientVisitor()
+
     def "the sources are found"() {
         expect:
         files().size() >= 5
@@ -89,7 +93,7 @@ class VisitorArchitectureSpec extends Specification {
         violations(parse(files().collect { new FileSource(it) })) == []
     }
 
-    def "the isolating visitor claims exactly the six annotations, the six options and the retired keys"() {
+    def "the isolating visitor claims exactly the six annotations, the eight options and the retired keys"() {
         expect:
         visitor.visitorKind == TypeElementVisitor.VisitorKind.ISOLATING
         visitor.supportedAnnotationNames == [
@@ -103,10 +107,21 @@ class VisitorArchitectureSpec extends Specification {
                                      'micronaut.graphql.tools.processor.resolver.accessor.prefixes',
                                      'micronaut.graphql.tools.processor.loose.nullability',
                                      'micronaut.graphql.tools.processor.type.class.convention',
+                                     'micronaut.graphql.tools.processor.client.dirs',
+                                     'micronaut.graphql.tools.processor.client.checks',
                                      'micronaut.graphql.tools.processor.resolverAccessorPrefixes',
                                      'micronaut.graphql.tools.processor.looseNullability',
                                      'micronaut.graphql.tools.processor.typeClassConvention',
                                      'micronaut.graphql.tools.sdlDir'] as Set
+    }
+
+    def "the isolating client visitor claims its two annotations by name and its two options"() {
+        expect:
+        clientVisitor.visitorKind == TypeElementVisitor.VisitorKind.ISOLATING
+        clientVisitor.supportedAnnotationNames == ['io.micronaut.graphql.tools.client.annotation.GraphQLClient',
+                                                   'io.micronaut.graphql.tools.client.annotation.GraphQLOperation'] as Set
+        clientVisitor.supportedOptions == ['micronaut.graphql.tools.processor.client.dirs',
+                                           'micronaut.graphql.tools.processor.client.checks'] as Set
     }
 
     def "each rule fails on a source that breaks it, however the source is formatted"() {
