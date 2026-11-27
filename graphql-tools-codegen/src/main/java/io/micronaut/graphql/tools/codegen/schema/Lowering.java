@@ -45,6 +45,8 @@ import io.micronaut.graphql.tools.codegen.ir.InputField;
 import io.micronaut.graphql.tools.codegen.ir.InputType;
 import io.micronaut.graphql.tools.codegen.ir.Ir;
 import io.micronaut.graphql.tools.codegen.ir.ModelType;
+import io.micronaut.graphql.tools.codegen.ir.NameClass;
+import io.micronaut.graphql.tools.codegen.ir.NameConstant;
 import io.micronaut.graphql.tools.codegen.ir.ResolverContract;
 import io.micronaut.graphql.tools.codegen.ir.ScalarType;
 import io.micronaut.graphql.tools.codegen.ir.shared.AppliedDirective;
@@ -74,6 +76,7 @@ final class Lowering {
 
     static final String TYPE_NAMES_CLASS = "GraphQLTypeNames";
     static final String NAMES_SUFFIX = "Names";
+    static final String TYPE_CONSTANT = "TYPE";
 
     private static final Map<String, BuiltinScalar> BUILTIN = Map.of(
             "ID", BuiltinScalar.ID, "String", BuiltinScalar.STRING, "Int", BuiltinScalar.INT, "Float", BuiltinScalar.FLOAT,
@@ -136,10 +139,10 @@ final class Lowering {
             }
         }
         List<ResolverContract> contracts = contracts();
-        nameConstants();
+        List<NameClass> nameClasses = nameClasses();
         collisions();
         checkOptionEntries();
-        return new Ir(enums, inputs, models, abstractTypes, scalars, contracts);
+        return new Ir(enums, inputs, models, abstractTypes, scalars, contracts, nameClasses);
     }
 
     private boolean isRoot(MergedType type) {
@@ -525,25 +528,88 @@ final class Lowering {
                 type.origin));
     }
 
-    private void nameConstants() {
+    private List<NameClass> nameClasses() {
+        List<NameClass> classes = new ArrayList<>();
         if (options.nameConstants() == NameConstants.NONE) {
-            return;
+            return classes;
         }
         String namesPackage = options.effectiveNamesPackage();
         units.add(new Unit(namesPackage, TYPE_NAMES_CLASS, "the class of the type name constants", null));
-        if (options.nameConstants() != NameConstants.FIELDS) {
-            return;
-        }
+        List<Pending> shared = new ArrayList<>();
         for (MergedType type : schema.types.values()) {
-            boolean hasFields = type.kind == Kind.OBJECT || type.kind == Kind.INTERFACE || type.kind == Kind.INPUT;
-            if (!hasFields || (!isRoot(type) && !names.containsKey(type.name))) {
+            if (!isRoot(type) && !names.containsKey(type.name)) {
                 continue;
             }
-            Names generated = names.get(type.name);
-            String simple = (generated == null ? type.name : generated.simpleName()) + NAMES_SUFFIX;
-            units.add(new Unit(namesPackage, simple, "the class of the name constants of the type '" + type.name + "' ("
-                    + type.origin + ")", type.origin));
+            boolean fielded = type.kind == Kind.OBJECT || type.kind == Kind.INTERFACE || type.kind == Kind.INPUT;
+            String typeDescription = "the type '" + type.name + "' (" + type.origin + ")";
+            if (fielded && options.nameConstants() == NameConstants.FIELDS) {
+                Names generated = names.get(type.name);
+                String simple = (generated == null ? type.name : generated.simpleName()) + NAMES_SUFFIX;
+                units.add(new Unit(namesPackage, simple, "the class of the name constants of " + typeDescription, type.origin));
+                List<Pending> constants = new ArrayList<>();
+                constants.add(new Pending(new NameConstant(TYPE_CONSTANT, type.name, type.origin), typeDescription));
+                if (type.kind == Kind.INPUT) {
+                    for (InputValueDefinition field : type.inputFields) {
+                        constants.add(fieldConstant(type, field.getName(), SchemaLoader.origin(field)));
+                    }
+                } else {
+                    for (FieldDefinition field : type.fields) {
+                        constants.add(fieldConstant(type, field.getName(), SchemaLoader.origin(field)));
+                    }
+                }
+                addClass(classes, namesPackage, simple, constants);
+            } else {
+                shared.add(new Pending(new NameConstant(constantName(type.name), type.name, type.origin), typeDescription));
+            }
         }
+        if (!shared.isEmpty()) {
+            addClass(classes, namesPackage, TYPE_NAMES_CLASS, shared);
+        }
+        return classes;
+    }
+
+    private static Pending fieldConstant(MergedType owner, String field, Origin origin) {
+        return new Pending(new NameConstant(constantName(field), field, origin),
+                "the field '" + owner.name + "." + field + "' (" + origin + ")");
+    }
+
+    private void addClass(List<NameClass> classes, String packageName, String simpleName, List<Pending> pending) {
+        Map<String, Pending> seen = new HashMap<>();
+        List<NameConstant> constants = new ArrayList<>(pending.size());
+        for (Pending item : pending) {
+            Pending first = seen.putIfAbsent(item.constant().name(), item);
+            if (first != null) {
+                error(Diagnostic.NAME_COLLISION, "Two schema elements generate the constant " + item.constant().name() + " in the class "
+                        + packageName + "." + simpleName + ": " + first.description() + " and " + item.description() + ". Rename one of"
+                        + " them in the schema.", item.constant().origin());
+            }
+            constants.add(item.constant());
+        }
+        classes.add(new NameClass(packageName, simpleName, constants));
+    }
+
+    /**
+     * The identifier of the constant of a schema name: the name in upper case, with an underscore before each word, so that
+     * {@code fooBar} gives {@code FOO_BAR} and {@code HTTPStatus} gives {@code HTTP_STATUS}. GraphQL names are ASCII, so the
+     * case conversion does not depend on the locale.
+     *
+     * @param name the schema name
+     * @return the identifier
+     */
+    static String constantName(String name) {
+        StringBuilder out = new StringBuilder(name.length() + 4);
+        for (int i = 0; i < name.length(); i++) {
+            char c = name.charAt(i);
+            if (i > 0 && Character.isUpperCase(c)) {
+                char previous = name.charAt(i - 1);
+                boolean startsWord = i + 1 < name.length() && Character.isLowerCase(name.charAt(i + 1));
+                if (Character.isLowerCase(previous) || Character.isDigit(previous) || Character.isUpperCase(previous) && startsWord) {
+                    out.append('_');
+                }
+            }
+            out.append(Character.toUpperCase(c));
+        }
+        return out.toString();
     }
 
     private void collisions() {
@@ -620,6 +686,9 @@ final class Lowering {
         }
         Names names = this.names.get(name);
         return new TypeRef.Reference(names != null ? names : new Names(name, options.effectiveModelPackage(), name), nullable);
+    }
+
+    private record Pending(NameConstant constant, String description) {
     }
 
     private record Unit(String packageName, String simpleName, String description, Origin origin) {

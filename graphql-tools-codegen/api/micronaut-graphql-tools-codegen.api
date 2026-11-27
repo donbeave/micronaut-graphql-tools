@@ -321,11 +321,12 @@ public final class io.micronaut.graphql.tools.codegen.ir.Ir extends java.lang.Re
   public final boolean equals(java.lang.Object);
   public final int hashCode();
   public final java.lang.String toString();
-  public io.micronaut.graphql.tools.codegen.ir.Ir(java.util.List<io.micronaut.graphql.tools.codegen.ir.EnumType>, java.util.List<io.micronaut.graphql.tools.codegen.ir.InputType>, java.util.List<io.micronaut.graphql.tools.codegen.ir.ModelType>, java.util.List<io.micronaut.graphql.tools.codegen.ir.AbstractType>, java.util.List<io.micronaut.graphql.tools.codegen.ir.ScalarType>, java.util.List<io.micronaut.graphql.tools.codegen.ir.ResolverContract>);
+  public io.micronaut.graphql.tools.codegen.ir.Ir(java.util.List<io.micronaut.graphql.tools.codegen.ir.EnumType>, java.util.List<io.micronaut.graphql.tools.codegen.ir.InputType>, java.util.List<io.micronaut.graphql.tools.codegen.ir.ModelType>, java.util.List<io.micronaut.graphql.tools.codegen.ir.AbstractType>, java.util.List<io.micronaut.graphql.tools.codegen.ir.ScalarType>, java.util.List<io.micronaut.graphql.tools.codegen.ir.ResolverContract>, java.util.List<io.micronaut.graphql.tools.codegen.ir.NameClass>);
   public java.util.List<io.micronaut.graphql.tools.codegen.ir.AbstractType> abstractTypes();
   public java.util.List<io.micronaut.graphql.tools.codegen.ir.EnumType> enums();
   public java.util.List<io.micronaut.graphql.tools.codegen.ir.InputType> inputs();
   public java.util.List<io.micronaut.graphql.tools.codegen.ir.ModelType> models();
+  public java.util.List<io.micronaut.graphql.tools.codegen.ir.NameClass> nameClasses();
   public java.util.List<io.micronaut.graphql.tools.codegen.ir.ResolverContract> contracts();
   public java.util.List<io.micronaut.graphql.tools.codegen.ir.ScalarType> scalars();
   public static final io.micronaut.graphql.tools.codegen.ir.Ir EMPTY;
@@ -347,6 +348,26 @@ public final class io.micronaut.graphql.tools.codegen.ir.ModelType extends java.
   public java.util.List<io.micronaut.graphql.tools.codegen.ir.shared.AppliedDirective> directives();
   public java.util.List<io.micronaut.graphql.tools.codegen.ir.shared.Names> implemented();
   public java.util.List<io.micronaut.graphql.tools.codegen.ir.shared.Names> memberOf();
+}
+
+public final class io.micronaut.graphql.tools.codegen.ir.NameClass extends java.lang.Record {
+  public final boolean equals(java.lang.Object);
+  public final int hashCode();
+  public final java.lang.String toString();
+  public io.micronaut.graphql.tools.codegen.ir.NameClass(java.lang.String, java.lang.String, java.util.List<io.micronaut.graphql.tools.codegen.ir.NameConstant>);
+  public java.lang.String packageName();
+  public java.lang.String simpleName();
+  public java.util.List<io.micronaut.graphql.tools.codegen.ir.NameConstant> constants();
+}
+
+public final class io.micronaut.graphql.tools.codegen.ir.NameConstant extends java.lang.Record {
+  public final boolean equals(java.lang.Object);
+  public final int hashCode();
+  public final java.lang.String toString();
+  public io.micronaut.graphql.tools.codegen.Origin origin();
+  public io.micronaut.graphql.tools.codegen.ir.NameConstant(java.lang.String, java.lang.String, io.micronaut.graphql.tools.codegen.Origin);
+  public java.lang.String name();
+  public java.lang.String value();
 }
 
 public final class io.micronaut.graphql.tools.codegen.ir.ResolverContract extends java.lang.Record {

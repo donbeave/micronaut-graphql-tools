@@ -91,13 +91,9 @@ enum Size { SMALL, MEDIUM }
 
         then:
         files*.path() == ['com/example/model/Color.java', 'com/example/model/Size.java', 'com/example/model/package-info.java',
-                          'META-INF/micronaut-graphql-tools/type-mappings.properties']
+                'com/example/names/GraphQLTypeNames.java', 'com/example/names/package-info.java',
+                'META-INF/micronaut-graphql-tools/type-mappings.properties']
         files.find { it.path() == 'com/example/model/package-info.java' }.content() == 'package com.example.model;\n'
-    }
-
-    def "a schema without an enum has no file"() {
-        expect:
-        generate(write('a.graphqls', 'type Query { hello: String }')).empty
     }
 
     private List<io.micronaut.graphql.tools.codegen.GeneratedFile> generate(Path... schemaFiles) {
