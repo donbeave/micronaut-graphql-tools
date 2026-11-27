@@ -1,3 +1,9 @@
 type Query {
+  color: Color
   hello: String
+}
+
+enum Color {
+  RED
+  GREEN
 }
