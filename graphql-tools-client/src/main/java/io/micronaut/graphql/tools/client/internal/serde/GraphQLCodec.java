@@ -15,6 +15,8 @@
  */
 package io.micronaut.graphql.tools.client.internal.serde;
 
+import io.micronaut.context.BeanProvider;
+import io.micronaut.context.exceptions.ConfigurationException;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.type.Argument;
 import io.micronaut.graphql.tools.client.GraphQLRequest;
@@ -27,7 +29,8 @@ import java.io.IOException;
 import java.util.Map;
 
 /**
- * Encodes requests and decodes responses with the application's Micronaut Serialization {@link ObjectMapper}.
+ * Encodes requests and decodes responses with the application's Micronaut Serialization {@link ObjectMapper}. It fails when it is
+ * created, which is when the first client is, if the application has no Micronaut Serialization JSON implementation.
  */
 @Internal
 @Singleton
@@ -37,8 +40,12 @@ public final class GraphQLCodec {
 
     private final ObjectMapper mapper;
 
-    GraphQLCodec(ObjectMapper mapper) {
-        this.mapper = mapper;
+    GraphQLCodec(BeanProvider<ObjectMapper> mappers) {
+        if (!mappers.isPresent()) {
+            throw new ConfigurationException("The GraphQL client needs Micronaut Serialization, and no JSON implementation of it is on the classpath. "
+                    + "Add the module io.micronaut.serde:micronaut-serde-jackson, which provides the JSON mapper of the client.");
+        }
+        this.mapper = mappers.get();
     }
 
     /**

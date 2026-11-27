@@ -31,7 +31,7 @@ public class Clients {
     public GraphQLHttpClient stub;
 
     @Inject
-    @GraphQLClient(id = "stub", endpoint = "/slow")
+    @GraphQLClient(id = "slow", endpoint = "/slow")
     public GraphQLHttpClient slow;
 
     @Inject

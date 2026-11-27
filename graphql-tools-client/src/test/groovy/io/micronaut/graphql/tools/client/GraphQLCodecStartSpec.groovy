@@ -13,23 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.micronaut.graphql.tools.client.internal
+package io.micronaut.graphql.tools.client
 
 import io.micronaut.context.ApplicationContext
-import io.micronaut.context.BeanContext
+import io.micronaut.context.BeanProvider
 import io.micronaut.context.exceptions.ConfigurationException
+import io.micronaut.graphql.tools.client.internal.serde.GraphQLCodec
 import io.micronaut.serde.ObjectMapper
 import spock.lang.Specification
 
-class SerdeRequirementSpec extends Specification {
+class GraphQLCodecStartSpec extends Specification {
 
-    void "an application without a Micronaut Serialization mapper fails at start and the message names the module to add"() {
+    void "an application without a Micronaut Serialization mapper fails when the codec is created, and the message names the module to add"() {
         given:
-        def context = Mock(BeanContext)
-        context.containsBean(ObjectMapper) >> false
+        def mappers = Mock(BeanProvider)
+        mappers.isPresent() >> false
 
         when:
-        new SerdeRequirement(context)
+        new GraphQLCodec(mappers)
 
         then:
         def e = thrown(ConfigurationException)
@@ -37,13 +38,13 @@ class SerdeRequirementSpec extends Specification {
         e.message.contains('io.micronaut.serde:micronaut-serde-jackson')
     }
 
-    void "an application with the mapper starts, and the requirement is part of the start"() {
+    void "an application that has the mapper starts without creating the codec, and creates it on demand"() {
         when:
         def context = ApplicationContext.run()
 
         then:
         context.containsBean(ObjectMapper)
-        context.getBeanDefinition(SerdeRequirement).isContextScope()
+        context.getBean(GraphQLCodec) != null
 
         cleanup:
         context.close()

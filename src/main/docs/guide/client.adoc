@@ -15,7 +15,7 @@ public class Books {
 }
 ----
 
-The client needs Micronaut Serialization with its JSON implementation (`io.micronaut.serde:micronaut-serde-jackson`) in the application. Without it the application fails at start, and the message names that module. The client does not use Jackson.
+The client needs Micronaut Serialization with its JSON implementation (`io.micronaut.serde:micronaut-serde-jackson`) in the application. Without it the first client that is created fails with a `ConfigurationException`, which is at start for a bean that injects the client, and the message names that module. The client does not use Jackson.
 
 === Variants
 

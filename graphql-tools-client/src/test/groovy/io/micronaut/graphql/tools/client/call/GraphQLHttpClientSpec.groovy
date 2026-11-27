@@ -48,7 +48,8 @@ class GraphQLHttpClientSpec extends Specification {
     @Shared @AutoCleanup ApplicationContext context = ApplicationContext.run(EmbeddedServer, [
             'micronaut.server.port'                     : port,
             'micronaut.http.services.stub.url'          : "http://localhost:$port",
-            'micronaut.http.services.stub.read-timeout' : '500ms',
+            'micronaut.http.services.slow.url'          : "http://localhost:$port",
+            'micronaut.http.services.slow.read-timeout' : '300ms',
             'micronaut.http.services.balanced.urls'     : ["http://localhost:$port", "http://localhost:$secondPort"],
             'micronaut.http.services.dead.url'          : "http://localhost:$deadPort",
             'micronaut.http.services.prefixed.url'      : "http://localhost:$port/api",
