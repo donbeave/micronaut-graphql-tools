@@ -220,7 +220,7 @@ final class OptionsForm {
             Map<String, String> mappings = new TreeMap<>();
             for (Map.Entry<String, String> entry : map.entrySet()) {
                 String key = entry.getKey();
-                if (key.startsWith(TYPE_MAPPINGS) && key.length() > TYPE_MAPPINGS.length()) {
+                if (key.startsWith(TYPE_MAPPINGS)) {
                     known.add(key);
                     if (entry.getValue() == null) {
                         invalid(key, "The option " + key + " has no value.");

@@ -98,6 +98,7 @@ class OptionsSpec extends Specification {
         'client, nullable none'    | Options.builder().mode(Mode.CLIENT).nullableAnnotation('').build()
         'empty includes'           | Options.builder().includes([]).build()
         'empty element and spaces' | Options.builder().excludes(['', ' a b ']).interfaceTypes(['A']).build()
+        'an empty mapping key'     | Options.builder().typeMappings(['': 'a.B']).build()
         'a key that looks like a list' | Options.builder().typeMappings(['size': 'a.B', '0': 'a.C']).build()
     }
 
@@ -244,6 +245,8 @@ class OptionsSpec extends Specification {
         base().nullableAnnotation('1').build()                                             | 'nullableAnnotation'
         base().subscriptionReturnType('').build()                                          | 'subscriptionReturnType'
         base().typeNamePrefix('a b').build()                                               | 'typeNamePrefix'
+        base().typeNamePrefix('1').build()                                                 | 'typeNamePrefix'
+        base().typeMappings(['': 'a.B']).build()                                           | 'typeMappings.'
         base().typeNameSuffix('x-').build()                                                | 'typeNameSuffix'
         base().interfaceTypes(['Ok', '1x']).build()                                        | 'interfaceTypes.1'
         base().contractNameTemplate('{Fieldd}Resolver').build()                            | 'contractNameTemplate'
@@ -270,6 +273,17 @@ class OptionsSpec extends Specification {
         expect:
         Options.builder().language(Language.JAVA).kotlinSuspend(true).modelPackage('1').build().validate()*.optionName() ==
                 ['packageName', 'modelPackage', 'kotlinSuspend']
+    }
+
+    def "a null type mapping key or value is rejected when the record is created"() {
+        when:
+        Options.builder().typeMappings(mapping).build()
+
+        then:
+        thrown(NullPointerException)
+
+        where:
+        mapping << [[(null): 'a.B'], [A: null]]
     }
 
     def "a null component is rejected when the record is created"() {

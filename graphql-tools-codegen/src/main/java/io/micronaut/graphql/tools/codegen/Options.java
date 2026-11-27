@@ -135,6 +135,10 @@ public record Options(
         includes = List.copyOf(includes);
         excludes = List.copyOf(excludes);
         typeMappings = Collections.unmodifiableMap(new LinkedHashMap<>(typeMappings));
+        typeMappings.forEach((key, value) -> {
+            Objects.requireNonNull(key, "typeMappings key");
+            Objects.requireNonNull(value, "typeMappings value");
+        });
     }
 
     /**

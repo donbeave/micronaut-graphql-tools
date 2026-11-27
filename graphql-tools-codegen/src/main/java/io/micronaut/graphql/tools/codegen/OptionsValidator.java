@@ -60,8 +60,8 @@ final class OptionsValidator {
         optionalQualifiedName("generatedAnnotation", options.generatedAnnotation());
         optionalQualifiedName("nullableAnnotation", options.nullableAnnotation());
         qualifiedName("subscriptionReturnType", options.subscriptionReturnType());
-        affix("typeNamePrefix", options.typeNamePrefix());
-        affix("typeNameSuffix", options.typeNameSuffix());
+        affix("typeNamePrefix", options.typeNamePrefix(), true);
+        affix("typeNameSuffix", options.typeNameSuffix(), false);
         for (int i = 0; i < options.interfaceTypes().size(); i++) {
             String name = options.interfaceTypes().get(i);
             if (!GRAPHQL_NAME.matcher(name).matches()) {
@@ -99,9 +99,11 @@ final class OptionsValidator {
         }
     }
 
-    private void affix(String option, String value) {
-        if (!value.isEmpty() && !value.chars().allMatch(Character::isJavaIdentifierPart)) {
-            invalid(option, "The option " + option + " must hold only characters of a Java identifier, not '" + value + "'.");
+    private void affix(String option, String value, boolean prefix) {
+        boolean valid = value.isEmpty() || !prefix || Character.isJavaIdentifierStart(value.codePointAt(0));
+        if (!valid || !value.codePoints().allMatch(Character::isJavaIdentifierPart)) {
+            invalid(option, "The option " + option + " must hold only characters of a Java identifier"
+                    + (prefix ? " and start with a letter, '_' or '$'" : "") + ", not '" + value + "'.");
         }
     }
 
