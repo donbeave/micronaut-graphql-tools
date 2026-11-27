@@ -35,6 +35,10 @@ public class Clients {
     public GraphQLHttpClient slow;
 
     @Inject
+    @GraphQLClient(id = "stub", endpoint = "/gated")
+    public GraphQLHttpClient gated;
+
+    @Inject
     @GraphQLClient("balanced")
     public GraphQLHttpClient balanced;
 
