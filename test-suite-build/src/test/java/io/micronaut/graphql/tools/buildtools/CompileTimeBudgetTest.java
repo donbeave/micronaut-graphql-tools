@@ -31,13 +31,20 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class CompileTimeBudgetTest {
 
     private static final List<String> SAMPLES = List.of("java-gradle", "kotlin-ksp", "kotlin-kapt", "groovy-gradle", "multi-module-gradle");
+    private static final List<String> CLIENT_SAMPLES = List.of("java-client-gradle", "kotlin-ksp-client", "groovy-client-gradle");
     private static final Path PROFILER = Path.of(System.getProperty("sample.dir")).resolveSibling("profiler");
 
     @Test
     void scenariosCoverEverySampleEditAndMode() throws IOException {
         String text = java.nio.file.Files.readString(PROFILER.resolve("compile-time.scenarios"));
         for (String sample : SAMPLES) {
-            for (String edit : List.of("clean", "body", "schema")) {
+            assertEquals(List.of("clean", "body", "schema"), CompileTimeBudget.edits(sample), sample);
+        }
+        for (String sample : CLIENT_SAMPLES) {
+            assertEquals(List.of("clean", "body", "document"), CompileTimeBudget.edits(sample), sample);
+        }
+        for (String sample : java.util.stream.Stream.concat(SAMPLES.stream(), CLIENT_SAMPLES.stream()).toList()) {
+            for (String edit : CompileTimeBudget.edits(sample)) {
                 for (String mode : List.of("on", "off")) {
                     String name = sample + "-" + edit + "-" + mode;
                     Matcher scenario = Pattern.compile("(?m)^" + Pattern.quote(name) + " \\{\n((?:  .*\n)+)\\}").matcher(text);
@@ -48,6 +55,7 @@ class CompileTimeBudgetTest {
                     assertEquals(edit.equals("clean"), body.contains("cleanup-tasks = [\"clean\"]"), name);
                     assertEquals(edit.equals("body"), body.contains("editBody"), name);
                     assertEquals(edit.equals("schema"), body.contains("editSchema"), name);
+                    assertEquals(edit.equals("document"), body.contains("editDocument"), name);
                 }
             }
         }
@@ -82,16 +90,34 @@ class CompileTimeBudgetTest {
         Path sample = java.nio.file.Files.createDirectories(output.resolve("a"));
         java.nio.file.Files.write(sample.resolve("benchmark.csv"), List.of(
                 "scenario,a-clean-on,a-clean-off,a-body-on,a-body-off,a-schema-on,a-schema-off",
-                "measured build #1,900,500,400,300,1500,300",
-                "measured build #2,1000,600,500,300,1700,300",
-                "measured build #3,1100,700,600,300,1600,300"));
+                "measured build #1,900,800,400,300,1500,300",
+                "measured build #2,1000,850,500,300,1700,300",
+                "measured build #3,1100,900,600,300,1600,300"));
         java.nio.file.Files.write(sample.resolve("compile-tasks.txt"), List.of(
                 "a-clean-on :books compileJava 700", "a-clean-off :books compileJava 300"));
         var budget = CompileTimeBudget.parse("a.clean=1000\na.incremental=1000\n");
         CompileTimeBudget.Outcome outcome = CompileTimeBudget.check(output, budget, 3);
         assertEquals(List.of("a-schema-on: 1600 ms exceeds the incremental budget of 1000 ms"), outcome.violations());
-        assertTrue(outcome.report().contains("| a | clean | 1000 | 600 | 400 | 1000 |"), outcome.report());
+        assertTrue(outcome.report().contains("| a | clean | 1000 | 850 | 150 | 1000 |"), outcome.report());
         assertTrue(outcome.report().contains("| a | clean | :books | compileJava | 700 | 300 | 400 |"), outcome.report());
+    }
+
+    @Test
+    void failsWhenACleanBuildWithTheChecksIsMoreThan125TimesTheBuildWithout(@org.junit.jupiter.api.io.TempDir Path output)
+            throws IOException {
+        Path sample = java.nio.file.Files.createDirectories(output.resolve("a"));
+        java.nio.file.Files.write(sample.resolve("benchmark.csv"), List.of(
+                "scenario,a-clean-on,a-clean-off,a-body-on,a-body-off,a-schema-on,a-schema-off",
+                "measured build #1,1300,1000,400,300,400,300"));
+        var budget = CompileTimeBudget.parse("a.clean=5000\na.incremental=5000\n");
+        assertEquals(List.of("a-clean-on: 1300 ms is more than 1.25 times the 1000 ms of the checks-off build"),
+                CompileTimeBudget.check(output, budget, 3).violations());
+    }
+
+    @Test
+    void theClientSamplesEditTheirDocumentAndTheOthersTheirSchema() {
+        assertEquals(List.of("clean", "body", "document"), CompileTimeBudget.edits("java-client-gradle"));
+        assertEquals(List.of("clean", "body", "schema"), CompileTimeBudget.edits("java-gradle"));
     }
 
     @Test
