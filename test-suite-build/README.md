@@ -33,6 +33,13 @@ snippets that the compile-time guide page (#12) includes, so a documented snippe
 - `samples/multi-module-maven`: a Maven reactor with `schema` (the schema file) and two modules with resolvers that read it and
   pass `schema.dirs` and `module.dir`. `MultiModuleMavenSampleTest` builds it, and builds it again with the snippet removed from the
   module built last: Maven compiles the reactor in one JVM, so without the check that module would pass against the schema of the one before it.
+- `samples/maven-plugin-<language>` (`maven-plugin-java`, `maven-plugin-kotlin`, `maven-plugin-groovy`): Maven projects that declare the
+  `generate` goal of `micronaut-graphql-tools-maven-plugin` (the tagged `plugin` snippet of the guide) and compile with their language. The
+  generator emits no source file yet, so each sample copies one source file of its language into the generated directory in the
+  same phase, before the goal, and `Main` uses it: the build proves that the registered source root is compiled. `MavenPluginSampleContract`
+  asserts the goal runs at `generate-sources`, an unchanged run is skipped and a changed schema runs again, `-Dmicronaut.graphql.tools.codegen.package.name`
+  and `.skip` bind, a missing option and a syntax error fail with their diagnostics; the Groovy sample shows that GMavenPlus ignores the
+  compile source roots (the `sources` snippet is required), and the Kotlin sample records that the Kotlin plugin reads them even with `sourceDirs`.
 - `samples/<name>-maven` (`java-maven`, `kotlin-kapt-maven`, `groovy-maven`): Maven projects with a Micronaut 4 parent.
   Java passes the option as a `-A` compiler argument and puts the processor on `annotationProcessorPaths`; Kotlin passes
   `annotationProcessorArgs` to the `kapt` execution of `kotlin-maven-plugin`; Groovy puts the processor on the `provided`

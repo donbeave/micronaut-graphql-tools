@@ -192,5 +192,7 @@ jobs:
             echo "- io.micronaut.graphql.tools:micronaut-graphql-tools-testing:${TAG}"
             echo "- io.micronaut.graphql.tools:micronaut-graphql-tools-client:${TAG}"
             echo "- io.micronaut.graphql.tools:micronaut-graphql-tools-codegen:${TAG}"
+            echo "- io.micronaut.graphql.tools:micronaut-graphql-tools-maven-plugin:${TAG}"
+            echo "- io.micronaut.graphql.tools:micronaut-graphql-tools-gradle-plugin:${TAG}"
             echo "- io.micronaut.graphql.tools:micronaut-graphql-tools-bom:${TAG}"
           } >> "$GITHUB_STEP_SUMMARY"
