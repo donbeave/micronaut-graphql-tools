@@ -81,8 +81,8 @@ public abstract class CodegenSpec implements Named {
     public abstract DirectoryProperty getResourcesDirectory();
 
     /**
-     * The generated language: {@code JAVA}, {@code KOTLIN} or {@code GROOVY}. The default follows the applied Kotlin or Groovy
-     * plugin, else {@code JAVA}.
+     * The generated language: {@code JAVA}, {@code KOTLIN} or {@code GROOVY}. The default is {@code JAVA}, also in a Kotlin or Groovy
+     * project: the generator emits Java only, which those projects compile together with their own sources.
      *
      * @return the property
      */

@@ -105,7 +105,8 @@ public class GraphQLToolsPlugin implements Plugin<Project> {
     }
 
     private static void configure(Project project, GraphQLToolsExtension extension, CodegenSpec spec) {
-        spec.getLanguage().convention(project.provider(() -> inferLanguage(project, spec)));
+        // The generator emits Java only, so a Kotlin or Groovy project compiles the Java output (mixed compilation).
+        spec.getLanguage().convention(JAVA);
         spec.getSchemaDirs().convention(extension.getSchemaDirs());
         spec.getOutputDirectory().convention(project.getLayout().getBuildDirectory().dir("generated/sources/graphqlTools/" + spec.getName()));
         spec.getResourcesDirectory().convention(project.getLayout().getBuildDirectory().dir("generated/resources/graphqlTools/" + spec.getName()));
@@ -140,19 +141,6 @@ public class GraphQLToolsPlugin implements Plugin<Project> {
     private static void wireResources(Project project, CodegenSpec spec) {
         TaskProvider<?> task = project.getTasks().named(taskName(spec.getName()));
         mainSourceSet(project).getResources().srcDir(project.files(spec.getResourcesDirectory()).builtBy(task));
-    }
-
-    private static String inferLanguage(Project project, CodegenSpec spec) {
-        if (CLIENT.equals(spec.getMode().getOrElse(SERVER))) {
-            return JAVA;
-        }
-        if (project.getPluginManager().hasPlugin("org.jetbrains.kotlin.jvm")) {
-            return KOTLIN;
-        }
-        if (project.getPluginManager().hasPlugin("groovy")) {
-            return GROOVY;
-        }
-        return JAVA;
     }
 
     static String taskName(String specName) {

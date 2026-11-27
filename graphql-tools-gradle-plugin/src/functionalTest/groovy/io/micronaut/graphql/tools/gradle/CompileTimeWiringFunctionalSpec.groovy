@@ -152,7 +152,7 @@ class CompileTimeWiringFunctionalSpec extends PluginFunctionalSpec {
         output.contains("micronaut.graphql.tools.processor.schema.dirs=${project.toRealPath()}/src/main/resources/graphql")
     }
 
-    def "the Kotlin plugin makes Kotlin the language and the output a Kotlin source directory"() {
+    def "the language Kotlin makes the output a Kotlin source directory, and the default stays Java"() {
         given:
         settings()
         schema()
@@ -166,7 +166,9 @@ class CompileTimeWiringFunctionalSpec extends PluginFunctionalSpec {
             tasks.register("report") {
                 val language = graphqlTools.codegenSpecs.getByName("main").language
                 val kotlinDirs = kotlin.sourceSets.getByName("main").kotlin.srcDirs
+                val javaDirs = sourceSets.getByName("main").java.srcDirs
                 doLast {
+                    println("JAVA_DIRS=" + javaDirs.map { it.path })
                     println("LANGUAGE=" + language.get())
                     println("KOTLIN_DIRS=" + kotlinDirs.map { it.path })
                 }
@@ -174,10 +176,16 @@ class CompileTimeWiringFunctionalSpec extends PluginFunctionalSpec {
         """.stripIndent())
 
         when:
-        def output = build(CURRENT, 'report').output
+        def defaults = build(CURRENT, 'report').output
+        write('build.gradle.kts', project.resolve('build.gradle.kts').text.replace('graphqlTools { addRuntimeDependency = false }',
+                'graphqlTools {\n addRuntimeDependency = false\n codegen { language = "KOTLIN" }\n}'))
+        def explicit = build(CURRENT, 'report').output
 
         then:
-        output.contains('LANGUAGE=KOTLIN')
-        output.contains('build/generated/sources/graphqlTools/main')
+        defaults.contains('LANGUAGE=JAVA')
+        defaults.readLines().find { it.startsWith('JAVA_DIRS=') }.contains('build/generated/sources/graphqlTools/main')
+        explicit.contains('LANGUAGE=KOTLIN')
+        !explicit.readLines().find { it.startsWith('JAVA_DIRS=') }.contains('graphqlTools')
+        explicit.readLines().find { it.startsWith('KOTLIN_DIRS=') }.contains('build/generated/sources/graphqlTools/main')
     }
 }
