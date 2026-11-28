@@ -5,6 +5,8 @@ public abstract class io.micronaut.graphql.tools.gradle.CodegenSpec implements o
   public abstract org.gradle.api.provider.ListProperty<java.lang.String> getExcludes();
   public abstract org.gradle.api.provider.ListProperty<java.lang.String> getIncludes();
   public abstract org.gradle.api.provider.ListProperty<java.lang.String> getInterfaceTypes();
+  public abstract org.gradle.api.provider.ListProperty<java.lang.String> getOperationExcludes();
+  public abstract org.gradle.api.provider.ListProperty<java.lang.String> getOperationIncludes();
   public abstract org.gradle.api.provider.MapProperty<java.lang.String, java.lang.String> getTypeMappings();
   public abstract org.gradle.api.provider.Property<java.lang.Boolean> getCommentsAsDescriptions();
   public abstract org.gradle.api.provider.Property<java.lang.Boolean> getKotlinSuspend();

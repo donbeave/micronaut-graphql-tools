@@ -108,10 +108,30 @@ class CompileTimeBudgetTest {
         Path sample = java.nio.file.Files.createDirectories(output.resolve("a"));
         java.nio.file.Files.write(sample.resolve("benchmark.csv"), List.of(
                 "scenario,a-clean-on,a-clean-off,a-body-on,a-body-off,a-schema-on,a-schema-off",
-                "measured build #1,1300,1000,400,300,400,300"));
+                "measured build #1,2000,1000,400,300,400,300"));
         var budget = CompileTimeBudget.parse("a.clean=5000\na.incremental=5000\n");
-        assertEquals(List.of("a-clean-on: 1300 ms is more than 1.25 times the 1000 ms of the checks-off build"),
+        assertEquals(List.of("a-clean-on: 2000 ms is more than 1.25 times the 1000 ms of the checks-off build and more than 250 ms above it"),
                 CompileTimeBudget.check(output, budget, 3).violations());
+    }
+
+    @Test
+    void toleratesTimerNoiseOfASubSecondCleanBuild(@org.junit.jupiter.api.io.TempDir Path output) throws IOException {
+        Path sample = java.nio.file.Files.createDirectories(output.resolve("a"));
+        java.nio.file.Files.write(sample.resolve("benchmark.csv"), List.of(
+                "scenario,a-clean-on,a-clean-off,a-body-on,a-body-off,a-schema-on,a-schema-off",
+                "measured build #1,922,737,400,300,400,300"));
+        var budget = CompileTimeBudget.parse("a.clean=5000\na.incremental=5000\n");
+        assertEquals(List.of(), CompileTimeBudget.check(output, budget, 3).violations());
+    }
+
+    @Test
+    void failsARealRegressionJustOverTheSlack(@org.junit.jupiter.api.io.TempDir Path output) throws IOException {
+        Path sample = java.nio.file.Files.createDirectories(output.resolve("a"));
+        java.nio.file.Files.write(sample.resolve("benchmark.csv"), List.of(
+                "scenario,a-clean-on,a-clean-off,a-body-on,a-body-off,a-schema-on,a-schema-off",
+                "measured build #1,1000,700,400,300,400,300"));
+        var budget = CompileTimeBudget.parse("a.clean=5000\na.incremental=5000\n");
+        assertEquals(1, CompileTimeBudget.check(output, budget, 3).violations().size());
     }
 
     @Test

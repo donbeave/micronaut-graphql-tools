@@ -1,0 +1,72 @@
+[[clientErrorHandling]]
+A call of the client ends in one of three ways: a response, a GraphQL failure that you read from the response or an exception, or a failure below GraphQL. This page says which is which, and what each one carries. The codes of the exceptions are in the <<clientErrors,client errors>> section of the <<exceptions,Exceptions>> page.
+
+[[clientResponses]]
+== Responses
+
+A response is classified by its status and its body. A body is a GraphQL body when it is a JSON object with a `data` entry or at least one error.
+
+[cols="2,5", options="header"]
+|===
+| Answer | Result
+
+| Any 2xx status (even one that HTTP does not define) with a GraphQL body
+| A `GraphQLResponse`. `dataOrThrow()` throws `GraphQLErrorsException` when it has errors.
+
+| A 4xx or 5xx status other than 404 with a well-formed GraphQL body
+| A `GraphQLResponse`, the same as above.
+
+| A 2xx status with a body that starts like a GraphQL response but does not decode
+| `GraphQLClientException` with the code `decode-error`.
+
+| Any other answer: 404, a 3xx status, an empty body, a body that is not a GraphQL body (HTML, a JSON array, `{}`, a JSON error of a proxy), or a 4xx or 5xx body that does not decode
+| `GraphQLTransportException` with the status and the headers.
+
+| A timeout
+| `GraphQLTransportException` with `isTimeout()` set and the code `transport-timeout`.
+
+| A connection error, or no server for the service id
+| `GraphQLTransportException` with the status `-1` and the cause.
+|===
+
+The media type of the response is not checked; the body is.
+
+== The exceptions
+
+* api:io.micronaut.graphql.tools.client.exceptions.GraphQLClientException[] is the base class, with a `getCode()` (the `code` property in Groovy and Kotlin). It is thrown for a failure of the client itself: `decode-error`, `no-data`, `blocking-on-event-loop`, `missing-operation` and `unsupported-signature`.
+* api:io.micronaut.graphql.tools.client.exceptions.GraphQLErrorsException[] (`graphql-errors`) is thrown when the server answered with GraphQL errors and you asked for the data. `getErrors()` lists them and `getResponse()` is the whole response.
+* api:io.micronaut.graphql.tools.client.exceptions.GraphQLTransportException[] (`transport-error` and `transport-timeout`) is thrown when the call failed below GraphQL. `getStatus()` is the HTTP status or `-1`, `getHeaders()` the response headers, `isTimeout()` tells a timeout and `getCause()` is the underlying failure.
+
+A `GraphQLError` is a record with the message, the locations, the path and the extensions of one error of the response. The `code` that a server puts in `extensions` is data of the application, and the client does not interpret it.
+
+== GraphQL errors and partial data
+
+A response with errors can hold data too, because a field that fails is `null` and the others are returned. The response carries both. `dataOrThrow()` throws `GraphQLErrorsException` as soon as there is an error, and the exception keeps the response, so the partial data is not lost:
+
+snippet::example.client.ExampleClient[project-base="test-suite", source="serdeTest", tags="partial-data", indent="0"]
+
+snippet::example.client.DeclarativeClientTest[project-base="test-suite", source="serdeTest", tags="partial-data", indent="0"]
+
+A declarative method that returns the payload behaves like `dataOrThrow()`. A method that returns `GraphQLResponse` never throws the errors exception: read `errors()` yourself.
+
+== Errors that are data
+
+A schema can model an expected failure as a field of the result, usually a union. The client reads it like any other data: the result type is a sealed interface, chosen by `__typename`, and a `switch` handles each failure. This does not involve the `errors` list of the response:
+
+snippet::example.client.DeclarativeClientTest[project-base="test-suite", source="serdeTest", tags="union", indent="0"]
+
+== Transport failures and retries
+
+A failure below GraphQL is a `GraphQLTransportException`. A retry that is right for it is the one of Micronaut, `@Retryable` of `micronaut-retry`, which an application adds to its dependencies. Put it on a query, and include the transport exception:
+
+snippet::example.client.ServiceClient[project-base="test-suite", source="serdeTest", tags="retry", indent="0"]
+
+snippet::example.client.ServiceClientTest[project-base="test-suite", source="serdeTest", tags="retry", indent="0"]
+
+Do not retry a mutation whose response was lost: it might run twice. The compile-time check `client-retry-mutation` fails the build when an interface with a retry annotation on the type declares a mutation (see <<clientChecks,the checks>>); a retry annotation on a single method is your decision about that method.
+
+A call that is stopped by a timeout is a `GraphQLTransportException` with `isTimeout()` set. The timeouts are the Micronaut ones, see <<clientServer,Configuration and discovery>>.
+
+== Failures that are mistakes in the code
+
+The code `blocking-on-event-loop`, `missing-operation` and `unsupported-signature` are mistakes in the program, not conditions to retry or catch. The first one means a blocking call on an event loop thread: use the reactive or the future variant. The other two are thrown on the first call of a method; apply the annotation processor and match the signature to the operation.

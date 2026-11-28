@@ -84,6 +84,9 @@ snippets that the compile-time guide page (#12) includes, so a documented snippe
   `compile-time-budget.properties` is the budget; `CompileTimeBudget` compares the medians with it and writes the per-module report.
   `./gradlew :test-suite-build:compileTimeBudget -PgradleProfiler=<path to gradle-profiler>` runs all of it (CI job `compile-time budget`).
   `CompileTimeBudgetTest` runs in `buildToolsTest`: the scenario definitions and the budget check, with a measurement that exceeds its budget.
+  A clean build with the checks on must stay within 1.25 times the build with the checks off, or within 250 ms of it: the on-minus-off
+  difference of the scenarios of one run ranged from -57 to +156 ms and the clean java-client sample was +185 ms, so a ratio of 1.251 on a
+  build under one second (922 ms against 737 ms) is timer noise on a shared runner, while a real regression exceeds both limits.
 - `profiler/large-schema/`: the large-schema spike (#665), a standalone Gradle build that is not part of `buildToolsTest`. `probe` holds one
   workload (a generated schema of 2,000 types and 250 operation documents; graphql-java parses and builds the schema, then parses and validates
   the documents) and three hosts for it: a javac processor, a KSP processor provider and a Groovy global AST transformation. `javac`, `ksp` and

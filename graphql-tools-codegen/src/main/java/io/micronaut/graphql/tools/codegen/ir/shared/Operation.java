@@ -16,7 +16,7 @@
 package io.micronaut.graphql.tools.codegen.ir.shared;
 
 /**
- * A root operation, which decides the marker interface of a resolver contract.
+ * A root operation: it decides the marker interface of a resolver contract and is the kind of an operation of a client.
  */
 public enum Operation {
     /** The query root type. */

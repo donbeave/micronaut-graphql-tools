@@ -15,9 +15,18 @@
  */
 package io.micronaut.graphql.tools.codegen.ir;
 
+import io.micronaut.graphql.tools.codegen.ir.client.FragmentDefinition;
+import io.micronaut.graphql.tools.codegen.ir.client.FragmentSpread;
+import io.micronaut.graphql.tools.codegen.ir.client.InlineFragment;
+import io.micronaut.graphql.tools.codegen.ir.client.OperationDocument;
+import io.micronaut.graphql.tools.codegen.ir.client.SelectedArgument;
+import io.micronaut.graphql.tools.codegen.ir.client.SelectedField;
+import io.micronaut.graphql.tools.codegen.ir.client.SelectionSet;
+import io.micronaut.graphql.tools.codegen.ir.client.Variable;
 import io.micronaut.graphql.tools.codegen.ir.shared.AppliedDirective;
 import io.micronaut.graphql.tools.codegen.ir.shared.Docs;
 import io.micronaut.graphql.tools.codegen.ir.shared.Names;
+import io.micronaut.graphql.tools.codegen.ir.shared.Presence;
 import io.micronaut.graphql.tools.codegen.ir.shared.TypeRef;
 import io.micronaut.graphql.tools.codegen.ir.shared.Wrapper;
 
@@ -51,7 +60,82 @@ public final class IrSnapshot {
         ir.models().forEach(it -> model(out, it));
         ir.contracts().forEach(it -> contract(out, it));
         ir.nameClasses().forEach(it -> nameClass(out, it));
+        ir.fragments().forEach(it -> fragment(out, it));
+        ir.operations().forEach(it -> operation(out, it));
         return out.toString();
+    }
+
+    private static void fragment(StringBuilder out, FragmentDefinition fragment) {
+        out.append("fragment ").append(names(fragment.names())).append(" on ").append(fragment.typeCondition()).append(" @ ")
+                .append(fragment.origin()).append('\n');
+        selection(out, "  ", fragment.selection());
+    }
+
+    private static void operation(StringBuilder out, OperationDocument operation) {
+        out.append("operation ").append(names(operation.names())).append(" : ").append(operation.kind().name().toLowerCase(Locale.ROOT))
+                .append(" @ ").append(operation.origin()).append('\n');
+        out.append("  variables type ").append(operation.variablesType().qualifiedName()).append('\n');
+        for (Variable variable : operation.variables()) {
+            out.append("  variable ").append(variable.name()).append(": ").append(type(variable.type()))
+                    .append(defaultValue(variable.defaultValue())).append(' ').append(presence(variable.presence())).append(" @ ")
+                    .append(variable.origin()).append('\n');
+        }
+        out.append("  payload ").append(operation.payload().name().toLowerCase(Locale.ROOT)).append(" result ")
+                .append(type(operation.result())).append('\n');
+        out.append("  document ").append(quote(operation.documentText())).append('\n');
+        out.append("  hash ").append(operation.documentHash()).append('\n');
+        texts(out, "  fragments ", operation.fragments());
+        selection(out, "  ", operation.selection());
+    }
+
+    private static void selection(StringBuilder out, String indent, SelectionSet selection) {
+        for (SelectedField field : selection.fields()) {
+            out.append(indent).append("select ").append(field.alias() == null ? "" : field.alias() + ": ").append(field.fieldName());
+            if (!field.arguments().isEmpty()) {
+                out.append('(');
+                for (int i = 0; i < field.arguments().size(); i++) {
+                    SelectedArgument argument = field.arguments().get(i);
+                    out.append(i == 0 ? "" : ", ").append(argument.name()).append(": ").append(argument.value());
+                }
+                out.append(')');
+            }
+            out.append(": ").append(type(field.type()));
+            directives(out, field.directives());
+            out.append(" @ ").append(field.origin()).append('\n');
+            if (field.selection() != null) {
+                selection(out, indent + "  ", field.selection());
+            }
+        }
+        for (InlineFragment fragment : selection.inlineFragments()) {
+            out.append(indent).append("inline ").append(fragment.typeCondition() == null ? "(no type condition)" : "on " + fragment.typeCondition());
+            directives(out, fragment.directives());
+            out.append(" @ ").append(fragment.origin()).append('\n');
+            selection(out, indent + "  ", fragment.selection());
+        }
+        for (FragmentSpread spread : selection.fragmentSpreads()) {
+            out.append(indent).append("spread ").append(spread.name());
+            directives(out, spread.directives());
+            out.append(" @ ").append(spread.origin()).append('\n');
+        }
+    }
+
+    private static void directives(StringBuilder out, List<AppliedDirective> directives) {
+        for (AppliedDirective directive : directives) {
+            out.append(" @").append(directive.name());
+            if (!directive.arguments().isEmpty()) {
+                out.append('(');
+                boolean first = true;
+                for (Map.Entry<String, String> argument : directive.arguments().entrySet()) {
+                    out.append(first ? "" : ", ").append(argument.getKey()).append(": ").append(argument.getValue());
+                    first = false;
+                }
+                out.append(')');
+            }
+        }
+    }
+
+    private static String presence(Presence presence) {
+        return presence.name().toLowerCase(Locale.ROOT).replace('_', '-');
     }
 
     private static void nameClass(StringBuilder out, NameClass nameClass) {
@@ -82,7 +166,8 @@ public final class IrSnapshot {
         details(out, "  ", type.docs(), type.directives());
         for (InputField field : type.fields()) {
             out.append("  field ").append(name(field.sdlName(), field.name())).append(": ").append(type(field.type()))
-                    .append(defaultValue(field.defaultValue())).append(" @ ").append(field.origin()).append('\n');
+                    .append(defaultValue(field.defaultValue())).append(' ').append(presence(field.presence())).append(" @ ")
+                    .append(field.origin()).append('\n');
             details(out, "    ", field.docs(), field.directives());
         }
     }
@@ -160,9 +245,16 @@ public final class IrSnapshot {
         if (!names.isEmpty()) {
             out.append(label);
             for (int i = 0; i < names.size(); i++) {
-                out.append(i == 0 ? "" : ", ").append(names.get(i).sdlName());
+                Names item = names.get(i);
+                out.append(i == 0 ? "" : ", ").append(name(item.sdlName(), item.simpleName()));
             }
             out.append('\n');
+        }
+    }
+
+    private static void texts(StringBuilder out, String label, List<String> values) {
+        if (!values.isEmpty()) {
+            out.append(label).append(String.join(", ", values)).append('\n');
         }
     }
 
@@ -195,7 +287,7 @@ public final class IrSnapshot {
         } else if (type instanceof TypeRef.Mapped mapped) {
             text = "mapped(" + mapped.className() + ")";
         } else if (type instanceof TypeRef.Reference reference) {
-            text = reference.target().sdlName();
+            text = name(reference.target().sdlName(), reference.target().simpleName());
         } else {
             text = "[" + type(((TypeRef.ListOf) type).element()) + "]";
         }

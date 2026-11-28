@@ -15,6 +15,9 @@
  */
 package io.micronaut.graphql.tools.codegen.ir;
 
+import io.micronaut.graphql.tools.codegen.ir.client.FragmentDefinition;
+import io.micronaut.graphql.tools.codegen.ir.client.OperationDocument;
+
 import java.util.List;
 import java.util.Objects;
 
@@ -23,7 +26,9 @@ import java.util.Objects;
  * is in schema order: the definitions of the schema files in the order of their relative paths, then the extensions of a type
  * after its base definition. The IR holds every decision, so an emitter makes no naming or mapping decision.
  *
- * <p>Server mode fills these lists; the operation nodes of client mode are added by the client generator.</p>
+ * <p>Server mode fills the lists of the schema and the contracts. Client mode fills the operations and the fragments that they
+ * use, and derives the result models of the operations into {@code models} and {@code abstractTypes}; it lists only the enums,
+ * inputs and scalars that an operation reaches, and no contract.</p>
  *
  * @param enums         the enum types
  * @param inputs        the input types
@@ -32,12 +37,16 @@ import java.util.Objects;
  * @param scalars       the custom scalars with a mapping
  * @param contracts     the resolver contracts
  * @param nameClasses   the classes of name constants, in the order of the types
+ * @param operations    the operations of a client, in the order of their documents; empty in server mode
+ * @param fragments     the named fragments that the operations use, by name; empty in server mode
  */
 public record Ir(List<EnumType> enums, List<InputType> inputs, List<ModelType> models, List<AbstractType> abstractTypes,
-                 List<ScalarType> scalars, List<ResolverContract> contracts, List<NameClass> nameClasses) {
+                 List<ScalarType> scalars, List<ResolverContract> contracts, List<NameClass> nameClasses,
+                 List<OperationDocument> operations, List<FragmentDefinition> fragments) {
 
     /** An IR without a node. */
-    public static final Ir EMPTY = new Ir(List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of());
+    public static final Ir EMPTY = new Ir(List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(),
+            List.of(), List.of());
 
     /**
      * Creates an IR, keeping immutable copies of the lists.
@@ -51,5 +60,7 @@ public record Ir(List<EnumType> enums, List<InputType> inputs, List<ModelType> m
         scalars = List.copyOf(scalars);
         contracts = List.copyOf(contracts);
         nameClasses = List.copyOf(nameClasses);
+        operations = List.copyOf(operations);
+        fragments = List.copyOf(fragments);
     }
 }
