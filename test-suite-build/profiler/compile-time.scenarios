@@ -1,11 +1,12 @@
 # gradle-profiler scenarios of the compile-time checks (#418). One project per language and tool, each with six scenarios:
 # a clean build, a body-only edit and a schema edit (both made by an init script task inside the measured build), with the checks on and with the checks off (the control).
+# The client samples (`*-client-*`, #664) have a document edit (the client operation file) in place of the schema edit.
 # Scenario names are <sample>-<edit>-<on|off>. `run.sh` (and the Gradle task compileTimeProfile) runs them against copies of
-# the samples; the control is -PgraphqlChecks=false, which keeps the processor on the compile path and turns its checks off.
+# the samples; the control is -PgraphqlChecks=false and -PgraphqlClientChecks=false, which keep the processor on the compile path and turn its checks (both the resolver and the client ones) off.
 
 common = ["-I", "profiler.init.gradle.kts"]
 on = ["-PgraphqlChecks=true"]
-off = ["-PgraphqlChecks=false"]
+off = ["-PgraphqlChecks=false", "-PgraphqlClientChecks=false"]
 
 java-gradle-clean-on {
   tasks = ["classes"]
@@ -145,5 +146,90 @@ multi-module-gradle-body-off {
 multi-module-gradle-schema-off {
   tasks = [":schema:editSchema", "classes"]
   gradle-args = ${common} ${off} ["-PprofilerScenario=multi-module-gradle-schema-off"]
+}
+
+
+java-client-gradle-clean-on {
+  tasks = ["classes"]
+  cleanup-tasks = ["clean"]
+  gradle-args = ${common} ${on} ["-PprofilerScenario=java-client-gradle-clean-on"]
+}
+java-client-gradle-body-on {
+  tasks = [":editBody", "classes"]
+  gradle-args = ${common} ${on} ["-PprofilerScenario=java-client-gradle-body-on"]
+}
+java-client-gradle-document-on {
+  tasks = [":editDocument", "classes"]
+  gradle-args = ${common} ${on} ["-PprofilerScenario=java-client-gradle-document-on"]
+}
+
+java-client-gradle-clean-off {
+  tasks = ["classes"]
+  cleanup-tasks = ["clean"]
+  gradle-args = ${common} ${off} ["-PprofilerScenario=java-client-gradle-clean-off"]
+}
+java-client-gradle-body-off {
+  tasks = [":editBody", "classes"]
+  gradle-args = ${common} ${off} ["-PprofilerScenario=java-client-gradle-body-off"]
+}
+java-client-gradle-document-off {
+  tasks = [":editDocument", "classes"]
+  gradle-args = ${common} ${off} ["-PprofilerScenario=java-client-gradle-document-off"]
+}
+
+kotlin-ksp-client-clean-on {
+  tasks = ["classes"]
+  cleanup-tasks = ["clean"]
+  gradle-args = ${common} ${on} ["-PprofilerScenario=kotlin-ksp-client-clean-on"]
+}
+kotlin-ksp-client-body-on {
+  tasks = [":editBody", "classes"]
+  gradle-args = ${common} ${on} ["-PprofilerScenario=kotlin-ksp-client-body-on"]
+}
+kotlin-ksp-client-document-on {
+  tasks = [":editDocument", "classes"]
+  gradle-args = ${common} ${on} ["-PprofilerScenario=kotlin-ksp-client-document-on"]
+}
+
+kotlin-ksp-client-clean-off {
+  tasks = ["classes"]
+  cleanup-tasks = ["clean"]
+  gradle-args = ${common} ${off} ["-PprofilerScenario=kotlin-ksp-client-clean-off"]
+}
+kotlin-ksp-client-body-off {
+  tasks = [":editBody", "classes"]
+  gradle-args = ${common} ${off} ["-PprofilerScenario=kotlin-ksp-client-body-off"]
+}
+kotlin-ksp-client-document-off {
+  tasks = [":editDocument", "classes"]
+  gradle-args = ${common} ${off} ["-PprofilerScenario=kotlin-ksp-client-document-off"]
+}
+
+groovy-client-gradle-clean-on {
+  tasks = ["classes"]
+  cleanup-tasks = ["clean"]
+  gradle-args = ${common} ${on} ["-PprofilerScenario=groovy-client-gradle-clean-on"]
+}
+groovy-client-gradle-body-on {
+  tasks = [":editBody", "classes"]
+  gradle-args = ${common} ${on} ["-PprofilerScenario=groovy-client-gradle-body-on"]
+}
+groovy-client-gradle-document-on {
+  tasks = [":editDocument", "classes"]
+  gradle-args = ${common} ${on} ["-PprofilerScenario=groovy-client-gradle-document-on"]
+}
+
+groovy-client-gradle-clean-off {
+  tasks = ["classes"]
+  cleanup-tasks = ["clean"]
+  gradle-args = ${common} ${off} ["-PprofilerScenario=groovy-client-gradle-clean-off"]
+}
+groovy-client-gradle-body-off {
+  tasks = [":editBody", "classes"]
+  gradle-args = ${common} ${off} ["-PprofilerScenario=groovy-client-gradle-body-off"]
+}
+groovy-client-gradle-document-off {
+  tasks = [":editDocument", "classes"]
+  gradle-args = ${common} ${off} ["-PprofilerScenario=groovy-client-gradle-document-off"]
 }
 

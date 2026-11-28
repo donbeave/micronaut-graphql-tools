@@ -82,7 +82,7 @@ public final class CompileTimeBudget {
         report.append("### Compile time of the checks, build time by gradle-profiler (median of the measured builds, milliseconds)\n\n");
         report.append("| sample | scenario | checks on | checks off | cost of the checks | budget |\n| --- | --- | ---: | ---: | ---: | ---: |\n");
         for (String sample : medians.keySet()) {
-            for (String edit : List.of("clean", "body", "schema")) {
+            for (String edit : edits(sample)) {
                 String kind = edit.equals("clean") ? "clean" : "incremental";
                 Long on = medians.get(sample).get(sample + "-" + edit + "-on");
                 Long off = medians.get(sample).get(sample + "-" + edit + "-off");
@@ -96,6 +96,10 @@ public final class CompileTimeBudget {
                     } else if (on > Long.parseLong(limit.trim())) {
                         violations.add(sample + "-" + edit + "-on: " + on + " ms exceeds the " + kind + " budget of " + limit + " ms");
                     }
+                }
+                // a clean build with the checks on stays within 1.25 times the same build with the checks off (integers: 4 * on <= 5 * off)
+                if (edit.equals("clean") && on != null && off != null && 4 * on > 5 * off) {
+                    violations.add(sample + "-clean-on: " + on + " ms is more than 1.25 times the " + off + " ms of the checks-off build");
                 }
             }
         }
@@ -114,6 +118,11 @@ public final class CompileTimeBudget {
                             .append(off == null ? "-" : String.valueOf(on - off)).append(" |\n");
                 }));
         return new Outcome(report.toString(), violations);
+    }
+
+    /** The edits a sample is measured with: the client samples edit their client document, the others their schema. */
+    static List<String> edits(String sample) {
+        return List.of("clean", "body", sample.contains("client") ? "document" : "schema");
     }
 
     private static String cell(Long value) {
