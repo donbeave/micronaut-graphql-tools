@@ -158,6 +158,32 @@ val serdeTestTask = tasks.register<Test>("serdeTest") {
     shouldRunAfter(tasks.named("test"))
 }
 tasks.named("check") { dependsOn(serdeTestTask) }
+// The same tests on the JDK HTTP client: the Netty HTTP client is removed from the class path, because both registries are primary and
+// the Netty client wins whenever it is present. HttpClientImplementationTest asserts the implementation that the task selects.
+val serdeTestJdkRuntime = configurations.create("serdeTestJdkRuntimeClasspath") {
+    isCanBeConsumed = false
+    extendsFrom(configurations.getByName(serdeTest.implementationConfigurationName), configurations.getByName(serdeTest.runtimeOnlyConfigurationName))
+    exclude(group = "io.micronaut", module = "micronaut-http-client")
+    attributes {
+        configurations.getByName(serdeTest.runtimeClasspathConfigurationName).attributes.keySet().forEach { key ->
+            @Suppress("UNCHECKED_CAST")
+            attribute(key as Attribute<Any>, configurations.getByName(serdeTest.runtimeClasspathConfigurationName).attributes.getAttribute(key)!!)
+        }
+    }
+}
+dependencies {
+    "serdeTestJdkRuntimeClasspath"(mn.micronaut.http.client.jdk)
+}
+val serdeTestJdkTask = tasks.register<Test>("serdeTestJdk") {
+    description = "Runs the tests of serdeTest on the JDK HTTP client instead of the Netty HTTP client."
+    group = "verification"
+    testClassesDirs = serdeTest.output.classesDirs
+    classpath = files(serdeTest.output, sourceSets.main.get().output, serdeTestJdkRuntime)
+    systemProperty("graphql.test.http-client", "jdk")
+    useJUnitPlatform()
+    shouldRunAfter(serdeTestTask)
+}
+tasks.named("check") { dependsOn(serdeTestJdkTask) }
 
 // A class that drifts from the schema on purpose, compiled with the processor and the options of `main`: driftFixtureTest asserts
 // that the compilation fails with the expected `[code] coordinate` line.

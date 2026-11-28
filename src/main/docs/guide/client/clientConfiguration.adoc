@@ -18,6 +18,8 @@ The path of the endpoint is the `endpoint` member of `@GraphQLClient`, and `/gra
 
 == Settings of the HTTP client
 
+The HTTP client is the Netty client (`micronaut-http-client`) or the JDK client (`micronaut-http-client-jdk`); the client runs on either. The tests of the library run the low-level client, the declarative client and the sessions on both. When both are on the class path, Micronaut picks the Netty client, so a build that wants the JDK client leaves `micronaut-http-client` out.
+
 These are the keys of the Micronaut HTTP client that matter most for a GraphQL call. The Micronaut documentation lists all of them.
 
 * `micronaut.http.services.<id>.read-timeout` bounds how long the client waits for the response. A call that exceeds it fails with `transport-timeout`. Set it to what your slowest operation needs.
