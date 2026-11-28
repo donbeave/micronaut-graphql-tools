@@ -224,6 +224,19 @@ val serdeTestJdkTask = tasks.register<Test>("serdeTestJdk") {
 }
 tasks.named("check") { dependsOn(serdeTestJdkTask) }
 
+graalvmNative.registerTestBinary("serdeTest") {
+    usingSourceSet(serdeTest)
+    forTestTask(serdeTestTask)
+}
+// The test binary takes the class path of the `test` source set by default, which has the Jackson databind stack and no client: the
+// class path of this binary is the runtime class path of `serdeTest`, with the JUnit launcher of the native build tools, which the
+// plugin resolves in `nativeImageSerdeTestClasspathInternal`.
+graalvmNative.binaries.named("serdeTest") {
+    classpath.setFrom(serdeTest.runtimeClasspath, serdeTest.output, provider {
+        configurations.getByName("nativeImageSerdeTestClasspathInternal").filter { it.path.contains("org.graalvm.buildtools") }
+    })
+}
+
 // A class that drifts from the schema on purpose, compiled with the processor and the options of `main`: driftFixtureTest asserts
 // that the compilation fails with the expected `[code] coordinate` line.
 val driftFixture: SourceSet by sourceSets.creating {

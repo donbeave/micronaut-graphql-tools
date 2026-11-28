@@ -62,7 +62,8 @@ final class JavaEmitter implements Emitter {
             files.add(new GeneratedFile(path(names.packageName(), names.simpleName()), enumFile(type, options)));
             packages.add(names.packageName());
         }
-        if (options.modelStyle() == ModelStyle.RECORD) {
+        // the models of a client are result models, which the emitter of the client models writes
+        if (options.modelStyle() == ModelStyle.RECORD && options.mode() == Mode.SERVER) {
             for (ModelType type : ir.models()) {
                 Names names = type.names();
                 files.add(new GeneratedFile(path(names.packageName(), names.simpleName()), recordFile(type, options)));

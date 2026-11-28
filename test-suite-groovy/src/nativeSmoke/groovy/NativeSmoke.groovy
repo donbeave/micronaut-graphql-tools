@@ -22,8 +22,10 @@ import java.net.http.HttpResponse
 import java.time.Duration
 
 // Starts the native executable (args[0]), posts the queries of GraphQLSmokeSpec and of the Java and Kotlin smoke tests to
-// /graphql, asserts the response bodies and stops the process. Spock cannot run natively, so this runs on the JVM.
+// /graphql, asserts the response bodies, runs the native executable of the client smoke test (args[1]) against it and stops the
+// process. Spock cannot run natively, so this runs on the JVM.
 File executable = new File(args[0])
+File clientExecutable = new File(args[1])
 int port
 new ServerSocket(0).withCloseable { port = it.localPort }
 
@@ -129,6 +131,22 @@ try {
     assert scalars.echoLocale == 'en-US'
 
     println "Native smoke test passed: 7 scenarios against ${executable.name} on port $port"
+
+    File clientLog = File.createTempFile('client-smoke', '.log')
+    Process client = new ProcessBuilder(clientExecutable.absolutePath, "http://localhost:$port")
+            .redirectErrorStream(true)
+            .redirectOutput(clientLog)
+            .start()
+    boolean finished = client.waitFor(120, java.util.concurrent.TimeUnit.SECONDS)
+    if (!finished) {
+        client.destroyForcibly().waitFor()
+    }
+    String clientOutput = clientLog.getText('UTF-8')
+    clientLog.delete()
+    print clientOutput
+    assert finished: "The native client smoke test did not finish within 120 seconds"
+    assert client.exitValue() == 0: "The native client smoke test exited with ${client.exitValue()}"
+    assert clientOutput.contains('Client smoke test passed: 10 scenarios'): "The native client smoke test did not report its scenarios"
 } finally {
     process.destroy()
     if (!process.waitFor(10, java.util.concurrent.TimeUnit.SECONDS)) {
