@@ -245,3 +245,20 @@ val buildSrcTest by tasks.registering(Exec::class) {
     doLast { marker.get().asFile.apply { parentFile.mkdirs() }.writeText("ok\n") }
 }
 tasks.matching { it.name == "check" }.configureEach { dependsOn(buildSrcTest) }
+
+// The annotation processors of the test suites run inside the compile tasks, and Micronaut copies the options of a compilation into the
+// system properties of the JVM and lets those override the options of the next compilation (JavaVisitorContext#getOptions merges the
+// system properties last). Two compile tasks that run at once in one Gradle daemon therefore read each other's schema.dirs, client.dirs
+// and module.dir, and a client visitor reports the module of the other task as the owner of its directories (client-schema-missing in
+// test-suite-serde:compileTestJava while a test suite of another module compiled). The compile tasks of the modules that apply the
+// processors take one lock, so they run one at a time.
+abstract class ProcessorCompileLock : BuildService<BuildServiceParameters.None>
+
+val processorCompileLock = gradle.sharedServices.registerIfAbsent("processorCompileLock", ProcessorCompileLock::class.java) {
+    maxParallelUsages.set(1)
+}
+subprojects.filter { it.path.startsWith(":test-suite-") }.forEach { suite ->
+    suite.tasks.matching {
+        it is JavaCompile || it is GroovyCompile || it.name.startsWith("ksp") || it.name.startsWith("kapt")
+    }.configureEach { usesService(processorCompileLock) }
+}

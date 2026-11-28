@@ -16,6 +16,7 @@
 package io.micronaut.graphql.tools.binding.internal.client.method;
 
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.graphql.tools.binding.internal.model.TypeRef;
 
 import java.util.List;
 
@@ -24,9 +25,10 @@ import java.util.List;
  *
  * @param member     where a finding is reported: {@code binary.Name#method(parameter types)}
  * @param parameters the parameters, a Kotlin continuation excluded
+ * @param returnType the declared return type, which of a Kotlin {@code suspend} function is the type of its value
  */
 @Internal
-public record ClientMethod(String member, List<ClientParameter> parameters) {
+public record ClientMethod(String member, List<ClientParameter> parameters, TypeRef returnType) {
 
     public ClientMethod {
         parameters = List.copyOf(parameters);

@@ -7,6 +7,6 @@ import io.micronaut.graphql.tools.client.annotation.GraphQLOperation
 interface BookClient {
 
     @GraphQLOperation("query A { version } query B { version }")
-    fun books(): String
+    fun books(): Any?
 
 }

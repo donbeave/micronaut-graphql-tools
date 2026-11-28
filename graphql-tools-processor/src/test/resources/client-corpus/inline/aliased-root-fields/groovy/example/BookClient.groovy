@@ -7,9 +7,9 @@ import io.micronaut.graphql.tools.client.annotation.GraphQLOperation
 interface BookClient {
 
     @GraphQLOperation('{ v: version }')
-    String one()
+    Object one()
 
     @GraphQLOperation('{ a: version b: version }')
-    String two()
+    Object two()
 
 }

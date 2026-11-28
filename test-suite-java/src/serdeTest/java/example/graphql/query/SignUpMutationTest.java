@@ -16,6 +16,7 @@
 package example.graphql.query;
 
 import example.AbstractTest;
+import example.client.ExampleClient.ValidationError;
 import example.client.ExampleClient.AuthPayload;
 import example.client.ExampleClient.SignUpInput;
 import example.client.ExampleClient.ValidationErrorCode;
@@ -24,6 +25,7 @@ import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -52,10 +54,9 @@ class SignUpMutationTest extends AbstractTest {
         assertNotNull(response.data());
         assertNull(response.data().data());
         assertNotNull(response.data().error());
-        assertNull(response.data().error().securityCode());
-        assertEquals("ValidationError", response.data().error().__typename());
-        assertEquals(ValidationErrorCode.DUPLICATE, response.data().error().validationCode());
-        assertEquals("User with username test already exists.", response.data().error().message());
+        ValidationError error = assertInstanceOf(ValidationError.class, response.data().error());
+        assertEquals(ValidationErrorCode.DUPLICATE, error.validationCode());
+        assertEquals("User with username test already exists.", error.message());
     }
 
 }

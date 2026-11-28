@@ -7,6 +7,6 @@ import io.micronaut.graphql.tools.client.annotation.GraphQLOperation
 interface BookClient {
 
     @GraphQLOperation("Huge")
-    fun huge(): String
+    fun huge(): Any?
 
 }

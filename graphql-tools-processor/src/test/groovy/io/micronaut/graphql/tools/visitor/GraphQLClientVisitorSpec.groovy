@@ -62,13 +62,13 @@ import java.util.*;
 @GraphQLClient(id = "books", schema = "books")
 public interface BookClient {
     @GraphQLOperation("query Book($id: ID!) { book(id: $id) { title } }")
-    String book(String id);
+    Object book(String id);
 
     @GraphQLOperation("{ version books { id } }")
-    String both();
+    Object both();
 
     @GraphQLOperation("mutation Save($title: String!) { save(title: $title) { id } }")
-    String save(String title);
+    Object save(String title);
 }''').compile()
 
         then:
@@ -94,10 +94,10 @@ public interface BookClient {
 @GraphQLClient(schema = "books")
 public interface BookClient {
     @GraphQLOperation("FindBooks")
-    String findBooks();
+    Object findBooks();
 
     @GraphQLOperation("{ books { ...Titled ...Local } } fragment Local on Book { id } fragment Unused on Book { id }")
-    String inlineWithFragments();
+    Object inlineWithFragments();
 }''').clientFile('books/operations/books.graphql', 'query FindBooks { books { ...Titled } }')
                 .clientFile('books/operations/fragments.graphql', 'fragment Titled on Book { title }').compile()
 
@@ -116,10 +116,10 @@ public interface BookClient {
 @GraphQLClient(schema = "books")
 public interface BookClient {
     @GraphQLOperation
-    String findBooks();
+    Object findBooks();
 
     @GraphQLOperation(name = "FindBooks")
-    String other();
+    Object other();
 }''').clientFile('books/operations.graphql', 'query findBooks { version } query FindBooks { books { id } }').compile()
 
         then:
@@ -136,12 +136,12 @@ public interface BookClient {
                 .source('example.Plain', HEADER + '''
 public interface Plain {
     @GraphQLOperation("{ nothingChecksThis }")
-    String operation();
+    Object operation();
 }''')
                 .source('example.BookClient', HEADER + '''
 @GraphQLClient(schema = "missing")
 public interface BookClient {
-    String plain();
+    Object plain();
 }''').compile()
 
         then:
@@ -156,7 +156,7 @@ public interface BookClient {
 @GraphQLClient(schema = "books")
 public interface BookClient {
     @GraphQLOperation("query {\\n  books {\\n    titel\\n  }\\n}")
-    String books();
+    Object books();
 }''').compile()
 
         then:
@@ -173,13 +173,13 @@ public interface BookClient {
 @GraphQLClient(schema = "books")
 public interface BookClient {
     @GraphQLOperation("{ nope }")
-    String first();
+    Object first();
 
     @GraphQLOperation("{ version }")
-    String fine();
+    Object fine();
 
     @GraphQLOperation("{ alsoNope }")
-    String second(String argument, int[] numbers);
+    Object second(String argument, int[] numbers);
 }''').compile()
 
         then:
@@ -194,10 +194,10 @@ public interface BookClient {
 @GraphQLClient(schema = "nowhere")
 public interface BookClient {
     @GraphQLOperation("{ version }")
-    String a();
+    Object a();
 
     @GraphQLOperation("{ version }")
-    String b();
+    Object b();
 }''').compile()
 
         then:
@@ -212,10 +212,10 @@ public interface BookClient {
 @GraphQLClient(schema = "books")
 public interface BookClient {
     @GraphQLOperation("Nothing")
-    String missing();
+    Object missing();
 
     @GraphQLOperation("query A { version } query B { version }")
-    String several();
+    Object several();
 }''').compile()
 
         then:
@@ -237,7 +237,7 @@ public interface BookClient {
 @GraphQLClient(schema = "books")
 public interface BookClient {
     @GraphQLOperation("Huge")
-    String huge();
+    Object huge();
 }'''
 
         when:
@@ -257,10 +257,10 @@ public interface BookClient {
 @GraphQLClient(schema = "server")
 public interface ServerClient {
     @GraphQLOperation("{ version }")
-    String version();
+    Object version();
 
     @GraphQLOperation("{ notThere }")
-    String broken();
+    Object broken();
 }''').compile()
 
         then:
@@ -273,10 +273,10 @@ public interface ServerClient {
 @GraphQLClient(schema = "books")
 public interface BookClient {
     @GraphQLOperation("query Q($x: Int) { notInTheSchema }")
-    String a();
+    Object a();
 
     @GraphQLOperation("{ alsoNotInTheSchema }")
-    String b();
+    Object b();
 }''').option(ProcessorOptions.CLIENT_CHECKS, 'false').compile()
 
         then:
@@ -295,7 +295,7 @@ public interface BookClient {
 @GraphQLClient(schema = "books")
 public interface BookClient {
     @GraphQLOperation("{ notInTheSchema }")
-    String a();
+    Object a();
 }''').option(ProcessorOptions.CHECKS, 'false').compile()
 
         then:
@@ -309,7 +309,7 @@ public interface BookClient {
 @GraphQLClient(schema = "books")
 public interface BookClient {
     @GraphQLOperation("{ version")
-    String a();
+    Object a();
 }''').option(ProcessorOptions.CLIENT_CHECKS, 'false').compile()
 
         then:
@@ -322,10 +322,10 @@ public interface BookClient {
 @GraphQLClient(schema = "books")
 public interface BookClient {
     @GraphQLOperation("{ version }")
-    String a();
+    Object a();
 
     @GraphQLOperation("{ books { id } }")
-    String b();
+    Object b();
 }''').compile()
 
         then:

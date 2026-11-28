@@ -7,6 +7,6 @@ import io.micronaut.graphql.tools.client.annotation.GraphQLOperation
 interface BookClient {
 
     @GraphQLOperation("Same")
-    fun same(): String
+    fun same(): Any?
 
 }

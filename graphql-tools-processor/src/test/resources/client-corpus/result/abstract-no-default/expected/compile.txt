@@ -1,0 +1,1 @@
+client-result-shape example.BookClient#search(java.lang.String) inline:1:32

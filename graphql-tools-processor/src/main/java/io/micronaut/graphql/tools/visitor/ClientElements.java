@@ -22,6 +22,7 @@ import io.micronaut.graphql.tools.binding.internal.model.JParameter;
 import io.micronaut.graphql.tools.binding.internal.model.TypeModel;
 import io.micronaut.inject.ast.MethodElement;
 import io.micronaut.inject.ast.ParameterElement;
+import io.micronaut.inject.visitor.VisitorContext;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -42,7 +43,16 @@ public final class ClientElements {
     private static final String BINDABLE = "io.micronaut.core.bind.annotation.Bindable";
     private static final String CONTINUATION = "kotlin.coroutines.Continuation";
 
-    private final ElementTypeModel model = new ElementTypeModel(new ModelCoverage());
+    private final ElementTypeModel model;
+
+    /**
+     * @param context the context of the visitor, which finds the subtypes that a result type names in an annotation by their binary
+     *                name: the one place where this module looks a class up by name, because the class file of the result type refers
+     *                to them
+     */
+    public ClientElements(VisitorContext context) {
+        this.model = new ElementTypeModel(new ModelCoverage(), name -> context.getClassElement(name).orElse(null));
+    }
 
     /**
      * @return the types that the methods of this adapter refer to
@@ -69,6 +79,6 @@ public final class ClientElements {
             parameters.add(new ClientParameter(parameter.name(), parameter.annotations().stringValue(VARIABLE, "value").orElse(""),
                     kind, parameter.type()));
         }
-        return new ClientMethod(member, parameters);
+        return new ClientMethod(member, parameters, model.method(method).genericReturnType());
     }
 }

@@ -41,6 +41,7 @@ final class ClientCodeScenarios {
             'variable-type'      : 'client-variable-type',
             'parameter-unbound'  : 'client-parameter-unbound',
             'scalar-conflict'    : 'client-scalar-conflict',
+            'result-shape'       : 'client-result-shape',
     ]
 
     private static final String CLIENT = '''package example;
@@ -56,7 +57,7 @@ public interface BookClient {
 }'''
 
     private static final String METHOD = '''    @GraphQLOperation(%s)
-    String %s(%s);
+    %s %s(%s);
 '''
 
     private static final String BOOK = 'query Book($id: ID!) { book(id: $id) { title } }'
@@ -118,15 +119,19 @@ public interface BookClient {
                 operation = BOOK
                 parameters = 'String id, int limit'
                 break
+            case 'result-shape':
+                operation = 'query Book($id: ID!) { book(id: $id) { title } }'
+                parameters = 'String id'
+                break
             case 'scalar-conflict':
-                methods = String.format(METHOD, '"query At($moment: DateTime) { at(moment: $moment) }"', 'at', 'java.time.Instant moment') + '\n' +
-                        String.format(METHOD, '"query Again($moment: DateTime) { at(moment: $moment) }"', 'atAgain', 'String moment')
+                methods = String.format(METHOD, '"query At($moment: DateTime) { at(moment: $moment) }"', 'Object', 'at', 'java.time.Instant moment') + '\n' +
+                        String.format(METHOD, '"query Again($moment: DateTime) { at(moment: $moment) }"', 'Object', 'atAgain', 'String moment')
                 break
             default:
                 throw new IllegalArgumentException('no scenario ' + scenario)
         }
         JavaParserCompilation compilation = new JavaParserCompilation().clientFile('books/schema.graphqls', schemaText)
-                .source('example.BookClient', String.format(CLIENT, typeAnnotations, schema, methods ?: String.format(METHOD, arguments ?: '"' + operation + '"', 'book', parameters)))
+                .source('example.BookClient', String.format(CLIENT, typeAnnotations, schema, methods ?: String.format(METHOD, arguments ?: '"' + operation + '"', scenario == 'result-shape' ? 'String' : 'Object', 'book', parameters)))
         files.each { path, text -> compilation.clientFile(path, text) }
         if (!checks) {
             compilation.option(ProcessorOptions.CLIENT_CHECKS, 'false')

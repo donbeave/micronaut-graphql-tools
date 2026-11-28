@@ -300,7 +300,10 @@ public enum BindingCode {
             "A parameter of a GraphQL client operation method binds no variable of the operation, or two parameters bind one."),
     /** Compile-time failure: one client maps a custom scalar to two Java types. */
     CLIENT_SCALAR_CONFLICT("client-scalar-conflict", false, true,
-            "One GraphQL client maps a custom scalar to two different Java types.");
+            "One GraphQL client maps a custom scalar to two different Java types."),
+    /** Compile-time failure: the Java result type of a client operation does not fit its selection set. */
+    CLIENT_RESULT_SHAPE("client-result-shape", false, true,
+            "The Java result type of a GraphQL client operation does not fit the selection set of the operation.");
 
     private static final Map<String, BindingCode> BY_CODE;
 

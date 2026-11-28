@@ -7,9 +7,9 @@ import io.micronaut.graphql.tools.client.annotation.GraphQLOperation
 interface BookClient {
 
     @GraphQLOperation("{ v: version }")
-    fun one(): String
+    fun one(): Any?
 
     @GraphQLOperation("{ a: version b: version }")
-    fun two(): String
+    fun two(): Any?
 
 }

@@ -84,6 +84,7 @@ public final class io.micronaut.graphql.tools.binding.BindingCode extends java.l
   public static final io.micronaut.graphql.tools.binding.BindingCode CLIENT_VARIABLE_TYPE;
   public static final io.micronaut.graphql.tools.binding.BindingCode CLIENT_PARAMETER_UNBOUND;
   public static final io.micronaut.graphql.tools.binding.BindingCode CLIENT_SCALAR_CONFLICT;
+  public static final io.micronaut.graphql.tools.binding.BindingCode CLIENT_RESULT_SHAPE;
   public boolean isCheck();
   public boolean isCompileTime();
   public java.lang.String getCode();

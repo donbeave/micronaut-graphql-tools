@@ -7,6 +7,6 @@ import io.micronaut.graphql.tools.client.annotation.GraphQLOperation
 interface BookClient {
 
     @GraphQLOperation(value = 'query First { version } query Second { books { id } }', name = 'Second')
-    String second()
+    Object second()
 
 }

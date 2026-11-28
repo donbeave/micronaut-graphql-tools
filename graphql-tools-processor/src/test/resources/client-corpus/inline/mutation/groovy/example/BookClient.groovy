@@ -7,6 +7,6 @@ import io.micronaut.graphql.tools.client.annotation.GraphQLOperation
 interface BookClient {
 
     @GraphQLOperation('mutation Save($title: String!) { save(title: $title) { id } }')
-    String save(String title)
+    Object save(String title)
 
 }

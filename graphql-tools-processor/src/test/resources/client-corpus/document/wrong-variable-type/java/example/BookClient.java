@@ -7,6 +7,6 @@ import io.micronaut.graphql.tools.client.annotation.GraphQLOperation;
 public interface BookClient {
 
     @GraphQLOperation("query Book($id: Int!) { book(id: $id) { id } }")
-    String book(int id);
+    Object book(int id);
 
 }

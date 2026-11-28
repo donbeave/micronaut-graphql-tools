@@ -7,9 +7,9 @@ import io.micronaut.graphql.tools.client.annotation.GraphQLOperation
 interface BookClient {
 
     @GraphQLOperation('query Q($x: Int) { notInTheSchema }')
-    String missing()
+    Object missing()
 
     @GraphQLOperation('{ alsoNot another }')
-    String two()
+    Object two()
 
 }

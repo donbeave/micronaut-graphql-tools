@@ -7,9 +7,9 @@ import io.micronaut.graphql.tools.client.annotation.GraphQLOperation
 interface BookClient {
 
     @GraphQLOperation("{ books { ...Titled ...Authored } } fragment Titled on Book { id }")
-    fun inline(): String
+    fun inline(): Any?
 
     @GraphQLOperation("Named")
-    fun named(): String
+    fun named(): Any?
 
 }

@@ -7,12 +7,12 @@ import io.micronaut.graphql.tools.client.annotation.GraphQLOperation
 interface BookClient {
 
     @GraphQLOperation("{ nope }")
-    fun first(): String
+    fun first(): Any?
 
     @GraphQLOperation("{ version }")
-    fun fine(): String
+    fun fine(): Any?
 
     @GraphQLOperation("Missing")
-    fun second(): String
+    fun second(): Any?
 
 }

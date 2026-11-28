@@ -7,9 +7,9 @@ import io.micronaut.graphql.tools.client.annotation.GraphQLOperation
 interface NewsClient {
 
     @GraphQLOperation("{ headline }")
-    fun headline(): String
+    fun headline(): Any?
 
     @GraphQLOperation("{ version }")
-    fun wrong(): String
+    fun wrong(): Any?
 
 }

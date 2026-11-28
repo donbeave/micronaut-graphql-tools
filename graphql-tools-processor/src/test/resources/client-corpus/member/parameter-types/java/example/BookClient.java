@@ -7,6 +7,6 @@ import io.micronaut.graphql.tools.client.annotation.GraphQLOperation;
 public interface BookClient {
 
     @GraphQLOperation("{ nope }")
-    String books(String id, int limit, String[] ids);
+    Object books(String id, int limit, String[] ids);
 
 }

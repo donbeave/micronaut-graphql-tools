@@ -126,6 +126,16 @@ final class KotlinBatchCompiler implements CheckedCaseCompiler {
         return projectName(corpusCase) + '--checked'
     }
 
+    /**
+     * Builds the Gradle projects of all the cases, once. The first case does it otherwise, and the build (303 s of a CI runner that also
+     * ran the build samples) would count as the run time of that one test against the limit of 5 minutes that stops a hung test.
+     */
+    synchronized void prepare() {
+        if (result == null) {
+            build()
+        }
+    }
+
     @Override
     synchronized CompiledCase compile(CorpusCase corpusCase, Path work) {
         if (result == null) {

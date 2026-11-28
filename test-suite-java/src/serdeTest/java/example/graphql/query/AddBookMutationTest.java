@@ -16,6 +16,7 @@
 package example.graphql.query;
 
 import example.AbstractTest;
+import example.client.ExampleClient.SecurityError;
 import example.client.ExampleClient.AddBookPayload;
 import example.client.ExampleClient.SecurityErrorCode;
 import example.client.ExampleClient.User;
@@ -24,6 +25,7 @@ import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -38,10 +40,9 @@ class AddBookMutationTest extends AbstractTest {
         assertTrue(response.errors().isEmpty());
         assertNotNull(response.data());
         assertNotNull(response.data().error());
-        assertNull(response.data().error().validationCode());
-        assertEquals("SecurityError", response.data().error().__typename());
-        assertEquals(SecurityErrorCode.NOT_AUTHENTICATED, response.data().error().securityCode());
-        assertEquals("Not logged in.", response.data().error().message());
+        SecurityError error = assertInstanceOf(SecurityError.class, response.data().error());
+        assertEquals(SecurityErrorCode.NOT_AUTHENTICATED, error.securityCode());
+        assertEquals("Not logged in.", error.message());
     }
 
     @Test

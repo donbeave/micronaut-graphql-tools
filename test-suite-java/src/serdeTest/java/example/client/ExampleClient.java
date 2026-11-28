@@ -15,6 +15,8 @@
  */
 package example.client;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.graphql.tools.client.GraphQLResponse;
 import io.micronaut.graphql.tools.client.annotation.GraphQLClient;
@@ -45,9 +47,29 @@ public interface ExampleClient {
         INCORRECT_CREDENTIALS, NOT_AUTHENTICATED
     }
 
-    /** The members of the union Error that the operations select: a field is {@code null} for the member that does not have it. */
+    /**
+     * The union Error as the operations select it: one subtype for each member that a fragment names, chosen by the field
+     * {@code __typename} that the processor adds to the selection, and a default branch for a member that a later schema adds.
+     */
     @Serdeable
-    record OperationError(String __typename, String message, ValidationErrorCode validationCode, SecurityErrorCode securityCode) {
+    @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "__typename", defaultImpl = OtherError.class)
+    @JsonSubTypes({
+            @JsonSubTypes.Type(value = ValidationError.class, name = "ValidationError"),
+            @JsonSubTypes.Type(value = SecurityError.class, name = "SecurityError")
+    })
+    sealed interface OperationError permits ValidationError, SecurityError, OtherError {
+    }
+
+    @Serdeable
+    record ValidationError(String message, ValidationErrorCode validationCode) implements OperationError {
+    }
+
+    @Serdeable
+    record SecurityError(String message, SecurityErrorCode securityCode) implements OperationError {
+    }
+
+    @Serdeable
+    record OtherError() implements OperationError {
     }
 
     @Serdeable
