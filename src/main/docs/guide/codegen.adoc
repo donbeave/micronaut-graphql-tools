@@ -1,6 +1,6 @@
 The code generator turns a GraphQL schema into Java, Kotlin or Groovy sources in the application's own source set. It is one library, `micronaut-graphql-tools-codegen`, and the build plugins map their configuration onto its options one to one and add only wiring. The generator runs on the build's class path, never on the application's, and it uses no Jackson.
 
-NOTE: This version of the generator checks the options, parses the schema files and reports what is wrong. It emits the enums and the name constants of Java and no other source file yet: the other emitters arrive in later changes, and the plugin already writes whatever the generator returns, reconciles the output directory and registers the source roots, so the build wiring below is final.
+NOTE: This version of the generator checks the options, parses the schema files and reports what is wrong. It emits the enums, the object models as records and the name constants of Java and no other source file yet: the other emitters arrive in later changes, and the plugin already writes whatever the generator returns, reconciles the output directory and registers the source roots, so the build wiring below is final.
 
 The section has one page so far:
 
