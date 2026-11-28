@@ -6,7 +6,6 @@ plugins {
     id("org.jetbrains.kotlin.jvm") version "2.1.21" apply false
     id("com.google.devtools.ksp") version "2.1.21-2.0.2" apply false
     id("io.micronaut.aot") version "4.6.2" apply false
-    id("com.apollographql.apollo") version "5.2.0" apply false
 }
 
 if (providers.gradleProperty("graphqlJavaVersion").isPresent) {
@@ -169,14 +168,15 @@ val auditLockfile by tasks.registering {
 }
 
 // The native coverage table of CONTRIBUTING.md names a test class per feature category and suite, and the TCK scenarios it
-// relies on. The native run executes the whole test source set, so a row whose class is missing means a category lost its test.
+// relies on. The native runs execute the whole `test` source set of each suite and the `serdeTest` source set of the Java suite, so a
+// row whose class is missing from them means a category lost its test.
 val checkNativeCoverage by tasks.registering {
     group = "verification"
     description = "Checks that every row of the native coverage table of CONTRIBUTING.md names existing tests and scenarios."
     val contributing = layout.projectDirectory.file("CONTRIBUTING.md")
     val scenarios = layout.projectDirectory.file("test-suite-tck/src/main/resources/tck/scenarios.txt")
     val sources = fileTree(layout.projectDirectory) {
-        include("test-suite-java/src/test/**/*.java", "test-suite-kotlin/src/test/**/*.kt")
+        include("test-suite-java/src/test/**/*.java", "test-suite-java/src/serdeTest/**/*.java", "test-suite-kotlin/src/test/**/*.kt")
     }
     inputs.files(contributing, scenarios, sources).withPathSensitivity(PathSensitivity.RELATIVE)
     val marker = layout.buildDirectory.file("checks/native-coverage.ok")
@@ -201,8 +201,11 @@ val checkNativeCoverage by tasks.registering {
                     "Kotlin" -> "test-suite-kotlin" to "kotlin"
                     else -> throw GradleException("Unknown suite '$suite' in the native coverage row '$category'")
                 }
-                val file = layout.projectDirectory.file("$module/src/test/$extension/$path.${if (extension == "kotlin") "kt" else extension}").asFile
-                if (!file.isFile) problems += "$category: $testClass is missing from $module"
+                val name = "$path.${if (extension == "kotlin") "kt" else extension}"
+                val roots = if (module == "test-suite-java") listOf("test", "serdeTest") else listOf("test")
+                if (roots.none { layout.projectDirectory.file("$module/src/$it/$extension/$name").asFile.isFile }) {
+                    problems += "$category: $testClass is missing from $module"
+                }
             }
             ids.filter { it !in known }.forEach { problems += "$category: scenario '$it' is not in scenarios.txt" }
         }

@@ -3,7 +3,6 @@ plugins {
     id("io.micronaut.application")
     id("com.gradleup.shadow")
     id("io.micronaut.aot")
-    id("com.apollographql.apollo")
 }
 
 repositories {
@@ -16,9 +15,6 @@ dependencies {
     implementation(projects.micronautGraphqlToolsScalars)
     // The JSON codec of the application. The library no longer brings Jackson (#36), so the default stack declares it here.
     runtimeOnly(mn.micronaut.jackson.databind)
-    implementation(libs.apollo.java.client)
-    implementation(libs.apollo.java.rx3)
-    implementation(libs.apollo.api) // the Java client 1.0.0 resolves apollo-api 5.0.1; keep the API at the plugin's version
     testImplementation(projects.testSuiteTck) // the execution-behaviour TCK (#53)
     // The metrics and tracing modules and the libraries their tests observe with: the Micrometer and OpenTelemetry integrations of
     // Micronaut, and an in-memory span exporter (#24). Test scope: the application itself does not depend on them.
@@ -84,14 +80,6 @@ tasks.named<io.micronaut.gradle.docker.NativeImageDockerfile>("dockerfileNative"
     jdkVersion = "25"
 }
 
-apollo {
-    service("service") {
-        packageName.set("example.client")
-        schemaFiles.from("src/main/resources/schema.graphqls")
-        generateKotlinModels.set(false)
-    }
-}
-
 // The compile-time checks (#291): the processor registers the visitor, which checks the resolver classes against the schema while
 // they compile. The schema directory is a declared input of the compilation, so that a schema edit recompiles. `module.dir` is the
 // project directory: a compilation that forgot the options in the same JVM fails instead of reading these.
@@ -118,6 +106,94 @@ tasks.named<JavaCompile>("compileJava") {
     options.compilerArgumentProviders.add(objects.newInstance<GraphQLSchemaDirs>().apply {
         dirs.from(graphqlSchemaDirs)
         moduleDir.set(layout.projectDirectory)
+    })
+}
+
+// The Micronaut Serialization stack: the library's GraphQL client needs Micronaut Serialization, and micronaut-serde-jackson makes its
+// JsonMapper win over the Jackson databind of this application, so the two stacks cannot share a classpath (test-suite-serde has the
+// same rule). The tests that call the application with the client, and the declarative client with its result models, are in the source
+// set `serdeTest`, which has its own task and its own native binary; `test` keeps the Jackson databind stack.
+// The processor checks each operation of the declarative client against the schema of the application (the reserved client schema
+// `server`, documents in src/serdeTest/graphql/client/server) and compiles it.
+abstract class GraphQLClientDirs : CommandLineArgumentProvider {
+    @get:InputFiles
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val schemaDirs: ConfigurableFileCollection
+
+    @get:InputFiles
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val clientDirs: ConfigurableFileCollection
+
+    @get:Internal
+    abstract val moduleDir: DirectoryProperty
+
+    override fun asArguments() = listOf(
+        "-Amicronaut.graphql.tools.processor.checks=true",
+        "-Amicronaut.graphql.tools.processor.schema.dirs=" + schemaDirs.files.joinToString(File.pathSeparator) { it.absolutePath },
+        "-Amicronaut.graphql.tools.processor.client.dirs=" + clientDirs.files.joinToString(File.pathSeparator) { it.absolutePath },
+        "-Amicronaut.graphql.tools.processor.client.checks=true",
+        "-Amicronaut.graphql.tools.processor.module.dir=" + moduleDir.get().asFile.absolutePath)
+}
+
+// The beans of the environment `host-graphql`, which a test of `test` and a test of `serdeTest` both start the application with
+val sharedFixtures: SourceSet by sourceSets.creating {
+    compileClasspath += sourceSets.main.get().output
+    runtimeClasspath += sourceSets.main.get().output
+}
+configurations {
+    named(sharedFixtures.implementationConfigurationName) { extendsFrom(implementation.get()) }
+    named(sharedFixtures.annotationProcessorConfigurationName) { extendsFrom(testAnnotationProcessor.get()) }
+}
+dependencies {
+    testImplementation(sharedFixtures.output)
+}
+
+val serdeTest: SourceSet by sourceSets.creating {
+    compileClasspath += sourceSets.main.get().output
+    runtimeClasspath += sourceSets.main.get().output
+}
+configurations {
+    named(serdeTest.implementationConfigurationName) { extendsFrom(implementation.get()) }
+    named(serdeTest.annotationProcessorConfigurationName) { extendsFrom(testAnnotationProcessor.get()) }
+}
+dependencies {
+    "serdeTestImplementation"(sharedFixtures.output)
+    "serdeTestImplementation"(projects.micronautGraphqlToolsClient)
+    "serdeTestImplementation"(mnSerde.micronaut.serde.jackson)
+    "serdeTestImplementation"(mn.micronaut.http.client)
+    "serdeTestImplementation"(mnTest.micronaut.test.junit5)
+    "serdeTestAnnotationProcessor"(mnSerde.micronaut.serde.processor)
+    "serdeTestAnnotationProcessor"(projects.micronautGraphqlToolsProcessor)
+    "serdeTestRuntimeOnly"(mnLogging.logback.classic)
+    "serdeTestRuntimeOnly"("org.junit.jupiter:junit-jupiter-engine")
+    "serdeTestRuntimeOnly"("org.junit.platform:junit-platform-launcher")
+}
+tasks.named<JavaCompile>(serdeTest.compileJavaTaskName) {
+    options.compilerArgumentProviders.add(objects.newInstance<GraphQLClientDirs>().apply {
+        schemaDirs.from(graphqlSchemaDirs)
+        clientDirs.from(files("src/serdeTest/graphql/client"))
+        moduleDir.set(layout.projectDirectory)
+    })
+}
+val serdeTestTask = tasks.register<Test>("serdeTest") {
+    description = "Runs the tests on the Micronaut Serialization stack: the library client against this application."
+    group = "verification"
+    testClassesDirs = serdeTest.output.classesDirs
+    classpath = serdeTest.runtimeClasspath
+    useJUnitPlatform()
+    shouldRunAfter(tasks.named("test"))
+}
+tasks.named("check") { dependsOn(serdeTestTask) }
+graalvmNative.registerTestBinary("serdeTest") {
+    usingSourceSet(serdeTest)
+    forTestTask(serdeTestTask)
+}
+// The test binary takes the class path of the `test` source set by default, which has the Jackson databind stack and no client: the
+// class path of this binary is the runtime class path of `serdeTest`, with the JUnit launcher of the native build tools, which the
+// plugin resolves in `nativeImageSerdeTestClasspathInternal`.
+graalvmNative.binaries.named("serdeTest") {
+    classpath.setFrom(serdeTest.runtimeClasspath, serdeTest.output, provider {
+        configurations.getByName("nativeImageSerdeTestClasspathInternal").filter { it.path.contains("org.graalvm.buildtools") }
     })
 }
 

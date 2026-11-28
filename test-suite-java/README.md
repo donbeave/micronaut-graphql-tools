@@ -10,9 +10,15 @@ annotation processors, and it has JUnit tests over HTTP, the native image tests 
 ## Responsibility
 
 - `src/main/java/example`: the application: the schema (`src/main/resources/schema.graphqls`), resolvers, data classes and
-  the `GraphQLFactory` bean. The `.graphql` operations used by the tests are in `src/main/graphql`.
-- `src/test/java/example`: JUnit tests by feature (`claimed`, `discovery`, `directives`, `eager`, `enums`, `graphql/query`, `manifest`, `nullfields`,
-  `scope`, `tck`, `host`, ...). `example.tck.GraphQLToolsTckTest` runs the scenarios of `test-suite-tck`.
+  the `GraphQLFactory` bean.
+- `src/serdeTest`: the tests that call the application with the library's GraphQL client (`example.client.ExampleClient`, a declarative
+  `@GraphQLClient` with hand-written result records), on the Micronaut Serialization stack: `graphql/query`, `host`, `qualified` and
+  `directives.DirectiveWiringTest`. The operation documents are in `src/serdeTest/graphql/client/server`; the processor checks them against the
+  schema of the application while the source set compiles (`client.dirs`, the client schema `server`). The client needs Serde, and
+  `micronaut-serde-jackson` makes its `JsonMapper` win over Jackson databind, so the two stacks cannot share a classpath: `test` keeps the
+  Jackson databind stack. `src/sharedFixtures` holds the beans of the environment `host-graphql` that both source sets start the application with.
+- `src/test/java/example`: JUnit tests by feature (`claimed`, `discovery`, `directives`, `eager`, `enums`, `manifest`, `nullfields`,
+  `scope`, `tck`, ...). `example.tck.GraphQLToolsTckTest` runs the scenarios of `test-suite-tck`.
 - The null-field checks with Micronaut Serialization are in `test-suite-serde`.
 - Build checks: `checkBindingManifest` and `checkSuiteSchemaParity`. The parity check fails when the schema of this suite
   differs from the copies in `test-suite-kotlin` and `test-suite-groovy`.
@@ -53,11 +59,12 @@ Run from the repository root. JDK 21 or 25 (JDK 25 with Oracle GraalVM for the n
 ```
 ./gradlew :test-suite-java:test
 ./gradlew :test-suite-java:test --tests 'example.tck.*'
-./gradlew :test-suite-java:nativeTest --no-parallel
+./gradlew :test-suite-java:serdeTest
+./gradlew :test-suite-java:nativeTest :test-suite-java:nativeSerdeTest --no-parallel
 ```
 
-- `test` runs the JUnit tests on the JVM; it is part of `check`.
-- `nativeTest` builds a native image and runs the tests in it. They need Oracle GraalVM 25, about 5 GB of
+- `test` runs the JUnit tests on the JVM (Jackson databind stack); `serdeTest` runs the client tests (Micronaut Serialization stack). Both are part of `check`.
+- `nativeTest` and `nativeSerdeTest` build a native image and run the tests of their source set in it. They need Oracle GraalVM 25, about 5 GB of
   memory and 5 to 7 minutes each. Run them one after another (`--no-parallel`).
 - Add `-PgraphqlJavaLeg=floor|ceiling` to run on another graphql-java leg.
 

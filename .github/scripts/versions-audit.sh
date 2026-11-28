@@ -67,10 +67,6 @@ compare "shadow" "$(plugin_pin com.gradleup.shadow)" "$(newest $PORTAL com.gradl
 # pin here: they come from the Micronaut BOMs and move with micronaut-platform above.
 
 # Outside Micronaut's control: the newest stable release.
-compare "apollo" "$(catalog apollo)" "$(newest $CENTRAL com.apollographql.apollo apollo-runtime '^[0-9.]+$')" "newest"
-compare "apollo plugin" "$(plugin_pin com.apollographql.apollo)" "$(newest $CENTRAL com.apollographql.apollo apollo-runtime '^[0-9.]+$')" "newest"
-compare "apollo-java client" "$(catalog apollo-java)" "$(newest $CENTRAL com.apollographql.java client '^[0-9.]+$')" "newest"
-compare "apollo-java rx3" "$(catalog apollo-java)" "$(newest $CENTRAL com.apollographql.java rx3 '^[0-9.]+$')" "newest"
 compare "jmh" "$(catalog jmh)" "$(newest $CENTRAL org.openjdk.jmh jmh-core '^[0-9.]+$')" "newest"
 compare "jmh plugin" "$(plugin_pin me.champeau.jmh)" "$(newest $PORTAL me.champeau.jmh me.champeau.jmh.gradle.plugin '^[0-9.]+$')" "newest"
 compare "jetbrains-annotations" "$(catalog jetbrains-annotations)" "$(newest $CENTRAL org.jetbrains annotations '^[0-9.]+$')" "newest"

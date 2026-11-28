@@ -15,16 +15,13 @@
  */
 package example.graphql.query;
 
-import com.apollographql.apollo.api.ApolloResponse;
-import com.apollographql.java.client.ApolloClient;
-import com.apollographql.java.rx3.Rx3Apollo;
 import example.AbstractTest;
-import example.client.CurrentUserQuery;
+import example.client.ExampleClient.User;
+import io.micronaut.graphql.tools.client.GraphQLResponse;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -34,28 +31,22 @@ class CurrentUserQueryTest extends AbstractTest {
 
     @Test
     void returnsNoUserForAGuest() {
-        ApolloResponse<CurrentUserQuery.Data> response =
-                Rx3Apollo.single(apolloClient.query(new CurrentUserQuery())).blockingGet();
+        GraphQLResponse<User> response = client.currentUser(null);
 
-        assertFalse(response.hasErrors());
-        assertNotNull(response.data);
-        assertNull(response.data.currentUser);
+        assertTrue(response.errors().isEmpty());
+        assertNull(response.data());
     }
 
     @Test
     void returnsTheAuthenticatedUser() {
-        ApolloClient client = clientOf("test");
+        GraphQLResponse<User> response = client.currentUser("test");
 
-        ApolloResponse<CurrentUserQuery.Data> response =
-                Rx3Apollo.single(client.query(new CurrentUserQuery())).blockingGet();
-
-        assertFalse(response.hasErrors());
-        assertNotNull(response.data);
-        assertNotNull(response.data.currentUser);
-        assertEquals("test", response.data.currentUser.username);
-        assertEquals("Test", response.data.currentUser.firstName);
-        assertEquals("Test", response.data.currentUser.lastName);
-        assertTrue(response.data.currentUser.books.isEmpty());
+        assertTrue(response.errors().isEmpty());
+        assertNotNull(response.data());
+        assertEquals("test", response.data().username());
+        assertEquals("Test", response.data().firstName());
+        assertEquals("Test", response.data().lastName());
+        assertTrue(response.data().books().isEmpty());
     }
 
 }
