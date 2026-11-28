@@ -30,15 +30,46 @@ import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
- * The javac of the running JDK, with {@code --release 17} and no annotation processing, on the class path of the tests.
+ * The javac of the running JDK, with {@code --release 17} and no annotation processing, on the class path of the tests. The classes
+ * are kept in memory only for {@link #load}.
  */
 public final class JavaInMemoryCompiler implements InMemoryCompiler {
 
     @Override
     public List<String> compile(List<GeneratedFile> files) {
+        return compile(files, new HashMap<>());
+    }
+
+    /**
+     * Compiles all files together and returns a class loader over the classes, to check the compiled shape by reflection.
+     *
+     * @param files the generated sources
+     * @return a class loader whose parent is the loader of the tests
+     */
+    public ClassLoader load(List<GeneratedFile> files) {
+        Map<String, byte[]> classes = new HashMap<>();
+        List<String> errors = compile(files, classes);
+        if (!errors.isEmpty()) {
+            throw new AssertionError("The generated sources do not compile:\n" + String.join("\n", errors));
+        }
+        return new ClassLoader(JavaInMemoryCompiler.class.getClassLoader()) {
+            @Override
+            protected Class<?> findClass(String name) throws ClassNotFoundException {
+                byte[] bytes = classes.get(name);
+                if (bytes == null) {
+                    throw new ClassNotFoundException(name + " in " + classes.keySet());
+                }
+                return defineClass(name, bytes, 0, bytes.length);
+            }
+        };
+    }
+
+    private List<String> compile(List<GeneratedFile> files, Map<String, byte[]> classes) {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         if (compiler == null) {
             throw new IllegalStateException("No system Java compiler: run the tests on a JDK");
@@ -51,7 +82,7 @@ public final class JavaInMemoryCompiler implements InMemoryCompiler {
             }
         }
         try (StandardJavaFileManager standard = compiler.getStandardFileManager(diagnostics, null, null);
-             Discarding manager = new Discarding(standard)) {
+             Collecting manager = new Collecting(standard, classes)) {
             Boolean ok = compiler.getTask(null, manager, diagnostics, List.of("--release", "17", "-proc:none", "-Xlint:none"), null, sources).call();
             List<String> errors = new ArrayList<>();
             for (Diagnostic<? extends JavaFileObject> d : diagnostics.getDiagnostics()) {
@@ -84,10 +115,13 @@ public final class JavaInMemoryCompiler implements InMemoryCompiler {
         }
     }
 
-    private static final class Discarding extends ForwardingJavaFileManager<StandardJavaFileManager> {
+    private static final class Collecting extends ForwardingJavaFileManager<StandardJavaFileManager> {
 
-        Discarding(StandardJavaFileManager delegate) {
+        private final Map<String, byte[]> classes;
+
+        Collecting(StandardJavaFileManager delegate, Map<String, byte[]> classes) {
             super(delegate);
+            this.classes = classes;
         }
 
         @Override
@@ -95,7 +129,12 @@ public final class JavaInMemoryCompiler implements InMemoryCompiler {
             return new SimpleJavaFileObject(URI.create("mem:///" + className.replace('.', '/') + kind.extension), kind) {
                 @Override
                 public OutputStream openOutputStream() {
-                    return new ByteArrayOutputStream();
+                    return new ByteArrayOutputStream() {
+                        @Override
+                        public void close() {
+                            classes.put(className, toByteArray());
+                        }
+                    };
                 }
             };
         }
