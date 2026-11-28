@@ -9,7 +9,7 @@ repositories {
 
 dependencies {
     implementation("io.micronaut.build.internal:micronaut-build:7.6.6")
-    implementation("com.diffplug.spotless:spotless-plugin-gradle:7.2.1")
+    implementation("com.diffplug.spotless:spotless-plugin-gradle:8.12.0")
 }
 
 dependencies {
