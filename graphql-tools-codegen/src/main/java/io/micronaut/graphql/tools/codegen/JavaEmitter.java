@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.codegen;
 
+import io.micronaut.graphql.tools.codegen.ir.AbstractType;
 import io.micronaut.graphql.tools.codegen.ir.EnumType;
 import io.micronaut.graphql.tools.codegen.ir.EnumValue;
 import io.micronaut.graphql.tools.codegen.ir.Field;
@@ -35,12 +36,14 @@ import io.micronaut.sourcegen.javapoet.TypeSpec;
 import javax.lang.model.element.Modifier;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.TreeSet;
 
 /**
- * The Java emitter: writes the enums, the object models (as records) and the name classes of the IR with the JavaPoet fork of
- * sourcegen, and one {@code package-info.java} for each package that holds a generated type. Output is Java 17 source, UTF-8,
+ * The Java emitter: writes the enums, the unions and interfaces (as sealed interfaces where the IR seals them), the object
+ * models (as records) and the name classes of the IR with the JavaPoet fork of sourcegen, and one {@code package-info.java} for each package that holds a generated type. Output is Java 17 source, UTF-8,
  * {@code \n} line endings and one newline at the end.
  */
 final class JavaEmitter implements Emitter {
@@ -49,6 +52,7 @@ final class JavaEmitter implements Emitter {
     private static final ClassName DEPRECATED = ClassName.get(Deprecated.class);
     private static final ClassName STRING = ClassName.get(String.class);
     private static final ClassName INTROSPECTED = ClassName.get("io.micronaut.core.annotation", "Introspected");
+    private static final ClassName ACCESSORS_STYLE = ClassName.get("io.micronaut.core.annotation", "AccessorsStyle");
     private static final ClassName GRAPHQL_TYPE = ClassName.get("io.micronaut.graphql.tools.annotation", "GraphQLType");
     private static final String JSPECIFY = "org.jspecify.annotations";
 
@@ -61,6 +65,14 @@ final class JavaEmitter implements Emitter {
             Names names = type.names();
             files.add(new GeneratedFile(path(names.packageName(), names.simpleName()), enumFile(type, options)));
             packages.add(names.packageName());
+        }
+        Set<String> permitted = permittedNames(ir);
+        for (AbstractType type : ir.abstractTypes()) {
+            Names names = type.names();
+            files.add(new GeneratedFile(path(names.packageName(), names.simpleName()),
+                    interfaceFile(type, permitted.contains(qualified(names)), options)));
+            packages.add(names.packageName());
+            modelPackages.add(names.packageName());
         }
         if (options.modelStyle() == ModelStyle.RECORD) {
             for (ModelType type : ir.models()) {
@@ -79,6 +91,20 @@ final class JavaEmitter implements Emitter {
         }
         files.sort(Comparator.comparing(GeneratedFile::path));
         return files;
+    }
+
+    private static String qualified(Names names) {
+        return names.packageName() + "." + names.simpleName();
+    }
+
+    private static Set<String> permittedNames(Ir ir) {
+        Set<String> permitted = new HashSet<>();
+        for (AbstractType type : ir.abstractTypes()) {
+            if (type.sealed()) {
+                type.members().forEach(member -> permitted.add(qualified(member)));
+            }
+        }
+        return permitted;
     }
 
     private static String path(String packageName, String simpleName) {
@@ -102,6 +128,38 @@ final class JavaEmitter implements Emitter {
             return "@NullMarked\npackage " + packageName + ";\n\nimport " + JSPECIFY + ".NullMarked;\n";
         }
         return "package " + packageName + ";\n";
+    }
+
+    private static String interfaceFile(AbstractType type, boolean permitted, Options options) {
+        Names names = type.names();
+        TypeSpec.Builder spec = TypeSpec.interfaceBuilder(names.simpleName()).addModifiers(Modifier.PUBLIC);
+        if (type.sealed()) {
+            spec.addModifiers(Modifier.SEALED);
+            for (Names member : type.members()) {
+                spec.addPermittedSubclass(ClassName.get(member.packageName(), member.simpleName()));
+            }
+        } else if (permitted) {
+            spec.addModifiers(Modifier.NON_SEALED);
+        }
+        documentation(spec, type.docs());
+        generated(spec, options);
+        List<Field> accessors = type.fields().stream().filter(field -> field.arguments().isEmpty()).toList();
+        if (!accessors.isEmpty()) {
+            spec.addAnnotation(INTROSPECTED);
+            spec.addAnnotation(AnnotationSpec.builder(ACCESSORS_STYLE).addMember("readPrefixes", "$S", "").build());
+        }
+        for (Names implemented : type.implemented()) {
+            spec.addSuperinterface(ClassName.get(implemented.packageName(), implemented.simpleName()));
+        }
+        JavaTypes types = new JavaTypes(options.nullableAnnotation());
+        for (Field field : accessors) {
+            MethodSpec.Builder accessor = MethodSpec.methodBuilder(field.name())
+                    .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
+                    .returns(types.component(field));
+            documentation(accessor, field.docs());
+            spec.addMethod(accessor.build());
+        }
+        return write(names.packageName(), spec);
     }
 
     private static String recordFile(ModelType type, Options options) {
@@ -186,6 +244,19 @@ final class JavaEmitter implements Emitter {
         if (!options.generatedAnnotation().isEmpty()) {
             spec.addAnnotation(AnnotationSpec.builder(ClassName.bestGuess(options.generatedAnnotation()))
                     .addMember("value", "$S", GENERATOR).build());
+        }
+    }
+
+    private static void documentation(MethodSpec.Builder builder, Docs docs) {
+        if (docs.description() != null) {
+            builder.addJavadoc("$L\n", docs.description());
+        }
+        if (docs.deprecation() != null) {
+            builder.addAnnotation(DEPRECATED);
+            if (docs.description() != null) {
+                builder.addJavadoc("\n");
+            }
+            builder.addJavadoc("@deprecated $L\n", docs.deprecation().reason());
         }
     }
 

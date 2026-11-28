@@ -19,6 +19,7 @@ import io.micronaut.graphql.tools.codegen.Language
 import io.micronaut.graphql.tools.codegen.Mode
 import io.micronaut.graphql.tools.codegen.ModelStyle
 import io.micronaut.graphql.tools.codegen.NameConstants
+import io.micronaut.graphql.tools.codegen.SealedAbstractTypes
 import io.micronaut.graphql.tools.codegen.Options
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.MapProperty
@@ -74,6 +75,7 @@ class CodegenSpecSpec extends Specification {
         spec.generatedAnnotation.set('com.example.Gen')
         spec.modelStyle.set('BEAN')
         spec.interfaceTypes.set(['Node', 'Entity'])
+        spec.sealedAbstractTypes.set('NEVER')
         spec.typeNamePrefix.set('Pre')
         spec.typeNameSuffix.set('Suf')
         spec.nullableAnnotation.set('com.example.Nullable')
@@ -95,7 +97,7 @@ class CodegenSpecSpec extends Specification {
         result.options() == Options.builder()
                 .language(Language.KOTLIN).mode(Mode.SERVER).packageName('com.example').modelPackage('com.example.m')
                 .resolverPackage('com.example.r').namesPackage('com.example.n').generatedAnnotation('com.example.Gen')
-                .modelStyle(ModelStyle.BEAN).interfaceTypes(['Node', 'Entity']).typeNamePrefix('Pre')
+                .modelStyle(ModelStyle.BEAN).interfaceTypes(['Node', 'Entity']).sealedAbstractTypes(SealedAbstractTypes.NEVER).typeNamePrefix('Pre')
                 .typeNameSuffix('Suf').nullableAnnotation('com.example.Nullable').rootContracts(false)
                 .contractNameTemplate('{Field}Contract').kotlinSuspend(true)
                 .subscriptionReturnType('kotlinx.coroutines.flow.Flow')

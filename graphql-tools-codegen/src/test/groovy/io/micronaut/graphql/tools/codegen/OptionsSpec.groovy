@@ -29,6 +29,7 @@ class OptionsSpec extends Specification {
         o.mode() == Mode.SERVER
         o.modelStyle() == ModelStyle.RECORD
         o.nameConstants() == NameConstants.FIELDS
+        o.sealedAbstractTypes() == SealedAbstractTypes.AUTO
         o.generatedAnnotation() == 'javax.annotation.processing.Generated'
         o.nullableAnnotation() == 'io.micronaut.core.annotation.Nullable'
         o.rootContracts()
@@ -104,9 +105,9 @@ class OptionsSpec extends Specification {
 
     def "the round trip holds for every combination of the enums and booleans"() {
         expect:
-        [Language.values(), Mode.values(), ModelStyle.values(), NameConstants.values(), [true, false], [true, false]].combinations().every {
+        [Language.values(), Mode.values(), ModelStyle.values(), NameConstants.values(), SealedAbstractTypes.values(), [true, false], [true, false]].combinations().every {
             def o = Options.builder().packageName('p').language(it[0]).mode(it[1]).modelStyle(it[2]).nameConstants(it[3])
-                    .rootContracts(it[4]).commentsAsDescriptions(it[5]).build()
+                    .sealedAbstractTypes(it[4]).rootContracts(it[5]).commentsAsDescriptions(it[6]).build()
             Options.fromMap(o.toMap()).options() == o
         }
     }
@@ -167,6 +168,7 @@ class OptionsSpec extends Specification {
         'mode'             | 'both'   | Diagnostic.INVALID_OPTION_VALUE
         'modelStyle'       | ''       | Diagnostic.INVALID_OPTION_VALUE
         'nameConstants'    | 'ALL'    | Diagnostic.INVALID_OPTION_VALUE
+        'sealedAbstractTypes' | 'ALWAYS' | Diagnostic.INVALID_OPTION_VALUE
         'rootContracts'    | 'yes'    | Diagnostic.INVALID_OPTION_VALUE
         'kotlinSuspend'    | 'TRUE'   | Diagnostic.INVALID_OPTION_VALUE
         'includes.size'    | 'many'   | Diagnostic.INVALID_OPTION_VALUE
@@ -301,7 +303,7 @@ class OptionsSpec extends Specification {
     static Options everything() {
         Options.builder().language(Language.KOTLIN).mode(Mode.SERVER).packageName('com.example.api').modelPackage('com.example.m')
                 .resolverPackage('com.example.r').namesPackage('com.example.n').generatedAnnotation('jakarta.annotation.Generated')
-                .modelStyle(ModelStyle.BEAN).interfaceTypes(['Node', 'Entity']).typeNamePrefix('Gql').typeNameSuffix('Dto')
+                .modelStyle(ModelStyle.BEAN).interfaceTypes(['Node', 'Entity']).sealedAbstractTypes(SealedAbstractTypes.NEVER).typeNamePrefix('Gql').typeNameSuffix('Dto')
                 .nullableAnnotation('org.jspecify.annotations.Nullable').rootContracts(false)
                 .contractNameTemplate('{Operation}{Field}Contract').kotlinSuspend(true)
                 .subscriptionReturnType('kotlinx.coroutines.flow.Flow')

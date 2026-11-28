@@ -163,6 +163,7 @@ under the same rules):
 | Output | `generatedAnnotation` | class name, empty for none | `javax.annotation.processing.Generated`, no date |
 | Models | `modelStyle` | enum `RECORD`, `BEAN` | `RECORD` |
 | Models | `interfaceTypes` | list of SDL object type names | empty |
+| Models | `sealedAbstractTypes` | enum `AUTO`, `NEVER` | `AUTO` |
 | Models | `typeNamePrefix`, `typeNameSuffix` | string | empty |
 | Models | `nullableAnnotation` | class name, empty for none | `io.micronaut.core.annotation.Nullable`; `org.jspecify.annotations.Nullable` in client mode |
 | Contracts | `rootContracts` | boolean | `true` |

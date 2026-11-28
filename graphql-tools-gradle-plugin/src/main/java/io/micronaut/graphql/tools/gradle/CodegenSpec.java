@@ -145,6 +145,13 @@ public abstract class CodegenSpec implements Named {
     public abstract ListProperty<String> getInterfaceTypes();
 
     /**
+     * {@code AUTO} (the default) or {@code NEVER}: whether unions and interfaces are sealed interfaces that permit their members.
+     *
+     * @return the property
+     */
+    public abstract Property<String> getSealedAbstractTypes();
+
+    /**
      * The prefix of every generated type name.
      *
      * @return the property
@@ -254,6 +261,7 @@ public abstract class CodegenSpec implements Named {
         put(map, "generatedAnnotation", getGeneratedAnnotation());
         put(map, "modelStyle", getModelStyle());
         putList(map, "interfaceTypes", getInterfaceTypes());
+        put(map, "sealedAbstractTypes", getSealedAbstractTypes());
         put(map, "typeNamePrefix", getTypeNamePrefix());
         put(map, "typeNameSuffix", getTypeNameSuffix());
         put(map, "nullableAnnotation", getNullableAnnotation());

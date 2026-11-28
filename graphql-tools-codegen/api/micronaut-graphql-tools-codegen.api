@@ -30,6 +30,7 @@ public final class io.micronaut.graphql.tools.codegen.Diagnostic extends java.la
   public static final java.lang.String ROOT_TYPE_REFERENCE = "root-type-reference";
   public static final java.lang.String SCHEMA_FILE_UNREADABLE = "schema-file-unreadable";
   public static final java.lang.String SCHEMA_SYNTAX_ERROR = "schema-syntax-error";
+  public static final java.lang.String SELECTED_MEMBER = "selected-member";
   public static final java.lang.String UNKNOWN_OPTION = "unknown-option";
   public static final java.lang.String UNKNOWN_TYPE = "unknown-type";
   public static final java.lang.String UNMAPPED_SCALAR = "unmapped-scalar";
@@ -125,7 +126,8 @@ public final class io.micronaut.graphql.tools.codegen.Options extends java.lang.
   public io.micronaut.graphql.tools.codegen.ModelStyle modelStyle();
   public io.micronaut.graphql.tools.codegen.NameConstants nameConstants();
   public io.micronaut.graphql.tools.codegen.Options$Builder toBuilder();
-  public io.micronaut.graphql.tools.codegen.Options(io.micronaut.graphql.tools.codegen.Language, io.micronaut.graphql.tools.codegen.Mode, java.lang.String, java.lang.String, java.lang.String, java.lang.String, java.lang.String, io.micronaut.graphql.tools.codegen.ModelStyle, java.util.List<java.lang.String>, java.lang.String, java.lang.String, java.lang.String, boolean, java.lang.String, boolean, java.lang.String, java.util.Map<java.lang.String, java.lang.String>, boolean, io.micronaut.graphql.tools.codegen.NameConstants, java.util.List<java.lang.String>, java.util.List<java.lang.String>, boolean);
+  public io.micronaut.graphql.tools.codegen.Options(io.micronaut.graphql.tools.codegen.Language, io.micronaut.graphql.tools.codegen.Mode, java.lang.String, java.lang.String, java.lang.String, java.lang.String, java.lang.String, io.micronaut.graphql.tools.codegen.ModelStyle, java.util.List<java.lang.String>, io.micronaut.graphql.tools.codegen.SealedAbstractTypes, java.lang.String, java.lang.String, java.lang.String, boolean, java.lang.String, boolean, java.lang.String, java.util.Map<java.lang.String, java.lang.String>, boolean, io.micronaut.graphql.tools.codegen.NameConstants, java.util.List<java.lang.String>, java.util.List<java.lang.String>, boolean);
+  public io.micronaut.graphql.tools.codegen.SealedAbstractTypes sealedAbstractTypes();
   public java.lang.String contractNameTemplate();
   public java.lang.String effectiveModelPackage();
   public java.lang.String effectiveNamesPackage();
@@ -175,6 +177,7 @@ public static final class io.micronaut.graphql.tools.codegen.Options$Builder {
   public io.micronaut.graphql.tools.codegen.Options$Builder packageName(java.lang.String);
   public io.micronaut.graphql.tools.codegen.Options$Builder resolverPackage(java.lang.String);
   public io.micronaut.graphql.tools.codegen.Options$Builder rootContracts(boolean);
+  public io.micronaut.graphql.tools.codegen.Options$Builder sealedAbstractTypes(io.micronaut.graphql.tools.codegen.SealedAbstractTypes);
   public io.micronaut.graphql.tools.codegen.Options$Builder subscriptionReturnType(java.lang.String);
   public io.micronaut.graphql.tools.codegen.Options$Builder typeMappings(java.util.Map<java.lang.String, java.lang.String>);
   public io.micronaut.graphql.tools.codegen.Options$Builder typeMappingsFromDependencies(boolean);
@@ -200,6 +203,13 @@ public final class io.micronaut.graphql.tools.codegen.Origin extends java.lang.R
   public io.micronaut.graphql.tools.codegen.Origin(java.lang.String, int, int);
   public java.lang.String path();
   public java.lang.String toString();
+}
+
+public final class io.micronaut.graphql.tools.codegen.SealedAbstractTypes extends java.lang.Enum<io.micronaut.graphql.tools.codegen.SealedAbstractTypes> {
+  public static final io.micronaut.graphql.tools.codegen.SealedAbstractTypes AUTO;
+  public static final io.micronaut.graphql.tools.codegen.SealedAbstractTypes NEVER;
+  public static io.micronaut.graphql.tools.codegen.SealedAbstractTypes valueOf(java.lang.String);
+  public static io.micronaut.graphql.tools.codegen.SealedAbstractTypes[] values();
 }
 
 public final class io.micronaut.graphql.tools.codegen.ir.AbstractType extends java.lang.Record {

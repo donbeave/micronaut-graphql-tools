@@ -98,6 +98,9 @@ public record Diagnostic(Severity severity, String code, String message, String 
     /** The code of a union or interface that has a member that {@code typeMappings} maps to an external class. A warning. */
     public static final String MAPPED_MEMBER = "mapped-member";
 
+    /** The code of a union that has a member that {@code interfaceTypes} generates as an interface. A warning. */
+    public static final String SELECTED_MEMBER = "selected-member";
+
     /** The code of a field that implements an interface field of a list type with another element type. A warning. */
     public static final String NARROWED_LIST_FIELD = "narrowed-list-field";
 

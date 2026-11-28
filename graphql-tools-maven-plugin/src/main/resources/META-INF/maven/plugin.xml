@@ -130,6 +130,13 @@
           <description>The SDL names of the object types that are generated as interfaces.</description>
         </parameter>
         <parameter>
+          <name>sealedAbstractTypes</name>
+          <type>java.lang.String</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>Whether unions and interfaces are sealed interfaces: AUTO or NEVER.</description>
+        </parameter>
+        <parameter>
           <name>typeNamePrefix</name>
           <type>java.lang.String</type>
           <required>false</required>
@@ -236,6 +243,7 @@
         <generatedAnnotation implementation="java.lang.String" default-value="javax.annotation.processing.Generated">${micronaut.graphql.tools.codegen.generated.annotation}</generatedAnnotation>
         <modelStyle implementation="java.lang.String" default-value="RECORD">${micronaut.graphql.tools.codegen.model.style}</modelStyle>
         <interfaceTypes implementation="java.util.List"/>
+        <sealedAbstractTypes implementation="java.lang.String" default-value="AUTO">${micronaut.graphql.tools.codegen.sealed.abstract.types}</sealedAbstractTypes>
         <typeNamePrefix implementation="java.lang.String">${micronaut.graphql.tools.codegen.type.name.prefix}</typeNamePrefix>
         <typeNameSuffix implementation="java.lang.String">${micronaut.graphql.tools.codegen.type.name.suffix}</typeNameSuffix>
         <nullableAnnotation implementation="java.lang.String">${micronaut.graphql.tools.codegen.nullable.annotation}</nullableAnnotation>
