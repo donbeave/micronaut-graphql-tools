@@ -144,6 +144,7 @@ class ClientDocumentsSpec extends Specification {
         then:
         result.diagnostics().empty
         result.files()*.path().contains('com/example/model/Role.java')
+        result.files()*.path().findAll { it.startsWith('com/example/model/') && !it.endsWith('package-info.java') } == ['com/example/model/Role.java']
     }
 
     def "the type mappings file of a client lists the enums, inputs and scalars, and not the result models"() {
