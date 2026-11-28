@@ -61,7 +61,8 @@ On Oracle GraalVM 25.0.5, each command below was run with `--no-parallel` and fi
 [cols="3,2,3", options="header"]
 |===
 |Command |Result |What it covers
-|`:test-suite-java:nativeTest` |252 tests, 0 failures, 0 errors, 9 skipped |The JUnit 5 tests of the Java example suite.
+|`:test-suite-java:nativeTest` |239 tests, 0 failures, 0 errors, 9 skipped |The JUnit 5 tests of the Java example suite.
+|`:test-suite-java:nativeSerdeTest` |22 tests, 0 failures, 0 errors, 0 skipped |The GraphQL client of the library against the Java example application, on the Micronaut Serialization stack.
 |`:test-suite-kotlin:nativeTest` |251 tests, 0 failures, 0 errors, 10 skipped |The JUnit 5 tests of the Kotlin example suite.
 |`:test-suite-serde:nativeTest` |21 tests, 0 failures, 0 errors, 0 skipped |The Micronaut Serialization stack as a native binary.
 |`:test-suite-groovy:nativeSmokeTest` |`BUILD SUCCESSFUL` |The Groovy example's native executable answers the queries of the smoke test.
@@ -73,7 +74,7 @@ The commands below are shell commands, not build settings. A native test build n
 
 [source,bash]
 ----
-./gradlew :test-suite-java:nativeTest :test-suite-serde:nativeTest :test-suite-kotlin:nativeTest --no-parallel
+./gradlew :test-suite-java:nativeTest :test-suite-java:nativeSerdeTest :test-suite-serde:nativeTest :test-suite-kotlin:nativeTest --no-parallel
 ./gradlew :test-suite-groovy:nativeSmokeTest --no-parallel
 ----
 

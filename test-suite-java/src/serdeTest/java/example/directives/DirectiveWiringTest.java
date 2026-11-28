@@ -15,18 +15,17 @@
  */
 package example.directives;
 
-import com.apollographql.apollo.api.ApolloResponse;
-import com.apollographql.java.rx3.Rx3Apollo;
 import example.AbstractTest;
-import example.client.DirectivesQuery;
+import example.client.ExampleClient.Directives;
 import graphql.schema.GraphQLSchema;
+import io.micronaut.graphql.tools.client.GraphQLResponse;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @MicronautTest
 class DirectiveWiringTest extends AbstractTest {
@@ -36,34 +35,33 @@ class DirectiveWiringTest extends AbstractTest {
 
     @Test
     void aNamedSchemaDirectiveRunsOnTheFieldThatAppliesIt() {
-        ApolloResponse<DirectivesQuery.Data> response = execute();
+        GraphQLResponse<Directives> response = execute();
 
-        assertEquals("QUIET", response.data.shout);
+        assertEquals("QUIET", response.data().shout());
     }
 
     @Test
     void anEveryElementSchemaDirectiveRunsOnTheFieldThatAppliesIt() {
-        ApolloResponse<DirectivesQuery.Data> response = execute();
+        GraphQLResponse<Directives> response = execute();
 
-        assertEquals("[t] value", response.data.tagged);
+        assertEquals("[t] value", response.data().tagged());
     }
 
     @Test
     void aWiringDoesNotChangeAFieldThatDoesNotApplyItsDirective() {
-        assertEquals("introduced introduced",
-                Rx3Apollo.single(apolloClient.query(new example.client.IntroducedQuery())).blockingGet().data.introduced);
+        assertEquals("introduced introduced", client.introduced().data());
     }
 
     @Test
     void aSchemaLevelDirectiveIsHandledByTheSchemaCustomizerThatItIsListedFor() {
         assertNotNull(schema.getSchemaAppliedDirective("audit"));
-        assertEquals("audited", execute().data.__schema.description);
+        assertEquals("audited", execute().data().__schema().description());
     }
 
-    private ApolloResponse<DirectivesQuery.Data> execute() {
-        ApolloResponse<DirectivesQuery.Data> response = Rx3Apollo.single(apolloClient.query(new DirectivesQuery())).blockingGet();
-        assertFalse(response.hasErrors(), String.valueOf(response.errors));
-        assertNotNull(response.data);
+    private GraphQLResponse<Directives> execute() {
+        GraphQLResponse<Directives> response = client.directives();
+        assertTrue(response.errors().isEmpty(), String.valueOf(response.errors()));
+        assertNotNull(response.data());
         return response;
     }
 

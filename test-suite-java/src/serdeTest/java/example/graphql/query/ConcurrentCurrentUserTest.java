@@ -15,11 +15,9 @@
  */
 package example.graphql.query;
 
-import com.apollographql.apollo.api.ApolloResponse;
-import com.apollographql.java.client.ApolloClient;
-import com.apollographql.java.rx3.Rx3Apollo;
 import example.AbstractTest;
-import example.client.CurrentUserQuery;
+import example.client.ExampleClient.User;
+import io.micronaut.graphql.tools.client.GraphQLResponse;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import org.junit.jupiter.api.Test;
 
@@ -33,8 +31,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Two clients send the X-User header with different values at the same moment, over and over: each response must carry only
@@ -47,13 +45,11 @@ class ConcurrentCurrentUserTest extends AbstractTest {
 
     @Test
     void concurrentRequestsEachSeeOnlyTheirOwnUser() throws Exception {
-        ApolloClient test = clientOf("test");
-        ApolloClient bob = clientOf("bob");
         CyclicBarrier start = new CyclicBarrier(2);
         ExecutorService pool = Executors.newFixedThreadPool(2);
         try {
-            Future<List<String>> testUsers = pool.submit(users(test, start));
-            Future<List<String>> bobUsers = pool.submit(users(bob, start));
+            Future<List<String>> testUsers = pool.submit(users("test", start));
+            Future<List<String>> bobUsers = pool.submit(users("bob", start));
 
             assertEquals(ROUNDS, testUsers.get(60, TimeUnit.SECONDS).stream().filter("test"::equals).count());
             assertEquals(ROUNDS, bobUsers.get(60, TimeUnit.SECONDS).stream().filter("bob"::equals).count());
@@ -62,17 +58,15 @@ class ConcurrentCurrentUserTest extends AbstractTest {
         }
     }
 
-    private static Callable<List<String>> users(ApolloClient client, CyclicBarrier start) {
+    private Callable<List<String>> users(String user, CyclicBarrier start) {
         return () -> {
             List<String> seen = new ArrayList<>();
             for (int round = 0; round < ROUNDS; round++) {
                 start.await(30, TimeUnit.SECONDS);
-                ApolloResponse<CurrentUserQuery.Data> response =
-                        Rx3Apollo.single(client.query(new CurrentUserQuery())).blockingGet();
-                assertFalse(response.hasErrors());
-                assertNotNull(response.data);
-                assertNotNull(response.data.currentUser);
-                seen.add(response.data.currentUser.username);
+                GraphQLResponse<User> response = client.currentUser(user);
+                assertTrue(response.errors().isEmpty());
+                assertNotNull(response.data());
+                seen.add(response.data().username());
             }
             return seen;
         };
