@@ -26,7 +26,7 @@ import java.util.Arrays;
  */
 public final class BenchmarkJarMain {
 
-    static final String STARTUP = "BindingBenchmark|RetainedHeapBenchmark";
+    static final String STARTUP = "BindingBenchmark|RetainedHeapBenchmark|ClientColdStartBenchmark";
 
     private BenchmarkJarMain() {
     }
