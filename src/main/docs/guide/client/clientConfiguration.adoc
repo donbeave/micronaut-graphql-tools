@@ -1,0 +1,35 @@
+[[clientConfiguration]]
+The client adds no configuration key of its own. It is configured with the keys of the Micronaut HTTP client for the service id, and with two options of the annotation processor at build time. This page lists where each setting lives.
+
+[[clientServer]]
+== The server
+
+The service id of `@GraphQLClient` is the Micronaut one, so the server comes from `micronaut.http.services.<id>.url` or `micronaut.http.services.<id>.urls` (several URLs are load balanced), and the timeouts, TLS, proxy and HTTP version settings of `micronaut.http.services.<id>.*` apply. A client filter with `@ClientFilter(serviceId = "<id>")` runs on each call.
+
+The test of the example points the service id `example` at the embedded server:
+
+snippet::example.client.ServiceClientTest[project-base="test-suite", source="serdeTest", tags="discovery", indent="0"]
+
+The id can also be a URL: `@GraphQLClient("https://books.example.com")` calls that server without configuration, and `@GraphQLClient("/")`, as in the example suites, calls the application itself.
+
+== The endpoint
+
+The path of the endpoint is the `endpoint` member of `@GraphQLClient`, and `/graphql` when it is empty. A path in the service URL is not used. `webSocketEndpoint` names the path of subscriptions, and the client does not send a subscription yet (see <<clientSecurity,Security>>).
+
+== Settings of the HTTP client
+
+The HTTP client is the Netty client (`micronaut-http-client`) or the JDK client (`micronaut-http-client-jdk`); the client runs on either. The tests of the library run the low-level client, the declarative client and the sessions on both. When both are on the class path, Micronaut picks the Netty client, so a build that wants the JDK client leaves `micronaut-http-client` out.
+
+These are the keys of the Micronaut HTTP client that matter most for a GraphQL call. The Micronaut documentation lists all of them.
+
+* `micronaut.http.services.<id>.read-timeout` bounds how long the client waits for the response. A call that exceeds it fails with `transport-timeout`. Set it to what your slowest operation needs.
+* `micronaut.http.services.<id>.connect-timeout` bounds the connection.
+* The `ssl` and `proxy` settings of the service apply as for any Micronaut client.
+
+== Serialization
+
+The client needs Micronaut Serialization and its JSON implementation (`io.micronaut.serde:micronaut-serde-jackson`) in the application. Without it, the first client that is created fails with a `ConfigurationException` that names the module. Every type that the client decodes or encodes is `@Serdeable`, or a type that Micronaut Serialization supports.
+
+== Build-time options
+
+The declarative client is checked at compile time by the annotation processor. Two options control the check: `micronaut.graphql.tools.processor.client.dirs` names the directories of the client schemas, and `micronaut.graphql.tools.processor.client.checks` switches the schema checks off. They are described on the <<compileTimeOptions,Options>> page, and the client checks on <<clientChecks,Compile-time checks>>.

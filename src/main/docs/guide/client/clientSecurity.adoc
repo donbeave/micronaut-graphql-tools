@@ -1,0 +1,36 @@
+[[clientSecurity]]
+The client sends what you give it and keeps nothing between calls, except in a session. This page says where a credential goes: a header, a cookie, a filter or a session, and what the client does not do. How a server decides who may call a field is on the <<security,Security>> page.
+
+== Headers
+
+A header that belongs to one call is a parameter of the method. A `null` value sends no header, so an optional header is a nullable parameter:
+
+snippet::example.client.ServiceClient[project-base="test-suite", source="serdeTest", tags="headers", indent="0"]
+
+`@Header` with a `name` and a `value` on the method or on the interface adds a fixed header to every call of it. On the low-level client, the customizer argument of `execute`, `executeAsync` and `executeBlocking` changes the HTTP request of that call, for example to add an `Authorization` header.
+
+A credential is a variable or a header, never part of the document. The document is compiled at build time and is the same for every call, so a value in its text would be fixed in the code and part of the operation.
+
+== Cookies
+
+A cookie of one call is a `@CookieValue` parameter:
+
+snippet::example.client.ServiceClient[project-base="test-suite", source="serdeTest", tags="cookie", indent="0"]
+
+The client does not keep cookies, because one client is shared by every caller. A caller that needs a cookie session, for example a login followed by calls that depend on it, starts a `GraphQLSession`, described on the <<clientLowLevel,low-level client>> page. A session stores the cookies that the responses set and sends them on its next calls, and `clearCookies()` ends them.
+
+== Filters
+
+A token that every call needs, and that changes over time, belongs in a Micronaut client filter of the service id. The filter runs on each call of that service, for the low-level and the declarative client alike, and not on the calls of another service:
+
+snippet::example.client.ServiceFilter[project-base="test-suite", source="serdeTest", tags="filter", indent="0"]
+
+The filter reads the request attributes `graphql.operation.name` and `graphql.operation.type` (see `GraphQLClientAttributes`) when it needs the operation, for example to refuse a mutation or to label a metric.
+
+== TLS and the network
+
+TLS, a proxy, the HTTP version and the timeouts are the settings of `micronaut.http.services.<id>.*` that <<clientServer,Configuration and discovery>> names. The client adds no setting of its own and does not weaken them.
+
+== WebSocket and subscriptions
+
+The client does not send subscriptions yet: a subscription is not an HTTP operation, and the builder rejects it. `@GraphQLClient` has a `webSocketEndpoint` member for the path of the WebSocket endpoint, and a request header or a token for the connection will use the mechanisms above. Until then, authenticate a WebSocket connection to a server of this library with the connection interceptors described on the <<subscriptions,Subscriptions>> page.
