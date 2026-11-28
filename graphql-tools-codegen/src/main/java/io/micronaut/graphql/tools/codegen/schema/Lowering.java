@@ -248,13 +248,16 @@ final class Lowering {
         for (String member : members) {
             MergedType type = schema.types.get(member);
             if (type != null && type.kind != Kind.SCALAR && external(member)) {
+                found = true;
+                if (options.sealedAbstractTypes() != SealedAbstractTypes.AUTO) {
+                    continue;
+                }
                 diagnostics.add(new Diagnostic(Diagnostic.Severity.WARNING, Diagnostic.MAPPED_MEMBER, "The "
                         + owner.kind.name().toLowerCase(Locale.ROOT) + " '" + owner.name + "' (" + owner.origin + ") has the member '"
                         + member + "', which typeMappings." + member + " maps to the external class " + mapping(member)
                         + ". That class cannot implement a generated type, so '" + owner.name + "' is generated as a plain interface,"
                         + " not a sealed one, and the application registers the class as a member itself.",
                         "typeMappings." + member, owner.origin));
-                found = true;
             }
         }
         return found;
@@ -463,7 +466,7 @@ final class Lowering {
                     diagnostics.add(new Diagnostic(Diagnostic.Severity.WARNING, Diagnostic.SELECTED_MEMBER, "The union '" + union.name
                             + "' (" + union.origin + ") has the member '" + member + "', which the option interfaceTypes generates as an"
                             + " interface. An interface cannot implement the union, so '" + union.name + "' is generated as a plain"
-                            + " interface, not a sealed one, and the classes that implement '" + member + "' implement the union too.",
+                            + " interface, not a sealed one, and a class that implements '" + member + "' implements the union itself.",
                             "interfaceTypes", union.origin));
                 }
             }

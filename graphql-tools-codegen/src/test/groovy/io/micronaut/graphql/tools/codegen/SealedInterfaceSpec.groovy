@@ -210,6 +210,15 @@ public final class Describe {
         loader.loadClass('com.example.model.SearchResult').isAssignableFrom(loader.loadClass('com.example.model.Folder'))
     }
 
+    def "with NEVER a mapped member is not reported, because the interface was asked to be plain"() {
+        given:
+        def schema = 'union Result = Product | External\ntype Product { id: ID! }\ntype External { id: ID! }\n'
+        def result = run(schema, base().typeMappings([External: 'com.acme.External']).sealedAbstractTypes(SealedAbstractTypes.NEVER).build())
+
+        expect:
+        result.diagnostics().empty
+    }
+
     def "an object type that interfaceTypes selects is a non-sealed member of its interface, and a union with such a member is plain"() {
         given:
         def schema = 'interface Node { id: ID! }\nunion Any = Entity | Item\ntype Entity implements Node { id: ID! }\n' +

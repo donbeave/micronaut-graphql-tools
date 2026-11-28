@@ -174,7 +174,7 @@ become character references such as `&#47;`, and line endings become `\n`.
 | `name-collision` | error | Two schema elements, or an element and a generated helper class (`GraphQLTypeNames`, `<Type>Names`), generate the same class, or two name constants of one class have the same identifier; the class comparison folds the case of the path, because two names such as `Foo` and `foo` overwrite each other on a case-insensitive file system |
 | `root-type-reference` | error | A field or argument has a root operation type as its type (map it with `typeMappings`) |
 | `field-mapping-not-scalar` | error | A `Type.field` entry of `typeMappings` names a field whose type is an object, interface, union, enum or input type |
-| `mapped-member` | warning | A union has a member, or an interface an implementing type, that `typeMappings` maps to an external class; the union or interface is not sealed |
+| `mapped-member` | warning | A union has a member, or an interface an implementing type, that `typeMappings` maps to an external class; the union or interface is not sealed (reported with `sealedAbstractTypes` `AUTO` only) |
 | `selected-member` | warning | A union has a member that `interfaceTypes` generates as an interface; an interface cannot implement the union, so the union is not sealed |
 | `narrowed-list-field` | warning | A field implements an interface field of a list type with a narrower element type; the generated type keeps the element type of the interface, because Java generics are invariant |
 | `interface-field-conflict` | error | Two interfaces that a type implements declare one field with a different list element type, or one as a primitive-capable non-null scalar and the other as a nullable scalar, so no single Java type implements both |
