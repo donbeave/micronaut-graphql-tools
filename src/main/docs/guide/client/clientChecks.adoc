@@ -1,0 +1,131 @@
+[[clientCompileTime]]
+The annotation processor of `micronaut-graphql-tools-processor` checks every method that carries `@GraphQLOperation` in a type annotated with `@GraphQLClient`, declared on that type itself (a method that the type inherits from another interface is not checked, so declare the operations on the interface that carries the annotation), in Java, Kotlin (KSP and kapt) and Groovy. It takes the document of the method, assembles the operation, validates it against the client schema with graphql-java and writes the result into the annotation metadata of the method. The runtime reads that metadata and never parses GraphQL. The processor writes no source, resource or service file.
+
+The checks are set by two options, `micronaut.graphql.tools.processor.client.dirs` and `micronaut.graphql.tools.processor.client.checks`, which the <<compileTimeOptions,options page>> describes, and by the `schema` member of `@GraphQLClient`.
+
+== The document
+
+The `value` of `@GraphQLOperation` is one of these:
+
+* A document, written in the annotation: `@GraphQLOperation("query($id: ID!) { book(id: $id) { title } }")`. A value that is not a GraphQL name is a document.
+* The name of an operation of the client directory: `@GraphQLOperation("FindBook")` runs the operation `FindBook` of a `*.graphql` file of the schema directory. A value that is a GraphQL name is looked up there.
+* Nothing: the operation is the one named like the method.
+
+`name` selects one operation of a document that holds several, or overrides the name that the value or the method gives. A document with one operation needs no `name`. An operation name that no document defines fails with `[client-operation-not-found]`, and one that two files define, or a document of several operations with no `name`, fails with `[client-operation-ambiguous]`.
+
+== Assembly
+
+The assembled document holds the selected operation and the fragments it uses, directly or through other fragments, and nothing else. The fragments of the operation's own document come first; a fragment that the document does not define is taken from the `*.graphql` files of the client schema, so a fragment can be shared by every operation of a schema. A fragment that neither defines fails with `[client-document-invalid]`. The document is printed compactly, the operation first and the fragments after it in name order, and that text is what the client sends.
+
+== The type name
+
+A value of an interface or a union is decoded as one of the object types that implement it, and the client chooses by the `__typename` of the value. The processor therefore puts `__typename` first in every selection set of an interface or union type that does not select it, in the operation, in an inline fragment and in a fragment, and the metadata holds the document with it. A `__typename` that the document selects without an alias or a directive is left where it is, and an aliased one does not count. The alias `__typename` is reserved: a field aliased to it, anywhere in a document that is checked, fails with `[client-document-invalid]`, because the field that is injected into a selection set of an interface or union would share its response key. A selection set of an object type is not changed. The types come from the client schema, so a compilation with `client.checks=false` adds nothing.
+
+== The HTTP method and the retry policy
+
+`@GraphQLOperation(method = GET)` sends a query in the URL, so an operation that is a mutation or a subscription with `method = GET` fails with `[client-get-mutation]`. A retry annotation of Micronaut (`@Retryable`, `@CircuitBreaker`) on the interface applies to every method of it, so an interface that carries one and declares a mutation fails with `[client-retry-mutation]`: the retry would repeat a mutation whose response was lost. A retry annotation on a single method is a decision about that method and is accepted. Both checks run with the checks switched off, because the operation type comes from the document that is always parsed.
+
+== Parameters and variables
+
+A parameter of an operation method is one of three things: a variable of the operation, bound by its name or by `@GraphQLVariable`, a header (`@Header`), or a cookie (`@CookieValue`). A parameter bound by any other HTTP annotation, a parameter that names a variable the operation does not declare, and two parameters for one variable fail with `[client-parameter-unbound]`; the runtime refuses such a method at its first call, and this rule moves the failure to the build, whatever `client.checks` says.
+
+With the checks on, the variables of the operation are matched with the parameters:
+
+* A variable that is non-null and has no default value needs a parameter, or the build fails with `[client-variable-missing]`. A nullable variable and one with a default need none; they are left out of the request.
+* The declared type of a parameter fits the type of its variable, or the build fails with `[client-variable-type]`. A scalar is looked up in the scalar catalog (`Int` takes `int` and `Integer`, `Float` takes `float` and `double`, `ID` and `String` take `String`, `Instant` takes `java.time.Instant`, and so on), a list needs an array, a `List`, a `Set` or another `Collection`, an enum needs a Java enum all of whose constants are values of the schema enum (or a `String`), and an input object needs a class, a record or a data class with a property for each required field and no property that is not a field (`@JsonProperty` renames a property, `@JsonIgnore` leaves it out). An `Optional`, or a nullable Kotlin type, at a non-null variable fails too, because it could send `null`. A `Map` or an `Object` is accepted at any position and not checked.
+
+A scalar that the catalog does not know, such as `DateTime`, is mapped by the Java type that the position declares, and one client interface must map it to one type: the second use with another type fails with `[client-scalar-conflict]`.
+
+== Result types
+
+The result of an operation method is checked against the selection of its operation, so a response that the declared type cannot read fails at the build, not at the first call. The payload is the declared return type without its wrapper: `CompletableFuture`, `CompletionStage`, `Publisher`, `Mono`, `Flux`, a Kotlin `Flow` or `Optional` of it, and `GraphQLResponse` of it, are peeled (a `suspend` function declares its payload), and a method that returns `void` or `Unit` has none. When the operation selects one root field, counted by response key, the payload is the value of that field. Otherwise it is the `data` object, and each root field is a property of it. The payload is compared with the schema level by level, and each finding is reported with `[client-result-shape]` at the position of the field in the document:
+
+* Every selected field has a property of the same name: a record component, a constructor parameter, a settable property, a Kotlin or Groovy property. The response key is the name, so an alias names the property, and `@JsonProperty` renames one. A field named `__typename` needs none. A property that no field selects is not an error, so one class can serve several operations.
+* A primitive does not fit a field that can be null, and a non-null Kotlin type does not either. A field that `@skip` or `@include` can leave out of the response counts as nullable, even when its schema type is non-null. A nullable Java type, a nullable Kotlin type and `Optional` fit any position.
+* A list field needs an array, a `List`, a `Set` or another `Collection`, with the element checked the same way, and an object, scalar or enum field does not take one.
+* A scalar is looked up in the scalar catalog, as for the variables. A scalar that the catalog does not know is mapped by the Java type that the position declares, and one client must map it to one type (`[client-scalar-conflict]`).
+* An enum field needs a Java enum with a constant for every value of the schema enum, so that no response fails to decode, or a constant marked `@JsonEnumDefaultValue` that reads the others, or a `String`.
+* An object field needs a class, a record or a data class, and the check goes on into the selection of that field.
+* A `Map` or an `Object` fits any position and is not checked below it.
+
+=== Interfaces and unions
+
+A selection on an interface or union that names object types, with inline fragments or fragments, has a different class for each object type. The result type is a polymorphic type: an interface (a `sealed` one is the natural choice) or an abstract class annotated with `@JsonTypeInfo(use = NAME, property = "__typename", defaultImpl = Other.class)` and `@JsonSubTypes`, with one subtype for each object type that the selection names, by its simple class name or by the name that `@JsonSubTypes.Type` or `@JsonTypeName` gives, and a default branch for the object types that the client does not know. Each subtype is checked against the fields that its object type selects, the fields that every type gets included; the default branch against the fields that every type gets. The processor puts `__typename` first in the selection, so the client can tell the types apart. A selection of the common fields of an interface alone needs no polymorphic type: one class reads them.
+
+[source,java]
+----
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "__typename", defaultImpl = Other.class)
+@JsonSubTypes({
+        @JsonSubTypes.Type(value = BookHit.class, name = "Book"),
+        @JsonSubTypes.Type(value = MagazineHit.class, name = "Magazine")
+})
+public sealed interface Hit permits BookHit, MagazineHit, Other {
+}
+----
+
+The library declares no dependency on Jackson: the annotations are those that Micronaut Serialization reads, and the processor reads `@JsonTypeInfo`, `@JsonSubTypes` and `@JsonTypeName` by their names, and the subtypes that `@JsonSubTypes` lists by the names of their classes, so that no Jackson type appears in the API of the library.
+
+[[clientMetadata]]
+== Metadata
+
+For each operation the processor writes `GraphQLOperationMetadata` on the method: the assembled `document`, the `operationName` (empty for an anonymous operation), the `operationType` (`query`, `mutation` or `subscription`), the names of the `variables` in declaration order and the `payload` mode. The payload is `field` when the operation selects one root field, counted by response key through fragments, and the result is the value of that field. It is `data` when the operation selects several, and the result is the whole `data` object.
+
+A document that does not fit in a string constant of a class file, 65,535 bytes of modified UTF-8, fails with `[client-document-too-large]`. A document written in the annotation is limited by the compiler as well, so a large operation belongs in a file of the client directory.
+
+== Diagnostics
+
+A finding carries a code, the method as `binary.Name#method(parameter types)`, the position in the document, and a `fix:` line. The position is a file and line for a document of the client directory, and `inline:<line>:<column>` for one written in the annotation. Validation errors name the position of the node that graphql-java rejects; the codes are stable, and the text of graphql-java is not.
+
+[cols="2,5", options="header"]
+|===
+| Code | Raised when
+
+| `client-schema-missing`
+| The client directories are not configured, a directory does not exist, the schema has no directory or no `*.graphqls` file, or `schema` is empty and the directories hold none or several schemas.
+
+| `client-schema-invalid`
+| A client schema cannot be parsed, merged or built. A chain of type references too long for the build is this code too: the schema is built on a thread with a large stack, so a chain of thousands of types builds.
+
+| `client-operation-not-found`
+| The operation that the value, the `name` or the method name selects is not defined.
+
+| `client-operation-ambiguous`
+| The selection matches several operations.
+
+| `client-document-invalid`
+| A document or a `*.graphql` file does not parse, uses a fragment that nothing defines, or does not validate against the schema.
+
+| `client-document-too-large`
+| The assembled document is over the limit of the metadata.
+
+| `client-get-mutation`
+| An operation that is a mutation or a subscription is sent with `method = GET`.
+
+| `client-retry-mutation`
+| An interface with a type-level retry annotation declares a mutation.
+
+| `client-variable-missing`
+| A variable that is non-null and has no default has no parameter.
+
+| `client-variable-type`
+| The declared type of a parameter does not fit the type of its variable.
+
+| `client-parameter-unbound`
+| A parameter binds no variable, is bound by an unsupported HTTP annotation, or binds a variable that another parameter binds.
+
+| `client-scalar-conflict`
+| One client maps a custom scalar to two Java types.
+
+| `client-result-shape`
+| The declared result type does not fit the selection of the operation.
+|===
+
+Each code is described on the <<exceptions,Exceptions>> page.
+
+== Switching the checks off
+
+`micronaut.graphql.tools.processor.client.checks=false`, or `micronaut.graphql.tools.processor.checks=false` for the whole compilation, builds no schema and validates nothing. Every operation is still parsed and assembled, because the runtime needs its type, its variables and its payload mode, so a document that does not parse still fails the build, and so do the rules that need no schema: `client-get-mutation`, `client-retry-mutation` and `client-parameter-unbound`; the rules that compare types with the schema (`client-variable-missing`, `client-variable-type`, `client-result-shape`) do not run. The processor prints one note.
+
+== What is checked once
+
+The client directories are read on the first operation that needs them, and a schema is built on the first operation that is validated against it, once per compilation. A cause that several operations share is reported once. A compilation with no client reads nothing and prints nothing.
