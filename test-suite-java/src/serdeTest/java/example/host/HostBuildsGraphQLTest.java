@@ -13,28 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package example.qualified;
+package example.host;
 
-import com.apollographql.apollo.api.ApolloResponse;
-import com.apollographql.java.rx3.Rx3Apollo;
 import example.AbstractTest;
-import example.client.AllBooksQuery;
+import example.client.ExampleClient.Book;
 import graphql.GraphQL;
 import graphql.schema.GraphQLSchema;
 import io.micronaut.context.ApplicationContext;
+import io.micronaut.graphql.tools.client.GraphQLResponse;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
-import jakarta.inject.Named;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertSame;
+import java.util.List;
 
-@MicronautTest(environments = QualifiedBeansFactory.ENVIRONMENT)
-class QualifiedBeansTest extends AbstractTest {
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+@MicronautTest(environments = HostGraphQLFactory.ENVIRONMENT)
+class HostBuildsGraphQLTest extends AbstractTest {
 
     @Inject
     ApplicationContext applicationContext;
@@ -46,26 +45,28 @@ class QualifiedBeansTest extends AbstractTest {
     GraphQL graphQL;
 
     @Inject
-    @Named("admin")
-    GraphQL adminGraphQL;
+    OperationCounter operationCounter;
 
     @Test
-    void qualifiedBeansDoNotReplaceTheLibraryBeans() {
-        assertEquals(2, applicationContext.getBeansOfType(GraphQL.class).size());
-        assertEquals(2, applicationContext.getBeansOfType(GraphQLSchema.class).size());
-        assertNotSame(adminGraphQL, graphQL);
+    void theApplicationGraphQLIsTheOnlyOneAndRunsTheLibrarySchema() {
+        assertEquals(1, applicationContext.getBeansOfType(GraphQL.class).size());
+        assertEquals(1, applicationContext.getBeansOfType(GraphQLSchema.class).size());
         assertSame(schema, graphQL.getGraphQLSchema());
         assertNotNull(schema.getQueryType().getFieldDefinition("allBooks"));
     }
 
     @Test
-    void requestsRunTheLibrarySchema() {
-        ApolloResponse<AllBooksQuery.Data> response =
-                Rx3Apollo.single(apolloClient.query(new AllBooksQuery())).blockingGet();
+    void requestsRunOnTheApplicationGraphQL() {
+        int before = operationCounter.getOperations();
 
-        assertFalse(response.hasErrors());
-        assertNotNull(response.data);
-        assertEquals(5, response.data.allBooks.size());
+        GraphQLResponse<List<Book>> response = client.allBooks();
+
+        assertTrue(response.errors().isEmpty());
+        assertNotNull(response.data());
+        assertEquals(5, response.data().size());
+        assertEquals("The Fractured Sage", response.data().getFirst().title());
+        assertEquals(2, response.data().getFirst().sellers().size());
+        assertEquals(before + 1, operationCounter.getOperations());
     }
 
 }

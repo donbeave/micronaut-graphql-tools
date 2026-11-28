@@ -15,28 +15,23 @@
  */
 package example.graphql.query;
 
-import com.apollographql.apollo.api.ApolloResponse;
-import com.apollographql.java.rx3.Rx3Apollo;
 import example.AbstractTest;
-import example.client.IntroducedQuery;
+import io.micronaut.graphql.tools.client.GraphQLResponse;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @MicronautTest
 class IntroducedQueryTest extends AbstractTest {
 
     @Test
     void resolvesAFieldThroughTheIntroductionAdvice() {
-        ApolloResponse<IntroducedQuery.Data> response =
-                Rx3Apollo.single(apolloClient.query(new IntroducedQuery())).blockingGet();
+        GraphQLResponse<String> response = client.introduced();
 
-        assertFalse(response.hasErrors());
-        assertNotNull(response.data);
-        assertEquals("introduced introduced", response.data.introduced);
+        assertTrue(response.errors().isEmpty());
+        assertEquals("introduced introduced", response.data());
     }
 
 }
