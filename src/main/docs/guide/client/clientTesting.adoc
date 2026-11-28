@@ -1,0 +1,40 @@
+[[clientTesting]]
+A client is tested like any Micronaut bean: with `@MicronautTest`, against a server that your test starts or replaces. The examples of this guide are the tests of the three example suites, so each snippet below runs in Java, Kotlin and Groovy.
+
+== Against the embedded server
+
+A test starts the application with `@MicronautTest` and points the service id at its embedded server. A property provider chooses a free port, and the same port goes into the server and the service URL:
+
+snippet::example.client.ServiceClientTest[project-base="test-suite", source="serdeTest", tags="discovery", indent="0"]
+
+The declarative client, or the low-level `GraphQLHttpClient`, is injected in the test and called as in the application:
+
+snippet::example.client.LowLevelClientTest[project-base="test-suite", source="serdeTest", tags="typed-query", indent="0"]
+
+== Asserting what the client sent
+
+A stub in front of the endpoint records the requests, and it can answer a failure. A Micronaut server filter on the endpoint path is enough, and no controller is needed:
+
+snippet::example.client.RequestRecorder[project-base="test-suite", source="serdeTest", tags="recorder", indent="0"]
+
+The test then asserts on the request, such as a header that a parameter sent or the number of attempts of a retry:
+
+snippet::example.client.ServiceClientTest[project-base="test-suite", source="serdeTest", tags="headers", indent="0"]
+
+snippet::example.client.ServiceClientTest[project-base="test-suite", source="serdeTest", tags="retry", indent="0"]
+
+A client filter of the service id is tested the same way: the call carries the header, and a call of another service does not.
+
+snippet::example.client.ServiceClientTest[project-base="test-suite", source="serdeTest", tags="filter", indent="0"]
+
+== Replacing the client
+
+A declarative client is an interface bean, so a test can replace it with `@MockBean` of Micronaut Test, as it replaces any other bean, and return the models of your code with no server. Use this for the code that depends on the client. It does not test the client itself, the document or the decoding, and the tests above do.
+
+== The in-process tester
+
+The `micronaut-graphql-tools-testing` module, described on the <<testing,Testing>> page, runs a document against the server of the application in the same process. It tests a server and not a client: it does not use the HTTP client of this module.
+
+== Compile-time checks
+
+A document, a variable or a result type that does not fit the schema fails the build, so most mistakes of a declarative client never reach a test. The example suites compile their client documents against the schema of the application they call. The checks are described on the <<clientChecks,Compile-time checks>> page.

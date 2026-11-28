@@ -98,7 +98,7 @@ subprojects {
 // The guide takes its code examples from the docs-examples-* and test-suite-* sources with the `snippet::` macro. The macro reads them behind
 // Gradle's back, so without these inputs a changed or removed example would leave publishGuide up to date.
 tasks.named("publishGuide") {
-    inputs.files(fileTree(".") { include("test-suite-*/src/main/**", "test-suite-*/src/test/**", "test-suite-*/src/driftFixture/**",
+    inputs.files(fileTree(".") { include("test-suite-*/src/main/**", "test-suite-*/src/test/**", "test-suite-*/src/driftFixture/**", "test-suite-*/src/serdeTest/**",
         "docs-examples-*/src/main/**", "docs-examples-*/src/test/**") })
         .withPathSensitivity(PathSensitivity.RELATIVE)
         .withPropertyName("snippetSources")

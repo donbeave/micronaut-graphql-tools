@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger
  * A server filter in front of the GraphQL endpoint of the application: it records what the clients of the tests send, and it
  * answers 503 to the next requests when a test asks for failures.
  */
+// tag::recorder[]
 @CompileStatic
 @ServerFilter('/graphql')
 class RequestRecorder {
@@ -58,3 +59,4 @@ class RequestRecorder {
         last == null ? null : last.headers.get(name)
     }
 }
+// end::recorder[]
