@@ -21,6 +21,9 @@ dependencies {
     // ScalarPresetsSpec compares the presets with the runtime catalog and the standard scalars.
     testImplementation(projects.micronautGraphqlToolsBinding)
     testImplementation(projects.micronautGraphqlToolsScalars)
+    // ModelRecordSpec compiles the generated records, which use @GraphQLType and the JSpecify annotations.
+    testImplementation(projects.micronautGraphqlTools)
+    testImplementation("org.jspecify:jspecify")
     testRuntimeOnly(mnLogging.logback.classic)
 }
 

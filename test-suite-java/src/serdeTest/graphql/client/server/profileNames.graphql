@@ -1,0 +1,9 @@
+query profileNames($contains: String!) {
+  searchProfile(contains: $contains) {
+    ...ProfileName
+  }
+}
+
+fragment ProfileName on Profile {
+  username
+}

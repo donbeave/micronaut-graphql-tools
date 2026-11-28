@@ -25,7 +25,7 @@ Run the checks that cover what you changed, and before you push run the full bui
 | graphql-java ceiling leg | `./gradlew build -PgraphqlJavaLeg=ceiling` | Same (JDK 25) |
 | graphql-java compat leg | `./gradlew build -PgraphqlJavaLeg=ceiling -PgraphqlJavaCompileLeg=default` | Changes to main code (JDK 25) |
 | Library on JDK 17 | `./gradlew :micronaut-graphql-tools:check :micronaut-graphql-tools-binding:check :micronaut-graphql-tools-processor:check :micronaut-graphql-tools-scalars:check :micronaut-graphql-tools-micrometer:check :micronaut-graphql-tools-opentelemetry:check :micronaut-graphql-tools-upload:check :micronaut-graphql-tools-security:check :micronaut-graphql-tools-testing:check :micronaut-graphql-tools-client:check :micronaut-graphql-tools-codegen:check :micronaut-graphql-tools-maven-plugin:check :micronaut-graphql-tools-gradle-plugin:check` | Changes to the library, binding, processor, scalars, client, codegen, Maven plugin or Gradle plugin module (JDK 17) |
-| Example suites, JVM | `./gradlew :test-suite-java:test :test-suite-java:serdeTest :test-suite-serde:test :test-suite-kotlin:test :test-suite-groovy:test` | Runtime and processor changes |
+| Example suites, JVM | `./gradlew :test-suite-java:test :test-suite-java:serdeTest :test-suite-serde:test :test-suite-kotlin:test :test-suite-kotlin:serdeTest :test-suite-groovy:test :test-suite-groovy:serdeTest` | Runtime and processor changes |
 | Drift fixtures of the suites | `./gradlew :test-suite-java:driftFixtureTest :test-suite-kotlin:driftFixtureTest :test-suite-groovy:driftFixtureTest` | Changes to the processor or its registration (part of `check`; each runs a build of its own, `--no-daemon`) |
 | Native image tests | `./gradlew :test-suite-java:nativeTest :test-suite-java:nativeSerdeTest :test-suite-serde:nativeTest :test-suite-kotlin:nativeTest --no-parallel` | Runtime features (Oracle GraalVM 25, about 5 GB each) |
 | Build wiring of the compile-time checks | `./gradlew :test-suite-build:buildToolsTest` | Changes to the processor's options, registration or documented build snippets (JDK 25 and `mvn`, needs the network; CI job `build tools`) |
@@ -66,7 +66,7 @@ Run the checks that cover what you changed, and before you push run the full bui
 - **Java, Kotlin and Groovy are first class.** A runtime feature has tests in `test-suite-java`, `test-suite-kotlin` and
   `test-suite-groovy`. A processor-only change is tested in `graphql-tools-processor` and the three suites
   (`test-suite-java`, `-kotlin` and `-groovy` apply the processor and have a `src/driftFixture` source set). A guide example exists in all three suites with the same class name and tags, and is included
-  with `snippet::`.
+  with `snippet::` (`checkClientExampleParity` compares the client examples of the three `serdeTest` source sets).
 - **Native.** Each runtime feature has a native test in `test-suite-java` and `test-suite-kotlin`; the Groovy example has the native smoke test. The client's native tests are the Serde source sets of those suites (`nativeSerdeTest`, #681).
 - **Client.** `graphql-tools-client` is a runtime library for applications that call a server. Its API names no graphql-java, graphql-tools, Jackson or Reactor type, and its main classpaths hold no graphql-java or graphql-tools runtime (`checkNoGraphQLJava`, part of `check`).
 - **No Jackson in the public API.** Use Micronaut Serialization (`micronaut-serde`). Build input conversion on

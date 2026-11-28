@@ -1,0 +1,14 @@
+mutation addBook($id: ID!) {
+  addBook(id: $id) {
+    error {
+      ... on ValidationError {
+        message
+        validationCode: code
+      }
+      ... on SecurityError {
+        message
+        securityCode: code
+      }
+    }
+  }
+}
