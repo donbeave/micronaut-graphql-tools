@@ -132,12 +132,19 @@ try {
 
     println "Native smoke test passed: 7 scenarios against ${executable.name} on port $port"
 
+    File clientLog = File.createTempFile('client-smoke', '.log')
     Process client = new ProcessBuilder(clientExecutable.absolutePath, "http://localhost:$port")
             .redirectErrorStream(true)
+            .redirectOutput(clientLog)
             .start()
-    String clientOutput = client.inputStream.getText('UTF-8')
-    assert client.waitFor(120, java.util.concurrent.TimeUnit.SECONDS): "The native client smoke test did not finish within 120 seconds"
+    boolean finished = client.waitFor(120, java.util.concurrent.TimeUnit.SECONDS)
+    if (!finished) {
+        client.destroyForcibly().waitFor()
+    }
+    String clientOutput = clientLog.getText('UTF-8')
+    clientLog.delete()
     print clientOutput
+    assert finished: "The native client smoke test did not finish within 120 seconds"
     assert client.exitValue() == 0: "The native client smoke test exited with ${client.exitValue()}"
     assert clientOutput.contains('Client smoke test passed: 10 scenarios'): "The native client smoke test did not report its scenarios"
 } finally {
