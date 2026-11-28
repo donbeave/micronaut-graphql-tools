@@ -6,6 +6,7 @@ schema @audit {
 scalar Instant
 scalar JSON
 scalar Locale
+scalar Long
 
 directive @audit on SCHEMA
 directive @upper on FIELD_DEFINITION
@@ -29,6 +30,10 @@ type Query {
   echoJson(data: JSON): JSON
 
   echoLocale(tag: Locale!): Locale!
+
+  echoLong(value: Long!): Long!
+
+  unreliable: String
 }
 
 type Mutation {

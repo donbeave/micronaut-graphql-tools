@@ -20,8 +20,15 @@ annotation processors, and it has JUnit tests over HTTP, the native image tests 
 - `src/test/java/example`: JUnit tests by feature (`claimed`, `discovery`, `directives`, `eager`, `enums`, `manifest`, `nullfields`,
   `scope`, `tck`, ...). `example.tck.GraphQLToolsTckTest` runs the scenarios of `test-suite-tck`.
 - The null-field checks with Micronaut Serialization are in `test-suite-serde`.
-- Build checks: `checkBindingManifest` and `checkSuiteSchemaParity`. The parity check fails when the schema of this suite
-  differs from the copies in `test-suite-kotlin` and `test-suite-groovy`.
+- The client examples of the guide are `example.client.*` of `src/serdeTest`: the declarative clients `ExampleClient` (the embedded server) and
+  `ServiceClient` (a service id, with `micronaut.http.services.example.urls`), and the tests `LowLevelClientTest`, `DeclarativeClientTest` and
+  `ServiceClientTest`. `RequestRecorder` (a server filter) records the headers and the cookie that the clients send and answers 503 on demand,
+  for the retry example. `test-suite-kotlin` and `test-suite-groovy` have the same classes and tags in their own `serdeTest` source sets.
+  `example.witness.RawHttpWitnessTest` in `src/test` is the independent witness of the server: it posts the same operations with the plain
+  Micronaut HTTP client on the Jackson databind stack and shares no code with the library client.
+- Build checks: `checkBindingManifest`, `checkSuiteSchemaParity` and `checkClientExampleParity`. The schema check fails when the schema of this
+  suite differs from the copies in `test-suite-kotlin` and `test-suite-groovy`; the client check fails when the class names, the tags or the
+  operation documents of the client examples of `serdeTest` differ between the three suites.
 
 Not in this module: the library itself (`graphql-tools`) and the shared scenarios (`test-suite-tck`).
 

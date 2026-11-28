@@ -18,6 +18,7 @@ Instant -> scalar ; Instant ; - ; -
 Int -> scalar ; Int ; - ; -
 JSON -> scalar ; JSON ; - ; -
 Locale -> scalar ; Locale ; - ; -
+Long -> scalar ; Long ; - ; -
 Mutation -> object ; - ; - ; -
 Mutation.addBook(id: ID!): AddBookPayload! -> root ; example.graphql.mutation.AddBookMutation#addBook(java.lang.String, graphql.schema.DataFetchingEnvironment) ; example.graphql.type.AddBookPayload ; example.graphql.type.AddBookPayload
 Mutation.signIn(username: String!, password: String!): SignInPayload! -> root ; example.graphql.mutation.SignInSignUpMutations#signIn(java.lang.String, java.lang.String) ; example.graphql.type.SignInPayload ; example.graphql.type.SignInPayload
@@ -31,10 +32,12 @@ Query.currentUser: User -> root ; example.graphql.query.CurrentUserQuery#current
 Query.echoInstant(at: Instant!): Instant! -> root ; example.graphql.query.ScalarsQuery#echoInstant(java.time.Instant) ; java.time.Instant ; java.time.Instant
 Query.echoJson(data: JSON): JSON -> root ; example.graphql.query.ScalarsQuery#echoJson(java.lang.Object) ; java.lang.Object ; java.lang.Object
 Query.echoLocale(tag: Locale!): Locale! -> root ; example.graphql.query.ScalarsQuery#echoLocale(java.util.Locale) ; java.util.Locale ; java.util.Locale
+Query.echoLong(value: Long!): Long! -> root ; example.graphql.query.ScalarsQuery#echoLong(long) ; long ; long
 Query.introduced: String! -> root ; example.graphql.query.IntroducedQuery#introduced() ; java.lang.String ; java.lang.String
 Query.searchProfile(contains: String!, limit: Int): [Profile!]! -> root ; example.graphql.query.SearchProfileQuery#searchProfile(java.lang.String, java.lang.Integer) ; java.util.List<example.graphql.type.Profile> ; java.util.List<example.graphql.type.Profile>
 Query.shout: String! -> root ; example.graphql.query.DirectivesQuery#shout() ; java.lang.String ; java.lang.String
 Query.tagged: String! -> root ; example.graphql.query.DirectivesQuery#tagged() ; java.lang.String ; java.lang.String
+Query.unreliable: String -> root ; example.graphql.query.UnreliableQuery#unreliable() ; java.lang.String ; java.lang.String
 SecurityError -> object ; example.graphql.type.SecurityError ; - ; -
 SecurityError.code: SecurityErrorCode! -> property ; example.graphql.type.SecurityError#code ; example.graphql.type.SecurityErrorCode ; example.graphql.type.SecurityErrorCode
 SecurityError.message: String! -> property ; example.graphql.type.SecurityError#message ; java.lang.String ; java.lang.String

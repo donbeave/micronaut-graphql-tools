@@ -161,6 +161,7 @@ dependencies {
     "serdeTestImplementation"(projects.micronautGraphqlToolsClient)
     "serdeTestImplementation"(mnSerde.micronaut.serde.jackson)
     "serdeTestImplementation"(mn.micronaut.http.client)
+    "serdeTestImplementation"(mn.micronaut.retry)
     "serdeTestImplementation"(mnTest.micronaut.test.junit5)
     "serdeTestAnnotationProcessor"(mnSerde.micronaut.serde.processor)
     "serdeTestAnnotationProcessor"(projects.micronautGraphqlToolsProcessor)
@@ -272,6 +273,44 @@ val checkSuiteSchemaParity by tasks.registering {
     }
 }
 tasks.named("check") { dependsOn(checkSuiteSchemaParity) }
+
+// The client examples of the guide exist in the three suites with the same class names and tags (snippet:: includes them by class name
+// and tag), and the three suites compile the same client documents.
+val checkClientExampleParity by tasks.registering {
+    val suites = mapOf("java" to "java", "kotlin" to "kt", "groovy" to "groovy").mapKeys { (language, _) ->
+        rootProject.layout.projectDirectory.dir("test-suite-$language/src/serdeTest")
+    }
+    val marker = layout.buildDirectory.file("checks/client-example-parity.ok")
+    inputs.files(suites.keys.map { fileTree(it) }).withPathSensitivity(PathSensitivity.RELATIVE)
+    outputs.file(marker)
+    doLast {
+        val tag = Regex("""tag::([\w-]+)\[]""")
+        fun Map.Entry<Directory, String>.examples(): Map<String, Set<String>> {
+            val root = key.dir("${if (value == "kt") "kotlin" else value}/example/client").asFile
+            return root.walkTopDown().filter { it.isFile && it.extension == value }.associate { file ->
+                file.relativeTo(root).invariantSeparatorsPath.removeSuffix(".${value}") to
+                    tag.findAll(file.readText()).map { it.groupValues[1] }.toSortedSet()
+            }
+        }
+        fun Map.Entry<Directory, String>.documents(): Map<String, String> {
+            val root = key.dir("graphql/client").asFile
+            return root.walkTopDown().filter { it.isFile }.associate { it.relativeTo(root).invariantSeparatorsPath to it.readText() }
+        }
+        val reference = suites.entries.first()
+        suites.entries.drop(1).forEach { suite ->
+            val language = suite.key.asFile.parentFile.parentFile.name
+            if (suite.examples() != reference.examples()) {
+                throw GradleException("$language: the client example classes and tags differ from test-suite-java: " +
+                    "${suite.examples()} against ${reference.examples()}")
+            }
+            if (suite.documents() != reference.documents()) {
+                throw GradleException("$language: the client documents differ from test-suite-java")
+            }
+        }
+        marker.get().asFile.apply { parentFile.mkdirs() }.writeText("ok\n")
+    }
+}
+tasks.named("check") { dependsOn(checkClientExampleParity) }
 
 // The schema index of the discovery test (SchemaDiscoveryTest): a native image cannot list a classpath directory, so the
 // wildcard location reads this file. The same task is in the Schema page of the guide.
