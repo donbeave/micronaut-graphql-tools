@@ -205,24 +205,68 @@ val generateClosureReflectConfig by tasks.registering {
 }
 sourceSets.main { resources.srcDir(generateClosureReflectConfig.map { closureReflectConfig }) }
 
+// The client smoke test (#681): an executable that runs the scenarios of the client tests of `serdeTest` on the Micronaut Serialization
+// stack. Spock cannot run natively, so the executable is built as a native image of its own (the client classes of `serdeTest` and the
+// classes of the application are on its class path) and `nativeSmokeTest` runs it against the native executable of the application.
+val clientSmoke: SourceSet by sourceSets.creating {
+    compileClasspath += sourceSets.main.get().output + serdeTest.output
+    runtimeClasspath += sourceSets.main.get().output + serdeTest.output
+}
+configurations {
+    named(clientSmoke.implementationConfigurationName) { extendsFrom(implementation.get()) }
+    named(clientSmoke.compileOnlyConfigurationName) { extendsFrom(configurations.testCompileOnly.get()) }
+}
+dependencies {
+    "clientSmokeImplementation"(projects.micronautGraphqlToolsClient)
+    "clientSmokeImplementation"(mnSerde.micronaut.serde.jackson)
+    "clientSmokeImplementation"(mn.micronaut.http.client)
+    "clientSmokeImplementation"(mn.micronaut.retry)
+    "clientSmokeCompileOnly"(mnSerde.micronaut.serde.processor)
+    "clientSmokeRuntimeOnly"(mnLogging.logback.classic)
+    // the result classes nested in the specs of `serdeTest` are compiled against Spock, and the image builder parses them
+    "clientSmokeRuntimeOnly"(mnTest.micronaut.test.spock)
+}
+// The client smoke test runs the classes of `serdeTest` in an image, so those are compiled without invokedynamic too.
+tasks.named<GroovyCompile>(clientSmoke.getCompileTaskName("groovy")) {
+    // the client interfaces of serdeTest are compiled first, and the class path of this task is their output
+    dependsOn(tasks.named(serdeTest.classesTaskName))
+}
+listOf(serdeTest, clientSmoke).forEach { sourceSet ->
+    tasks.named<GroovyCompile>(sourceSet.getCompileTaskName("groovy")) {
+        groovyOptions.optimizationOptions = (groovyOptions.optimizationOptions ?: mutableMapOf()).apply { put("indy", false) }
+    }
+}
+graalvmNative.binaries.create("clientSmoke") {
+    imageName.set("client-smoke")
+    mainClass.set("example.smoke.ClientSmoke")
+    classpath.setFrom(clientSmoke.runtimeClasspath)
+    // The Gradle plugin of the native build tools takes the reachability metadata and the netty settings of the main and the test binaries
+    // only, so a binary of its own sets the netty classes to initialize at run time, as Micronaut does for its layered images.
+    buildArgs.addAll(listOf("io.netty.channel.unix.Errors", "io.netty.channel.unix.IovArray", "io.netty.channel.unix.Limits", "io.netty.buffer",
+        "io.netty.channel", "io.netty.handler", "io.netty.resolver", "io.netty.util", "io.netty.bootstrap").map { "--initialize-at-run-time=$it" })
+}
+
 // Spock cannot run natively, so the native executable of the application is smoke-tested instead (#276): the script
-// starts it, posts the queries of the Java and Kotlin smoke tests and asserts the response bodies. Not part of `check`:
-// a native build takes minutes and about 5 GB.
+// starts it, posts the queries of the Java and Kotlin smoke tests and asserts the response bodies, then runs the native
+// executable of the client smoke test against it. Not part of `check`: a native build takes minutes and about 5 GB.
 val nativeSmoke: Configuration by configurations.creating
 dependencies {
     nativeSmoke("org.apache.groovy:groovy:${libs.versions.groovy.get()}")
     nativeSmoke("org.apache.groovy:groovy-json:${libs.versions.groovy.get()}")
 }
 tasks.register<JavaExec>("nativeSmokeTest") {
-    description = "Builds the native executable, starts it and asserts GraphQL responses (Groovy has no native test)."
+    description = "Builds the native executables, starts the application and asserts GraphQL responses, with the client smoke test (Groovy has no native test)."
     group = "verification"
     val executable = layout.buildDirectory.file("native/nativeCompile/${project.name}")
+    val clientExecutable = layout.buildDirectory.file("native/nativeClientSmokeCompile/client-smoke")
     val script = layout.projectDirectory.file("src/nativeSmoke/groovy/NativeSmoke.groovy")
-    dependsOn("nativeCompile")
+    dependsOn("nativeCompile", "nativeClientSmokeCompile")
     inputs.file(script)
     classpath = nativeSmoke
     mainClass.set("groovy.ui.GroovyMain")
-    argumentProviders.add(CommandLineArgumentProvider { listOf(script.asFile.absolutePath, executable.get().asFile.absolutePath) })
+    argumentProviders.add(CommandLineArgumentProvider {
+        listOf(script.asFile.absolutePath, executable.get().asFile.absolutePath, clientExecutable.get().asFile.absolutePath)
+    })
     outputs.upToDateWhen { false }
 }
 

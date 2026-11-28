@@ -58,12 +58,12 @@ Run from the repository root. JDK 21 or 25 (native tests need Oracle GraalVM 25;
 ./gradlew :test-suite-kotlin:test
 ./gradlew :test-suite-kotlin:test --tests 'example.tck.*'
 ./gradlew :test-suite-kotlin:serdeTest
-./gradlew :test-suite-kotlin:nativeTest --no-parallel
+./gradlew :test-suite-kotlin:nativeTest :test-suite-kotlin:nativeSerdeTest --no-parallel
 ```
 
 - `test` runs the JUnit tests on the JVM (Jackson databind stack); `serdeTest` runs the client examples (Micronaut Serialization stack). Both are part of `check`.
-- `nativeTest` builds a native image and runs the tests in it. It takes about 5 to 7 minutes and 5 GB of memory. Run it after the
-  other native tests, not in parallel with them.
+- `nativeTest` and `nativeSerdeTest` build a native image and run the tests of their source set in it. Each takes about 5 to 7 minutes and
+  5 GB of memory. Run them one after another and after the other native tests, not in parallel with them.
 - Add `-PgraphqlJavaLeg=floor|ceiling` to run on another graphql-java leg.
 
 The full list of the commands CI runs is in `CONTRIBUTING.md` ("Running Tests").

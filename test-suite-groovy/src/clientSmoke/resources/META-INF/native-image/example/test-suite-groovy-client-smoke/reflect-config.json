@@ -1,0 +1,10 @@
+[
+  {
+    "name": "example.client.ExampleClient$ValidationErrorCode",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "example.client.ExampleClient$SecurityErrorCode",
+    "allDeclaredConstructors": true
+  }
+]

@@ -24,7 +24,10 @@ as a native executable instead.
   compiler checks the operation documents of `src/serdeTest/graphql/client/server` against the schema of the application (`client.dirs`, the
   client schema `server`). `checkClientExampleParity` in `test-suite-java` compares the class names, the tags and the documents with the Java suite.
 - `src/nativeSmoke/groovy/NativeSmoke.groovy`: the native smoke test. It starts the native executable, posts the queries of
-  the Java and Kotlin smoke tests to `/graphql`, asserts the bodies and stops the process.
+  the Java and Kotlin smoke tests to `/graphql`, asserts the bodies, runs the client smoke test against it and stops the process.
+- `src/clientSmoke/groovy/example/smoke`: the client smoke test, an executable of its own (source set `clientSmoke`, native binary
+  `client-smoke`). It runs the query, mutation, union, error and scalar cases of the client tests on the declarative clients of
+  `serdeTest` and on the low-level client, against the address in its argument, and exits with a non-zero status on a failed case.
 
 Not in this module: the library (`graphql-tools`), the shared scenarios (`test-suite-tck`) and the compile-time checks
 (`graphql-tools-processor`, which this suite does not use).
@@ -65,8 +68,10 @@ Run from the repository root. JDK 21 or 25.
 ```
 
 - `test` runs the Spock specs on the JVM (Jackson databind stack); `serdeTest` runs the client examples (Micronaut Serialization stack). Both are part of `check`.
-- `nativeSmokeTest` builds the native executable with `:test-suite-groovy:nativeCompile` and smoke-tests it. It needs
-  Oracle GraalVM 25, about 5 minutes and 5 GB of memory. It is the native check for this suite in CI.
+- `nativeSmokeTest` builds the native executable with `:test-suite-groovy:nativeCompile` and smoke-tests it, then builds the native
+  executable of the client smoke test (`:test-suite-groovy:nativeClientSmokeCompile`, the source set `clientSmoke`) and runs it against the first:
+  query, mutation, union, error and scalar cases on the declarative and the low-level client. It needs
+  Oracle GraalVM 25, about 5 minutes and 5 GB of memory for each executable. It is the native check for this suite in CI.
 - Add `-PgraphqlJavaLeg=floor|ceiling` to run on another graphql-java leg.
 
 The full list of the commands CI runs is in `CONTRIBUTING.md` ("Running Tests").

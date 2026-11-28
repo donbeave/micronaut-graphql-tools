@@ -23,8 +23,9 @@ any other method to the Micronaut HTTP client.
 - The `checkNoGraphQLJava` task, part of `check`: it fails when graphql-java or the graphql-tools runtime is on a main
   classpath of this module.
 
-Not in this module: the server (`graphql-tools`), the transport of the server (`micronaut-graphql`), and the native tests of
-the client (#681).
+Not in this module: the server (`graphql-tools`) and the transport of the server (`micronaut-graphql`). The native tests of
+the client are the `nativeSerdeTest` tasks of `test-suite-java` and `test-suite-kotlin` and the client smoke test of
+`test-suite-groovy` (`nativeSmokeTest`).
 
 ## Packages
 

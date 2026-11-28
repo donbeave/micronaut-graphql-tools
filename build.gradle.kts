@@ -168,17 +168,24 @@ val auditLockfile by tasks.registering {
 }
 
 // The native coverage table of CONTRIBUTING.md names a test class per feature category and suite, and the TCK scenarios it
-// relies on. The native runs execute the whole `test` source set of each suite and the `serdeTest` source set of the Java suite, so a
-// row whose class is missing from them means a category lost its test.
+// relies on. The native runs execute the whole `test` and `serdeTest` source sets of the Java and Kotlin suites, so a row whose
+// class is missing from them means a category lost its test.
 val checkNativeCoverage by tasks.registering {
     group = "verification"
-    description = "Checks that every row of the native coverage table of CONTRIBUTING.md names existing tests and scenarios."
+    description = "Checks that every row of the native coverage table of CONTRIBUTING.md names existing tests and scenarios, and that the workflows run the native client tasks."
     val contributing = layout.projectDirectory.file("CONTRIBUTING.md")
     val scenarios = layout.projectDirectory.file("test-suite-tck/src/main/resources/tck/scenarios.txt")
     val sources = fileTree(layout.projectDirectory) {
-        include("test-suite-java/src/test/**/*.java", "test-suite-java/src/serdeTest/**/*.java", "test-suite-kotlin/src/test/**/*.kt")
+        include("test-suite-java/src/test/**/*.java", "test-suite-java/src/serdeTest/**/*.java", "test-suite-kotlin/src/test/**/*.kt",
+            "test-suite-kotlin/src/serdeTest/**/*.kt")
     }
-    inputs.files(contributing, scenarios, sources).withPathSensitivity(PathSensitivity.RELATIVE)
+    // the commands of CI: each native task of the client must run in the gated native job, and the Groovy smoke test in its own job
+    val workflows = mapOf(
+        ".github/workflows/gradle.yml" to listOf(":test-suite-java:nativeSerdeTest", ":test-suite-kotlin:nativeSerdeTest",
+            ":test-suite-groovy:nativeSmokeTest"),
+        ".github/workflows/canary.yml" to listOf(":test-suite-java:nativeSerdeTest", ":test-suite-kotlin:nativeSerdeTest")
+    ).mapKeys { layout.projectDirectory.file(it.key) }
+    inputs.files(contributing, scenarios, sources, workflows.keys).withPathSensitivity(PathSensitivity.RELATIVE)
     val marker = layout.buildDirectory.file("checks/native-coverage.ok")
     outputs.file(marker)
     doLast {
@@ -202,14 +209,18 @@ val checkNativeCoverage by tasks.registering {
                     else -> throw GradleException("Unknown suite '$suite' in the native coverage row '$category'")
                 }
                 val name = "$path.${if (extension == "kotlin") "kt" else extension}"
-                val roots = if (module == "test-suite-java") listOf("test", "serdeTest") else listOf("test")
+                val roots = listOf("test", "serdeTest")
                 if (roots.none { layout.projectDirectory.file("$module/src/$it/$extension/$name").asFile.isFile }) {
                     problems += "$category: $testClass is missing from $module"
                 }
             }
             ids.filter { it !in known }.forEach { problems += "$category: scenario '$it' is not in scenarios.txt" }
         }
-        if (problems.isNotEmpty()) throw GradleException("Native coverage table is out of date:\n" + problems.joinToString("\n"))
+        workflows.forEach { (workflow, tasks) ->
+            val commands = workflow.asFile.readText()
+            tasks.filter { it !in commands }.forEach { problems += "${workflow.asFile.name} does not run $it" }
+        }
+        if (problems.isNotEmpty()) throw GradleException("Native coverage is out of date:\n" + problems.joinToString("\n"))
         marker.get().asFile.apply { parentFile.mkdirs() }.writeText("ok\n")
     }
 }
