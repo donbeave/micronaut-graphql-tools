@@ -53,8 +53,8 @@ query Books($status: Status, $first: Int! = 10, $withAuthor: Boolean!) {
     author @include(if: $withAuthor) {
       name
     }
-    ... on Book @skip(if: false) {
-      rating
+    ... on Book {
+      rating @skip(if: false)
     }
   }
 }

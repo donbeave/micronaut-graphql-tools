@@ -20,12 +20,12 @@ public final class Books {
     /**
      * The document that is sent: the operation and the fragments it uses, with the field {@code __typename} added where a result needs it.
      */
-    public static final String DOCUMENT = "query Books($status:Status,$first:Int!=10,$withAuthor:Boolean!){books(status:$status,first:$first){id status author @include(if:$withAuthor){name}...on Book @skip(if:false){rating}}}";
+    public static final String DOCUMENT = "query Books($status:Status,$first:Int!=10,$withAuthor:Boolean!){books(status:$status,first:$first){id status author @include(if:$withAuthor){name}...on Book{rating @skip(if:false)}}}";
 
     /**
      * The SHA-256 of the UTF-8 bytes of the document, as 64 hexadecimal digits.
      */
-    public static final String HASH = "adf9f97267bd32f471868a2b7b58ea89c81210c5adc5def938b3b00567a5f512";
+    public static final String HASH = "47f95d80c4a6e4b43387d8ceea6afef694000ff5d0cb0a9cb68053c326ff4c60";
 
     /**
      * The kind of the operation.
