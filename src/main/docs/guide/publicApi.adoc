@@ -106,7 +106,8 @@ A type marked `(experimental)` in the tables below carries `@Experimental` (`io.
 |===
 |Package |Types
 |`io.micronaut.graphql.tools.client` |`GraphQLClientAttributes`, `GraphQLError`, `GraphQLHttpClient`, `GraphQLMediaTypes`, `GraphQLRequest`, `GraphQLResponse`, `GraphQLSession`, `OperationType`
+|`io.micronaut.graphql.tools.client.annotation` |`GraphQLClient`, `GraphQLOperation`, `GraphQLVariable`
 |`io.micronaut.graphql.tools.client.exceptions` |`GraphQLClientException`, `GraphQLErrorsException`, `GraphQLTransportException`
 |===
 
-The client exceptions are described in the <<clientErrors,client errors>> section of the <<exceptions,Exceptions>> page.
+The client exceptions are described in the <<clientErrors,client errors>> section of the <<exceptions,Exceptions>> page, and the types of the client in the pages of the <<client,Client>> section.

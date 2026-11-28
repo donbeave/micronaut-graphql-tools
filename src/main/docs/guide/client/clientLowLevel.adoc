@@ -1,0 +1,83 @@
+[[clientLowLevel]]
+The low-level client sends a request that your code builds, with a document and variables of your own, and returns the response. Use it for a dynamic operation, a document that you read at run time, or a response that you want to inspect without a declarative interface. For a fixed set of operations, the <<clientDeclarative,declarative client>> checks each document at compile time and returns the types that you declare.
+
+== The client
+
+api:io.micronaut.graphql.tools.client.GraphQLHttpClient[] sends a `GraphQLRequest` and returns a `GraphQLResponse`. The data is typed (`GraphQLRequest.builder(Search.class)`, a `@Serdeable` type) or dynamic (`GraphQLRequest.builder()`, a `Map`). Inject the client with `@GraphQLClient` on the field or the parameter, naming the service:
+
+[source,java]
+----
+@Singleton
+public class Books {
+
+    @Inject
+    @GraphQLClient("books")
+    GraphQLHttpClient client;
+}
+----
+
+The service id is the Micronaut one, see <<clientServer,Configuration and discovery>>. The client needs Micronaut Serialization with its JSON implementation (`io.micronaut.serde:micronaut-serde-jackson`) in the application. Without it the first client that is created fails with a `ConfigurationException`, which is at start for a bean that injects the client, and the message names that module. The client does not use Jackson.
+
+== A typed request
+
+The request names the type of its data, so the response is decoded into it:
+
+snippet::example.client.LowLevelClientTest[project-base="test-suite", source="serdeTest", tags="typed-query", indent="0"]
+
+== A dynamic request
+
+Without a type, the data is a `Map` of the response:
+
+snippet::example.client.LowLevelClientTest[project-base="test-suite", source="serdeTest", tags="dynamic-query", indent="0"]
+
+== Variants
+
+* `execute` returns a reactive `Publisher` of one response. It is cold: each subscription sends the request.
+* `executeAsync` returns a `CompletableFuture` of the response. Cancelling it cancels the call.
+* `executeBlocking` returns the response, or throws an exception to the caller.
+
+Each method has a second form that takes a customizer, a `Consumer<MutableHttpRequest<?>>` that changes the HTTP request of that call before it is sent, for example to add a header. The `execute` and `executeAsync` variants report every failure, including a request that cannot be sent, through the publisher or the future.
+
+The reactive and the `CompletableFuture` variants complete on the event loop of the HTTP client, so a continuation that you attach must not block. `executeBlocking` called on an event loop thread, for example from a controller that returns a reactive type, throws a `GraphQLClientException` with the code `blocking-on-event-loop` and sends nothing; call it from a thread that may block, such as a `@ExecuteOn(TaskExecutors.BLOCKING)` method.
+
+== The request
+
+A request is sent with POST by default. The body is JSON with the keys `query`, `operationName`, `variables` and `extensions` only, and a key without a value is left out. The `Content-Type` is `application/json` and the `Accept` header is `application/graphql-response+json, application/json;q=0.9`. The client sets the request attributes `graphql.operation.name` and `graphql.operation.type` (see `GraphQLClientAttributes`) for a filter to read.
+
+`GraphQLRequest.Builder#httpMethod(HttpMethod.GET)` sends a query with GET instead: the parameters `query`, `operationName`, `variables` and `extensions` are URL-encoded in the URL, and the last two hold JSON. Only a query can be sent with GET; the builder rejects any other operation. A subscription is not sent over HTTP.
+
+How a response is told apart from a failure is on the <<clientResponses,Errors>> page.
+
+== Sessions
+
+The client keeps no cookies, because one client is shared by every caller. A caller that needs a cookie session, for example a login followed by calls that depend on it, starts a `GraphQLSession` with `newSession()`. A session is itself a `GraphQLHttpClient`: it has the same methods, and it also stores the cookies that the responses of its calls set, sends them on its next calls, and sends fixed headers that `newSession(Map<String, String>)` takes. The code that starts the session owns it and decides how long it lives; two sessions share nothing, and the client that started them never keeps a cookie.
+
+[source,java]
+----
+GraphQLSession session = client.newSession(Map.of("X-Tenant", "books"));
+session.executeBlocking(login);   // the response sets a cookie
+session.executeBlocking(viewer);  // the cookie is sent
+session.clearCookies();
+----
+
+[source,kotlin]
+----
+val session = client.newSession(mapOf("X-Tenant" to "books"))
+session.executeBlocking(login) // the response sets a cookie
+session.executeBlocking(viewer) // the cookie is sent
+session.clearCookies()
+----
+
+[source,groovy]
+----
+GraphQLSession session = client.newSession([ 'X-Tenant': 'books' ])
+session.executeBlocking(login) // the response sets a cookie
+session.executeBlocking(viewer) // the cookie is sent
+session.clearCookies()
+----
+
+A cookie is kept by its name and path, with its value and its expiry. A response that sets the same name and path replaces it, and one that expires it (`Max-Age` of zero or less, or an `Expires` in the past) removes it. A cookie whose expiry has passed is not sent. A cookie is sent when its path is a prefix of the path of the endpoint by the rules of RFC 6265; a cookie that sets no `Path` takes the directory of the endpoint path, which is `/` for `/graphql`. `Domain`, `Secure` and `HttpOnly` are not interpreted: a session sends its cookies to the service id it was started from and never rewrites a domain. `getCookies()` returns the cookies the session holds, the expired ones left out, as `GraphQLSession.Cookie` values with a name, a value, a path and an optional expiry.
+
+A response stores its cookies before the call completes, so the next call sees them, including the cookies of a 4xx or 5xx response. A session is thread safe: concurrent calls each send the cookies that were stored when they started. The fixed headers are set first and the cookie header after them, and the customizer of a call runs last, so it can replace either. `newSession()` on a session starts a new, independent session.
+
+The session is also the place for the headers and the cookies that a login sets, see <<clientSecurity,Security>>.

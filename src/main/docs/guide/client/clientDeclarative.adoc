@@ -1,0 +1,174 @@
+[[clientDeclarative]]
+A declarative client is an interface annotated with `@GraphQLClient`. Each method that carries `@GraphQLOperation` is one operation: calling it sends the operation to the server and returns the response as the declared type. Micronaut implements the interface at compile time, with no `java.lang.reflect.Proxy` and no reflection, so it works in a native image.
+
+== A client interface
+
+The interface is annotated with `@GraphQLClient`, which names the service, and each operation is a method:
+
+[source,java]
+----
+@GraphQLClient("books")
+public interface BookClient {
+
+    @GraphQLOperation("query($id: ID!) { book(id: $id) { title pages } }")
+    Book book(String id);
+
+    @GraphQLOperation("query($id: ID!) { book(id: $id) { title pages } }")
+    GraphQLResponse<Book> bookResponse(String id);
+
+    @GraphQLOperation("mutation($title: String!) { addBook(title: $title) { id } }")
+    CompletableFuture<Long> addBook(String title);
+
+    @GraphQLOperation("mutation { clear }")
+    void clear();
+}
+----
+
+The client is a bean: inject it where you need it. It runs on the Micronaut HTTP client, so everything that <<clientServer,Configuration and discovery>> says about the service id applies, and `@ClientFilter(serviceId = "...")` filters, `@Retryable` and the other Micronaut interceptors apply to its methods. A method without `@GraphQLOperation` is left to the Micronaut HTTP client, so an interface can mix GraphQL operations with `@Get` and `@Post` methods.
+
+The module needs the annotation processor of `micronaut-graphql-tools-processor`, which compiles each operation (see the <<clientCompileTime,compile-time checks>>). The runtime parses no GraphQL: on the first call of a method it builds a plan from the compiled operation and the signature of the method, and every later call picks the values of the arguments. A method that carries `@GraphQLOperation` and no compiled operation fails on its first call with a `GraphQLClientException` of the code `missing-operation` that tells you to apply the processor.
+
+A document is written in the annotation, as above, or it is an operation of a `*.graphql` file of the client directory that the annotation names. The examples of this guide use the second form. This one is a document with a fragment that it defines:
+
+snippet::example.client.ExampleClient[project-base="test-suite", source="serdeTest", tags="fragment", indent="0"]
+
+== Return types
+
+The result of a method is one of these. Its type is the type of the payload: for an operation that selects one root field, the value of that field, and for an operation that selects several, the whole `data` object (see <<clientMetadata,Metadata>>).
+
+[cols="2,5", options="header"]
+|===
+| Return type | Result
+
+| `P`, the payload
+| The payload. The call blocks, so it is refused on an event loop thread. It throws `GraphQLErrorsException` when the response has errors, even when it has partial data, which the exception carries in `getResponse()`. It returns `null` for a payload that is `null`.
+
+| `GraphQLResponse<P>`
+| The response with the unwrapped payload as its `data`, the errors, the extensions and the HTTP response. It never throws `GraphQLErrorsException`; the errors are in the response. It still throws a transport or decode failure.
+
+| `void`
+| Nothing. It throws like a payload method when the response has errors, and the payload is not decoded.
+
+| `CompletableFuture<R>` or `CompletionStage<R>`
+| The same results as above, in a future that completes on the event loop of the HTTP client. A failure, including `GraphQLErrorsException`, completes the future exceptionally. The future is `CompletableFuture<Void>` for no result. Cancelling it cancels the call.
+
+| `Publisher<R>`, and `Mono<R>` and `Flux<R>` of Reactor when `micronaut-reactor` is on the classpath
+| A cold publisher of one item: each subscription sends the request, and nothing is sent before it. A `null` payload completes it with no item. A failure is the `onError` signal. Cancelling the subscription cancels the call.
+
+| Kotlin `suspend` functions and `Flow<R>`
+| The same results as the future and the publisher. A `suspend` function resumes with the payload, the response or the exception; `Flow` emits one item.
+|===
+
+A method that returns a list, such as `List<Book>`, returns the payload, which is the list: the publisher variants emit it as one item, as `Publisher<List<Book>>`. The type of the payload is decoded with Micronaut Serialization, so `@Serdeable` types and the types that it supports work, and no Jackson type is used.
+
+== Parameters
+
+Each parameter is one of these:
+
+* A variable. A parameter binds the variable named like the parameter, or the variable that `@GraphQLVariable` names. The value is encoded with the serializer of the declared type of the parameter, so an input type, a list, an enum or a `java.time` value is encoded as Micronaut Serialization encodes it, and `null` is sent as JSON `null`. A variable of the operation that has no parameter is not sent.
+* A header: `@Header("X-Request-Id") String requestId`. `@Header` without a name names the header after the parameter in the hyphenated form (`requestId` is `request-id`). A `null` value sends no header.
+* A cookie: `@CookieValue("session") String session`. A `null` value sends no cookie.
+
+`@Header` on the method or on the interface adds a header to the request with `name` and `value`, as it does for the Micronaut HTTP client. A parameter that another HTTP annotation binds (`@Body`, `@QueryValue` and the like) is refused with a `GraphQLClientException` of the code `unsupported-signature`, naming the parameter, on the first call of the method, and so is a parameter that binds a variable that the operation does not declare.
+
+A header and a cookie of a call come from the parameters of the method:
+
+snippet::example.client.ServiceClient[project-base="test-suite", source="serdeTest", tags="headers", indent="0"]
+
+snippet::example.client.ServiceClient[project-base="test-suite", source="serdeTest", tags="cookie", indent="0"]
+
+== Results
+
+The payload of a method is the value of the one root field that its operation selects. This is the form to use when an error is an exception for the caller:
+
+snippet::example.client.DeclarativeClientTest[project-base="test-suite", source="serdeTest", tags="payload", indent="0"]
+
+The envelope form returns the response, with the errors and the HTTP response next to the data:
+
+snippet::example.client.ExampleClient[project-base="test-suite", source="serdeTest", tags="envelope", indent="0"]
+
+snippet::example.client.DeclarativeClientTest[project-base="test-suite", source="serdeTest", tags="envelope", indent="0"]
+
+== Mutations and input types
+
+An input type is a parameter that is a class, a record or a data class, encoded by Micronaut Serialization:
+
+snippet::example.client.ExampleClient[project-base="test-suite", source="serdeTest", tags="mutation", indent="0"]
+
+snippet::example.client.DeclarativeClientTest[project-base="test-suite", source="serdeTest", tags="mutation", indent="0"]
+
+== Scalars
+
+A scalar maps to the Java type that its position declares, and Micronaut Serialization encodes it. A `java.time` value and a `Long` with more digits than a JavaScript number holds round-trip exactly:
+
+snippet::example.client.ExampleClient[project-base="test-suite", source="serdeTest", tags="scalars", indent="0"]
+
+snippet::example.client.DeclarativeClientTest[project-base="test-suite", source="serdeTest", tags="scalars", indent="0"]
+
+== Interfaces and unions
+
+A result that is an interface or a union is a polymorphic type with a default branch, as <<clientCompileTime,the compile-time checks>> describe. The operations of the examples select the union `Error`, and the result type has one subtype for each member:
+
+snippet::example.client.ExampleClient[project-base="test-suite", source="serdeTest", tags="union", indent="0"]
+
+snippet::example.client.DeclarativeClientTest[project-base="test-suite", source="serdeTest", tags="union", indent="0"]
+
+== What the client sends
+
+The request is the one of the <<clientLowLevel,low-level client>>: POST with the compiled document, the operation name and the variables, or, for `@GraphQLOperation(method = GET)`, a GET with the parameters in the URL. The request attributes `graphql.operation.name` and `graphql.operation.type` are set for the filters. The responses are classified as <<clientResponses,the Errors page>> says.
+
+== The annotations
+
+[cols="2,5", options="header"]
+|===
+| Annotation | Use
+
+| `@GraphQLClient`
+| Marks a client. On an interface it declares a client; on a field or a parameter it marks a low-level injection point.
+
+| `@GraphQLOperation`
+| Marks a method of a client interface as one GraphQL operation.
+
+| `@GraphQLVariable`
+| Binds a parameter of an operation method to a variable of the operation.
+|===
+
+=== GraphQLClient
+
+`@GraphQLClient` is a stereotype of the Micronaut `@Client` annotation, so the members that name the service resolve like those of `@Client`:
+
+[cols="2,5", options="header"]
+|===
+| Member | Meaning
+
+| `value`, `id`
+| The service id or the URL of the server. Both are aliases of each other and of `@Client(id)`, so `@GraphQLClient("books")` reads the configuration under `micronaut.http.services.books`.
+
+| `endpoint`
+| The path of the GraphQL endpoint. An alias of `@Client(path)`.
+
+| `webSocketEndpoint`
+| The path of the WebSocket endpoint that subscriptions use. Empty means the value of `endpoint`.
+
+| `schema`
+| The name of the client schema that the operations are checked against at compile time.
+
+| `configuration`
+| The HTTP client configuration class. An alias of `@Client(configuration)`.
+|===
+
+[source,java]
+----
+@GraphQLClient(id = "books", endpoint = "/graphql")
+public interface BookClient {
+
+    @GraphQLOperation("query($id: ID!) { book(id: $id) { title } }")
+    Book book(@GraphQLVariable("id") String bookId);
+}
+----
+
+=== GraphQLOperation and GraphQLVariable
+
+`@GraphQLOperation` takes the GraphQL document in `value`, or the name of an operation of the client directory. `name` selects one operation of a document that holds several, and `method` is `POST` (the default) or `GET`; only a query can use `GET`. A method without `@GraphQLOperation` is left to the Micronaut HTTP client.
+
+`@GraphQLVariable` names the variable that a parameter binds, without the dollar sign. A parameter without it binds the variable named like the parameter.

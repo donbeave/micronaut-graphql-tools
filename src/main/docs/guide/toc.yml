@@ -34,7 +34,16 @@ protection: Protection
 transport: Transports
 customization: Customization
 federation: Federation
-client: Client
+client:
+  title: Client
+  clientLowLevel: Low-Level Client
+  clientDeclarative: Declarative Client
+  clientChecks: Compile-Time Checks
+  clientErrorHandling: Errors
+  clientConfiguration: Configuration
+  clientSecurity: Security
+  clientTesting: Testing
+  clientNative: Native Image
 safety:
   title: Safety
   startupErrors: Startup Errors
