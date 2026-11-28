@@ -1,7 +1,19 @@
 The code generator turns a GraphQL schema into Java, Kotlin or Groovy sources in the application's own source set. It is one library, `micronaut-graphql-tools-codegen`, and the build plugins map their configuration onto its options one to one and add only wiring. The generator runs on the build's class path, never on the application's, and it uses no Jackson.
 
-NOTE: This version of the generator checks the options, parses the schema files and reports what is wrong. It emits the enums, the object models as records and the name constants of Java and no other source file yet: the other emitters arrive in later changes, and the plugin already writes whatever the generator returns, reconciles the output directory and registers the source roots, so the build wiring below is final.
+NOTE: This version of the generator checks the options, parses the schema files and reports what is wrong. It emits the enums, the object models as records and the name constants of Java, and in client mode the client models (below), and no other source file yet: the other emitters arrive in later changes, and the plugin already writes whatever the generator returns, reconciles the output directory and registers the source roots, so the build wiring below is final.
 
 The section has one page so far:
 
 * <<codegenMavenPlugin,Maven Plugin>> shows the `generate` goal, its parameters, the source directories of the three languages and the incremental behaviour.
+
+== Client models
+
+With `mode` set to `CLIENT` the generator reads the operation documents of the client as well as its schema, and writes Java sources that Java, Kotlin and Groovy callers use: for each operation a request class, a record of its variables and the records of its result, and the enums and input records that the operations reach. They are in one package, `modelPackage`, with a `package-info.java` that is null-marked when the nullable annotation is JSpecify, which is the default in this mode.
+
+* The request class, such as `GetUser`, describes the operation and sends nothing. It holds the document as a constant, so that `@GraphQLOperation(GetUser.DOCUMENT)` uses it, the hash of the document, the name, the kind (`OperationType.QUERY`, `MUTATION` or `SUBSCRIPTION`) and the `Argument` types of the result, and it is constructed from the variables record. `GraphQLRequest.builder(GetUser.DATA)` builds a low-level request for it. A subscription operation gets the same class and its result records; the transport of subscriptions is not part of the generated code.
+* A selection on an object type is a record with a component for each response key, so an alias names the component. A field that `@skip` or `@include` can remove, or that the schema makes nullable, is a nullable component.
+* A selection on an interface or a union is a sealed interface with one record for each object type that the selection names and a record `Other` for every other type, read through the field `__typename`, so a response with a type that the client does not know still decodes, and the record keeps the type name. A named fragment is an interface that every record that spreads it implements.
+* An enum has the values of the schema and one more, `UNKNOWN__`, which a value that the client does not know is read as.
+* All the types are `@Serdeable`, and a nullable position carries the `nullableAnnotation` option. The generated records pass the compile-time checks of the declarative client.
+
+The sources compile with the dependencies that a client needs anyway: `micronaut-graphql-tools-client`, which exposes the JSpecify annotations as an API dependency, and `micronaut-serde-jackson`, which brings the Jackson annotations that the polymorphic types and the default constant of an enum use (annotations only, no Jackson databind). Kotlin callers read the JSpecify nullability and match the sealed interfaces exhaustively; a record component is a property in Kotlin, and an accessor of a fragment interface is a method.

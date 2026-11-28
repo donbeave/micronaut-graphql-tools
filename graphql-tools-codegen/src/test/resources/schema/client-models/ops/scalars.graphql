@@ -1,0 +1,19 @@
+query BookCount {
+  bookCount
+}
+
+query Titles {
+  titles
+}
+
+query Matrix {
+  matrix
+}
+
+query Updated {
+  updated
+}
+
+query TopStatus {
+  topStatus
+}

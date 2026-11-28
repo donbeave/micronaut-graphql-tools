@@ -37,8 +37,18 @@ final class JavaTypes {
     }
 
     TypeName component(Field field) {
-        TypeRef type = field.type();
-        if (type instanceof TypeRef.Builtin builtin && !builtin.nullable() && !field.boxed()) {
+        return component(field.type(), field.boxed());
+    }
+
+    /**
+     * The type of a value in a direct position: a non-null {@code Int}, {@code Float} or {@code Boolean} is a primitive unless it is boxed.
+     *
+     * @param type  the type of the value
+     * @param boxed whether a primitive is written as its wrapper class
+     * @return the Java type
+     */
+    TypeName component(TypeRef type, boolean boxed) {
+        if (type instanceof TypeRef.Builtin builtin && !builtin.nullable() && !boxed) {
             switch (builtin.scalar()) {
                 case INT:
                     return TypeName.INT;
@@ -53,22 +63,55 @@ final class JavaTypes {
         return reference(type);
     }
 
-    private TypeName reference(TypeRef type) {
+    /**
+     * The type of a value that may be left out although its GraphQL type is non-null: a reference type annotated as nullable.
+     *
+     * @param type the type of the value
+     * @return the Java type
+     */
+    TypeName omittable(TypeRef type) {
+        return reference(type, true);
+    }
+
+    /**
+     * The type of a type argument that is not a position of the model: a reference type without the nullable annotation, at every level.
+     *
+     * @param type the type
+     * @return the Java type
+     */
+    TypeName plain(TypeRef type) {
+        if (type instanceof TypeRef.ListOf list) {
+            return ParameterizedTypeName.get(ClassName.get(java.util.List.class), plain(list.element()));
+        }
+        return erased(type);
+    }
+
+    TypeName reference(TypeRef type) {
+        return reference(type, false);
+    }
+
+    private TypeName reference(TypeRef type, boolean forceNullable) {
         TypeName name;
+        if (type instanceof TypeRef.ListOf list) {
+            name = ParameterizedTypeName.get(ClassName.get(java.util.List.class), reference(list.element(), false));
+        } else {
+            name = erased(type);
+        }
+        return (forceNullable || type.isNullable()) && nullable != null ? name.annotated(nullable) : name;
+    }
+
+    private static TypeName erased(TypeRef type) {
         if (type instanceof TypeRef.Builtin builtin) {
-            name = switch (builtin.scalar()) {
+            return switch (builtin.scalar()) {
                 case ID, STRING -> ClassName.get(String.class);
                 case INT -> ClassName.get(Integer.class);
                 case FLOAT -> ClassName.get(Double.class);
                 case BOOLEAN -> ClassName.get(Boolean.class);
             };
         } else if (type instanceof TypeRef.Mapped mapped) {
-            name = ClassName.bestGuess(mapped.className());
-        } else if (type instanceof TypeRef.Reference reference) {
-            name = ClassName.get(reference.target().packageName(), reference.target().simpleName());
-        } else {
-            name = ParameterizedTypeName.get(ClassName.get(java.util.List.class), reference(((TypeRef.ListOf) type).element()));
+            return ClassName.bestGuess(mapped.className());
         }
-        return type.isNullable() && nullable != null ? name.annotated(nullable) : name;
+        TypeRef.Reference reference = (TypeRef.Reference) type;
+        return ClassName.get(reference.target().packageName(), reference.target().simpleName());
     }
 }

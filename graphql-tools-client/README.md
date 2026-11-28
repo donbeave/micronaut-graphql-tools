@@ -50,7 +50,7 @@ Applications that call a GraphQL server from Micronaut, and do not serve GraphQL
 
 ## Relation to other modules
 
-- Depends on `micronaut-http-client-core` (`api`) and on the Micronaut Serialization API (`api`, `micronaut-serde-api`).
+- Depends on `micronaut-http-client-core` (`api`), on the Micronaut Serialization API (`api`, `micronaut-serde-api`) and on JSpecify (`api`, `org.jspecify:jspecify`, annotations only: the client models that the code generator writes use its nullable annotation, so they compile with this module and the JSON implementation of Micronaut Serialization alone).
 - Depends on the Micronaut WebSocket client and the retry module at compile time only (`compileOnly`); an application adds them
   to use the subscriptions and the retries.
 - It does not depend on `graphql-tools`, `graphql-tools-binding` or `graphql-tools-processor`. `checkNoGraphQLJava` keeps it so.

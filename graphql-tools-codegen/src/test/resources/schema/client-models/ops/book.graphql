@@ -1,0 +1,67 @@
+query GetBook($id: ID!) {
+  book(id: $id) {
+    ...BookCard
+    subtitle
+    status
+    oldTitle
+    headline: title
+    editions {
+      ...EditionLine
+    }
+  }
+}
+
+fragment BookCard on Book {
+  id
+  title
+  tags
+  ...BookBadge
+}
+
+fragment BookBadge on Book {
+  inStock
+  rating
+}
+
+fragment EditionLine on Edition {
+  year
+  label
+  isbns
+}
+
+query ShelfView($name: String!) {
+  ...ShelfRoot
+}
+
+fragment ShelfRoot on Query {
+  shelf(name: $name) {
+    name
+    books {
+      id
+      pages
+    }
+    rows {
+      id
+    }
+  }
+}
+
+query Books($status: Status, $first: Int! = 10, $withAuthor: Boolean!) {
+  books(status: $status, first: $first) {
+    id
+    status
+    author @include(if: $withAuthor) {
+      name
+    }
+    ... on Book @skip(if: false) {
+      rating
+    }
+  }
+}
+
+mutation AddBook($input: BookInput!, $dryRun: Boolean = false) {
+  addBook(input: $input, dryRun: $dryRun) {
+    id
+    title
+  }
+}

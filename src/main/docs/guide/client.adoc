@@ -17,7 +17,7 @@ implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-client")
 implementation("io.micronaut.serde:micronaut-serde-jackson")
 ----
 
-The version comes from the `micronaut-graphql-tools-bom` import of the <<quickStart,quick start>>. The client does not bring a JSON codec: it needs Micronaut Serialization with its JSON implementation, and fails the first client that it creates with a `ConfigurationException` when it is missing. The module has no dependency on graphql-java, on the server of the library or on Jackson, and a build check keeps it so.
+The version comes from the `micronaut-graphql-tools-bom` import of the <<quickStart,quick start>>. The client does not bring a JSON codec: it needs Micronaut Serialization with its JSON implementation, and fails the first client that it creates with a `ConfigurationException` when it is missing. The module has no dependency on graphql-java, on the server of the library or on Jackson, and a build check keeps it so. It exposes the JSpecify annotations (`org.jspecify:jspecify`, annotations only) as an API dependency, because the client models that the <<codegen,code generator>> writes use them for nullability.
 
 Two modules are optional. `micronaut-retry` adds `@Retryable` for the <<clientErrorHandling,retries>> of a call, and `micronaut-reactor` adds `Mono` and `Flux` as the return types of a declarative method. A declarative client also needs the annotation processor `micronaut-graphql-tools-processor`, set up as the <<compileTimeSetupClient,build page>> describes, with the directory of the client schema in `micronaut.graphql.tools.processor.client.dirs`.
 

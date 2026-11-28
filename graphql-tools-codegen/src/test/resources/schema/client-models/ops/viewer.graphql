@@ -1,0 +1,10 @@
+query Viewer {
+  viewer {
+    id
+    tags
+  }
+  mine: viewer {
+    name @skip(if: true)
+    id
+  }
+}

@@ -157,6 +157,10 @@ final class VariableTypes {
         }
         List<String> unknown = new ArrayList<>();
         for (JEnumConstant constant : declared.enumConstants()) {
+            // the constant that reads the values this client does not know is never sent: the generated enums have one
+            if (constant.annotations().has(ResultTypes.JSON_ENUM_DEFAULT)) {
+                continue;
+            }
             String name = constant.annotations().stringValue(JSON_PROPERTY, "value").filter(it -> !it.isEmpty()).orElse(constant.name());
             if (!values.contains(name)) {
                 unknown.add(constant.name());

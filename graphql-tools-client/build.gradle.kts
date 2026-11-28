@@ -11,6 +11,8 @@ plugins {
 dependencies {
     api(mn.micronaut.http.client.core)
     api(mnSerde.micronaut.serde.api)
+    // the nullable annotation that the generated client models use by default (#671): an annotation-only jar with no dependencies
+    api(mn.jspecify)
     compileOnly(mn.micronaut.websocket)
     compileOnly(mn.micronaut.retry)
 

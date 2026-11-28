@@ -152,6 +152,7 @@ final class ClientLowering {
         List<Variable> variables = new ArrayList<>();
         for (VariableDefinition variable : operation.getVariableDefinitions()) {
             Origin at = SchemaLoader.origin(variable);
+            lowering.checkField("variable", name, variable.getName(), at);
             String where = "variable $" + variable.getName() + " of the operation '" + name + "' (" + at + ")";
             TypeRef type = shape(variable.getType(), true, (typeName, nullable) -> {
                 reach(typeName);

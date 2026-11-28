@@ -41,12 +41,12 @@ import java.util.TreeSet;
 /**
  * The Java emitter: writes the enums, the object models (as records) and the name classes of the IR with the JavaPoet fork of
  * sourcegen, and one {@code package-info.java} for each package that holds a generated type. Output is Java 17 source, UTF-8,
- * {@code \n} line endings and one newline at the end.
+ * {@code \n} line endings and one newline at the end. The models of a client mode IR are written by {@link ClientEmitter}.
  */
 final class JavaEmitter implements Emitter {
 
+    static final ClassName DEPRECATED = ClassName.get(Deprecated.class);
     private static final String GENERATOR = "io.micronaut.graphql.tools.codegen";
-    private static final ClassName DEPRECATED = ClassName.get(Deprecated.class);
     private static final ClassName STRING = ClassName.get(String.class);
     private static final ClassName INTROSPECTED = ClassName.get("io.micronaut.core.annotation", "Introspected");
     private static final ClassName GRAPHQL_TYPE = ClassName.get("io.micronaut.graphql.tools.annotation", "GraphQLType");
@@ -54,6 +54,9 @@ final class JavaEmitter implements Emitter {
 
     @Override
     public List<GeneratedFile> emit(Ir ir, Options options) {
+        if (options.mode() == Mode.CLIENT) {
+            return new ClientEmitter().emit(ir, options);
+        }
         List<GeneratedFile> files = new ArrayList<>();
         TreeSet<String> packages = new TreeSet<>();
         TreeSet<String> modelPackages = new TreeSet<>();
@@ -62,8 +65,7 @@ final class JavaEmitter implements Emitter {
             files.add(new GeneratedFile(path(names.packageName(), names.simpleName()), enumFile(type, options)));
             packages.add(names.packageName());
         }
-        // the models of a client are result models, which the emitter of the client models writes
-        if (options.modelStyle() == ModelStyle.RECORD && options.mode() == Mode.SERVER) {
+        if (options.modelStyle() == ModelStyle.RECORD) {
             for (ModelType type : ir.models()) {
                 Names names = type.names();
                 files.add(new GeneratedFile(path(names.packageName(), names.simpleName()), recordFile(type, options)));
@@ -82,7 +84,7 @@ final class JavaEmitter implements Emitter {
         return files;
     }
 
-    private static String path(String packageName, String simpleName) {
+    static String path(String packageName, String simpleName) {
         return packageName.replace('.', '/') + "/" + simpleName + ".java";
     }
 
@@ -98,7 +100,7 @@ final class JavaEmitter implements Emitter {
         return write(type.names().packageName(), spec);
     }
 
-    private static String packageInfo(String packageName, boolean holdsModels, Options options) {
+    static String packageInfo(String packageName, boolean holdsModels, Options options) {
         if (holdsModels && options.nullableAnnotation().startsWith(JSPECIFY + ".")) {
             return "@NullMarked\npackage " + packageName + ";\n\nimport " + JSPECIFY + ".NullMarked;\n";
         }
@@ -132,7 +134,7 @@ final class JavaEmitter implements Emitter {
         return write(names.packageName(), spec);
     }
 
-    private static void recordDocumentation(TypeSpec.Builder spec, Docs docs, List<Field> components) {
+    static void recordDocumentation(TypeSpec.Builder spec, Docs docs, List<Field> components) {
         if (docs.description() != null) {
             spec.addJavadoc("$L\n", docs.description());
         }
@@ -175,7 +177,7 @@ final class JavaEmitter implements Emitter {
         return write(nameClass.packageName(), spec);
     }
 
-    private static String write(String packageName, TypeSpec.Builder spec) {
+    static String write(String packageName, TypeSpec.Builder spec) {
         return JavaFile.builder(packageName, spec.build())
                 .indent("    ")
                 .skipJavaLangImports(true)
@@ -183,14 +185,14 @@ final class JavaEmitter implements Emitter {
                 .toString();
     }
 
-    private static void generated(TypeSpec.Builder spec, Options options) {
+    static void generated(TypeSpec.Builder spec, Options options) {
         if (!options.generatedAnnotation().isEmpty()) {
             spec.addAnnotation(AnnotationSpec.builder(ClassName.bestGuess(options.generatedAnnotation()))
                     .addMember("value", "$S", GENERATOR).build());
         }
     }
 
-    private static void documentation(TypeSpec.Builder builder, Docs docs) {
+    static void documentation(TypeSpec.Builder builder, Docs docs) {
         if (docs.description() != null) {
             builder.addJavadoc("$L\n", docs.description());
         }
