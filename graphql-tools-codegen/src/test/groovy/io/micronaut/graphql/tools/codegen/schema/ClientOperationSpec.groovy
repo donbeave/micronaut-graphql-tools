@@ -381,6 +381,74 @@ class ClientOperationSpec extends Specification {
         result.diagnostics()*.code() == [Diagnostic.RESERVED_NAME]
     }
 
+    def "an operation that selects only __typename at the root returns the type name"() {
+        when:
+        def result = build('query Q { __typename }')
+
+        then:
+        result.diagnostics().empty
+        result.ir().operations()[0].payload() == Payload.FIELD
+        result.ir().operations()[0].result() == new TypeRef.Builtin(BuiltinScalar.STRING, false)
+        build('query Q { name: __typename count }').diagnostics().empty
+    }
+
+    def "an introspection field at the root is an error and not a crash"() {
+        when:
+        def result = build('query Q { __schema { queryType { name } } }')
+
+        then:
+        result.diagnostics()*.code() == [Diagnostic.OPERATION_INVALID]
+        result.diagnostics()[0].message().contains('__schema')
+    }
+
+    def "a field below a field that include can remove is removable, although another occurrence of the parent always stays"() {
+        when:
+        def result = build('''
+            query Q($on: Boolean!) {
+              user { id }
+              user @include(if: $on) { age }
+            }
+        ''')
+        def user = model(result, 'QUser')
+
+        then:
+        result.diagnostics().empty
+        field(user, 'id').type() == new TypeRef.Builtin(BuiltinScalar.ID, false)
+        field(user, 'age').type() == new TypeRef.Builtin(BuiltinScalar.INT, true)
+    }
+
+    def "a field that another occurrence of the parent selects without a condition stays present"() {
+        when:
+        def result = build('''
+            query Q($on: Boolean!) {
+              user @include(if: $on) { age }
+              user { age }
+            }
+        ''')
+
+        then:
+        result.diagnostics().empty
+        field(model(result, 'QUser'), 'age').type() == new TypeRef.Builtin(BuiltinScalar.INT, false)
+    }
+
+    def "the fields below a field that every occurrence can remove are present when the field is"() {
+        when:
+        def result = build('query Q($on: Boolean!) { user @include(if: $on) { age } }')
+
+        then:
+        result.diagnostics().empty
+        field(model(result, 'QUser'), 'age').type() == new TypeRef.Builtin(BuiltinScalar.INT, false)
+    }
+
+    def "an operation that fails does not stop the checks of the others"() {
+        when:
+        def result = build('query A { nope } query B($f: Filter) { find(filter: $f) { __typename } }',
+                client().typeMappings([:]).build())
+
+        then:
+        result.diagnostics()*.code() == [Diagnostic.OPERATION_INVALID, Diagnostic.UNMAPPED_SCALAR]
+    }
+
     def "server mode ignores the operation documents"() {
         when:
         def result = IrBuilder.fromSources([new SchemaSource('schema.graphqls', SCHEMA)],

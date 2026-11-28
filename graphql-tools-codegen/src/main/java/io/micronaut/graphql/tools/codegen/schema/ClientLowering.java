@@ -83,6 +83,8 @@ final class ClientLowering {
 
     private static final String SKIP = "skip";
     private static final String INCLUDE = "include";
+    private static final String SCHEMA_FIELD = "__schema";
+    private static final String TYPE_FIELD = "__type";
     private static final String OTHER = "Other";
     private static final String DATA = "Data";
     private static final String VARIABLES = "Variables";
@@ -112,7 +114,6 @@ final class ClientLowering {
     }
 
     Result lower(OperationDocuments.Parsed parsed) {
-        int before = diagnostics.size();
         ClientSchema.Built built = ClientSchema.build(schema);
         if (built.schema() == null) {
             diagnostics.add(built.diagnostic());
@@ -126,9 +127,7 @@ final class ClientLowering {
                 assembled.put(operation, one);
             }
         }
-        if (diagnostics.size() > before) {
-            return result();
-        }
+        // an operation that failed does not stop the checks of the others: the IR is dropped when a diagnostic is an error
         assembled.forEach((operation, one) -> one.fragments().forEach(canonical::putIfAbsent));
         assembled.forEach(this::operation);
         closeInputs();
@@ -163,7 +162,16 @@ final class ClientLowering {
         }
         String root = rootType(kind);
         io.micronaut.graphql.tools.codegen.ir.client.SelectionSet selection = selection(assembled.operation().getSelectionSet(), root, origin);
-        Flat flat = flatten(List.of(assembled.operation().getSelectionSet()), root);
+        Flat flat = flatten(List.of(new Sub(assembled.operation().getSelectionSet(), false)), root);
+        for (Group group : flat.groups.values()) {
+            if (group.fieldName.equals(SCHEMA_FIELD) || group.fieldName.equals(TYPE_FIELD)) {
+                diagnostics.add(new Diagnostic(Diagnostic.Severity.ERROR, Diagnostic.OPERATION_INVALID, "The operation '" + name
+                        + "' selects the introspection field " + group.fieldName + " at " + originOf(group.nodes.get(0), origin)
+                        + ", and the generator makes no result model of an introspection query. Send it with the low-level client.",
+                        null, origin));
+                return;
+            }
+        }
         TypeRef result;
         if (assembled.payload() == Payload.DATA) {
             Names data = named(root, base + DATA);
@@ -182,6 +190,10 @@ final class ClientLowering {
     // an operation that selects one root field returns that field's value
     private TypeRef rootField(String base, String root, Group group, Origin origin) {
         FieldDefinition definition = definition(root, group.fieldName);
+        if (definition == null) {
+            // __typename: the name of the root type
+            return fieldType(root, group, null, null);
+        }
         boolean composite = composite(definition.getType());
         Names child = composite ? named(baseName(definition.getType()), base + capitalize(group.key)) : null;
         TypeRef type = fieldType(root, group, definition, child);
@@ -427,7 +439,7 @@ final class ClientLowering {
         Names names = node.names();
         String condition = node.typeCondition();
         register(names, "interface of the fragment '" + name + "'", node.origin());
-        Flat flat = flatten(List.of(fragment.getSelectionSet()), condition);
+        Flat flat = flatten(List.of(new Sub(fragment.getSelectionSet(), false)), condition);
         Map<String, Entry> keys = new LinkedHashMap<>();
         List<io.micronaut.graphql.tools.codegen.ir.Field> fields = new ArrayList<>();
         List<Pending> pending = new ArrayList<>();
@@ -454,10 +466,10 @@ final class ClientLowering {
 
     // ----- walking a selection
 
-    private Flat flatten(List<SelectionSet> sets, String scope) {
+    private Flat flatten(List<Sub> sets, String scope) {
         Flat flat = new Flat();
-        for (SelectionSet set : sets) {
-            walk(set, scope, false, flat, new HashSet<>());
+        for (Sub sub : sets) {
+            walk(sub.set(), scope, sub.conditional(), flat, new HashSet<>());
         }
         return flat;
     }
@@ -466,10 +478,20 @@ final class ClientLowering {
         for (Selection<?> selection : set.getSelections()) {
             if (selection instanceof Field field) {
                 Group group = flat.groups.computeIfAbsent(field.getResultKey(), key -> new Group(key, field.getName()));
-                if (group.nodes.stream().noneMatch(node -> node == field)) {
-                    group.nodes.add(field);
+                boolean removable = conditional || conditional(field.getDirectives());
+                int known = -1;
+                for (int i = 0; i < group.nodes.size(); i++) {
+                    if (group.nodes.get(i) == field) {
+                        known = i;
+                    }
                 }
-                group.conditional &= conditional || conditional(field.getDirectives());
+                if (known < 0) {
+                    group.nodes.add(field);
+                    group.removable.add(removable);
+                } else {
+                    group.removable.set(known, group.removable.get(known) && removable);
+                }
+                group.conditional &= removable;
             } else if (selection instanceof InlineFragment fragment) {
                 String condition = fragment.getTypeCondition() == null ? null : fragment.getTypeCondition().getName();
                 if (condition == null || applies(condition, scope)) {
@@ -490,10 +512,10 @@ final class ClientLowering {
     }
 
     // the object types of an abstract selection that a type condition singles out, in schema order
-    private List<String> variants(String scope, List<SelectionSet> sets) {
+    private List<String> variants(String scope, List<Sub> sets) {
         Set<String> conditions = new LinkedHashSet<>();
-        for (SelectionSet set : sets) {
-            conditions(set, scope, conditions, new HashSet<>());
+        for (Sub sub : sets) {
+            conditions(sub.set(), scope, conditions, new HashSet<>());
         }
         List<String> variants = new ArrayList<>();
         for (String type : possible(scope)) {
@@ -523,11 +545,14 @@ final class ClientLowering {
         }
     }
 
-    private static List<SelectionSet> selections(Group group) {
-        List<SelectionSet> sets = new ArrayList<>();
-        for (Field field : group.nodes) {
-            if (field.getSelectionSet() != null) {
-                sets.add(field.getSelectionSet());
+    // the selections below a response key. When every occurrence of the key can be removed, the object below exists exactly when its
+    // fields do, so they are present; when another occurrence always stays, the fields of an occurrence that can be removed can be
+    // missing from the object
+    private static List<Sub> selections(Group group) {
+        List<Sub> sets = new ArrayList<>();
+        for (int i = 0; i < group.nodes.size(); i++) {
+            if (group.nodes.get(i).getSelectionSet() != null) {
+                sets.add(new Sub(group.nodes.get(i).getSelectionSet(), !group.conditional && group.removable.get(i)));
             }
         }
         return sets;
@@ -707,13 +732,19 @@ final class ClientLowering {
     private record Interface(Names names, Map<String, Entry> keys) {
     }
 
-    private record Pending(Names names, String path, String typeName, List<SelectionSet> sets, Origin origin) {
+    private record Pending(Names names, String path, String typeName, List<Sub> sets, Origin origin) {
+    }
+
+    // a selection set and whether skip or include can remove it from the response
+    private record Sub(SelectionSet set, boolean conditional) {
     }
 
     private static final class Group {
         final String key;
         final String fieldName;
         final List<Field> nodes = new ArrayList<>();
+        // for each node, whether skip or include can remove it, on the field or on a fragment around it
+        final List<Boolean> removable = new ArrayList<>();
         boolean conditional = true;
 
         Group(String key, String fieldName) {
