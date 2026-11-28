@@ -11,59 +11,59 @@ enum Color -> com.example.model.GqlColorDto @ model.graphqls:43:1
     description "Cool"
   value YELLOW @ a-extensions.graphqls:8:3
 input ProductFilter -> com.example.model.GqlProductFilterDto @ model.graphqls:51:1
-  field minStars: Int! = 3 @ model.graphqls:52:3
-  field color: Color = RED @ model.graphqls:53:3
-  field tags: [String!] = ["new", "sale"] @ model.graphqls:54:3
-  field text: String @ a-extensions.graphqls:14:3
+  field minStars: Int! = 3 omittable @ model.graphqls:52:3
+  field color: Color -> GqlColorDto = RED tri-state @ model.graphqls:53:3
+  field tags: [String!] = ["new", "sale"] tri-state @ model.graphqls:54:3
+  field text: String tri-state @ a-extensions.graphqls:14:3
 input ReviewInput -> com.example.model.GqlReviewInputDto @ model.graphqls:57:1
-  field productId: ID! @ model.graphqls:58:3
-  field stars: Int! @ model.graphqls:59:3
-  field body: String @ model.graphqls:60:3
+  field productId: ID! required @ model.graphqls:58:3
+  field stars: Int! required @ model.graphqls:59:3
+  field body: String tri-state @ model.graphqls:60:3
 interface Node -> com.example.model.GqlNodeDto sealed @ model.graphqls:6:1
   description "An object with an identifier."
-  members Resource, Product, Review
+  members Resource -> GqlResourceDto, Product -> GqlProductDto, Review -> GqlReviewDto
   field id: ID! @ model.graphqls:8:3
 interface Resource -> com.example.model.GqlResourceDto sealed @ model.graphqls:11:1
   description "A resource that can be fetched."
-  implements Node
-  members Product
+  implements Node -> GqlNodeDto
+  members Product -> GqlProductDto
   field id: ID! @ model.graphqls:13:3
   field url: String @ model.graphqls:14:3
 object Review -> com.example.model.GqlReviewDto open @ model.graphqls:30:1
-  implements Node
+  implements Node -> GqlNodeDto
   field id: ID! @ model.graphqls:31:3
   field stars: Int! @ model.graphqls:32:3
   field body: String @ model.graphqls:33:3
 union SearchResult -> com.example.model.GqlSearchResultDto open @ model.graphqls:41:1
-  members Product, Review
+  members Product -> GqlProductDto, Review -> GqlReviewDto
 model Product -> com.example.model.GqlProductDto @ model.graphqls:17:1
   description "An item that is for sale."
   @entity(table: "products", cached: "true")
-  implements Node, Resource
-  memberOf SearchResult
+  implements Node -> GqlNodeDto, Resource -> GqlResourceDto
+  memberOf SearchResult -> GqlSearchResultDto
   field id: ID! @ model.graphqls:21:3
   field url: String @ model.graphqls:22:3
   field name: String! @ model.graphqls:23:3
   field stars: Float! @ model.graphqls:24:3
-  field reviews: [Review!]! @ model.graphqls:25:3
+  field reviews: [Review -> GqlReviewDto!]! @ model.graphqls:25:3
     argument first: Int = 10 @ model.graphqls:25:11
     argument after: String @ model.graphqls:25:28
-  field color: Color @ model.graphqls:26:3
+  field color: Color -> GqlColorDto @ model.graphqls:26:3
   field oldName: String @ model.graphqls:27:3
     deprecated "Use name."
   field releasedAt: mapped(java.time.LocalDate) @ a-extensions.graphqls:2:3
     description "When the product came out."
   field price: mapped(java.lang.String) @ a-extensions.graphqls:4:3
 contract Query.node -> com.example.api.QueryNode : io.micronaut.graphql.tools.resolver.QueryResolver @ operations.graphqls:2:3
-  method node returns Node wrapper suspend @ operations.graphqls:2:3
+  method node returns Node -> GqlNodeDto wrapper suspend @ operations.graphqls:2:3
     description "Looks up a node."
     argument id: ID! @ operations.graphqls:3:8
 contract Query.products -> com.example.api.QueryProducts : io.micronaut.graphql.tools.resolver.QueryResolver @ operations.graphqls:4:3
-  method products returns [Product!]! wrapper suspend @ operations.graphqls:4:3
-    argument filter: ProductFilter @ operations.graphqls:4:12
+  method products returns [Product -> GqlProductDto!]! wrapper suspend @ operations.graphqls:4:3
+    argument filter: ProductFilter -> GqlProductFilterDto @ operations.graphqls:4:12
     argument first: Int = 10 @ operations.graphqls:4:35
 contract Query.search -> com.example.api.QuerySearch : io.micronaut.graphql.tools.resolver.QueryResolver @ operations.graphqls:5:3
-  method search returns [SearchResult!]! wrapper suspend @ operations.graphqls:5:3
+  method search returns [SearchResult -> GqlSearchResultDto!]! wrapper suspend @ operations.graphqls:5:3
     argument text: String! @ operations.graphqls:5:10
 contract Query.oldQuery -> com.example.api.QueryOldQuery : io.micronaut.graphql.tools.resolver.QueryResolver @ operations.graphqls:6:3
   method oldQuery returns String wrapper suspend @ operations.graphqls:6:3
@@ -71,10 +71,10 @@ contract Query.oldQuery -> com.example.api.QueryOldQuery : io.micronaut.graphql.
 contract Query.categories -> com.example.api.QueryCategories : io.micronaut.graphql.tools.resolver.QueryResolver @ a-extensions.graphqls:18:3
   method categories returns [mapped(com.example.ext.Category)!]! wrapper suspend @ a-extensions.graphqls:18:3
 contract Mutation.addReview -> com.example.api.MutationAddReview : io.micronaut.graphql.tools.resolver.MutationResolver @ operations.graphqls:10:3
-  method addReview returns Review! wrapper suspend @ operations.graphqls:10:3
-    argument input: ReviewInput! @ operations.graphqls:10:13
+  method addReview returns Review -> GqlReviewDto! wrapper suspend @ operations.graphqls:10:3
+    argument input: ReviewInput -> GqlReviewInputDto! @ operations.graphqls:10:13
 contract Subscription.reviewAdded -> com.example.api.SubscriptionReviewAdded : io.micronaut.graphql.tools.resolver.SubscriptionResolver @ operations.graphqls:14:3
-  method reviewAdded returns Review! wrapper kotlinx.coroutines.flow.Flow<T> @ operations.graphqls:14:3
+  method reviewAdded returns Review -> GqlReviewDto! wrapper kotlinx.coroutines.flow.Flow<T> @ operations.graphqls:14:3
     argument productId: ID! @ operations.graphqls:14:15
 names com.example.names.GqlNodeDtoNames
   constant TYPE = Node @ model.graphqls:6:1

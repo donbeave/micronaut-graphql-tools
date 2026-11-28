@@ -107,6 +107,39 @@ public record Diagnostic(Severity severity, String code, String message, String 
     /** The code of a problem with the type mappings that a dependency carries. A warning. */
     public static final String DEPENDENCY_TYPE_MAPPINGS = "dependency-type-mappings";
 
+    /** The code of an operation document that does not exist or cannot be read. */
+    public static final String OPERATION_FILE_UNREADABLE = "operation-file-unreadable";
+
+    /** The code of an operation document that is not valid GraphQL syntax. */
+    public static final String OPERATION_SYNTAX_ERROR = "operation-syntax-error";
+
+    /** The code of client mode without an operation: no document is given, none matches the options, or none defines an operation. */
+    public static final String NO_OPERATION_DOCUMENTS = "no-operation-documents";
+
+    /** The code of an operation name that two documents, or one document, define. */
+    public static final String DUPLICATE_OPERATION = "duplicate-operation";
+
+    /** The code of an operation without a name: the generated request class is named by the operation. */
+    public static final String ANONYMOUS_OPERATION = "anonymous-operation";
+
+    /** The code of a fragment name that two places define. */
+    public static final String DUPLICATE_FRAGMENT = "duplicate-fragment";
+
+    /** The code of an operation whose assembled document the schema does not accept, or whose fragment is defined nowhere. */
+    public static final String OPERATION_INVALID = "operation-invalid";
+
+    /** The code of a schema that cannot be built for the validation of the operations. */
+    public static final String CLIENT_SCHEMA_INVALID = "client-schema-invalid";
+
+    /** The code of a field aliased to {@code __typename} in a document, which the injection of the type name reserves. */
+    public static final String RESERVED_TYPENAME_ALIAS = "reserved-typename-alias";
+
+    /** The code of an assembled document that is larger than a string constant of a class file can hold. */
+    public static final String DOCUMENT_TOO_LARGE = "document-too-large";
+
+    /** The code of a result model that cannot implement the interface of a fragment it spreads, so it does not. A warning. */
+    public static final String FRAGMENT_INTERFACE_SKIPPED = "fragment-interface-skipped";
+
     /**
      * Creates a diagnostic.
      */

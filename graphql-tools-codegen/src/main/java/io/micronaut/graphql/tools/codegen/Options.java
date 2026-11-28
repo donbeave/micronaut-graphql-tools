@@ -77,6 +77,10 @@ import java.util.Objects;
  * @param excludes               the globs that remove schema files from the selection. Default empty.
  * @param commentsAsDescriptions whether {@code #} comments before a definition are its description. Default {@code false}; it must
  *                               match the runtime setting.
+ * @param operationIncludes      the globs that select the operation documents of client mode, relative to the directory that holds
+ *                               them. Default {@code **}{@code /*.graphql}. It applies to a directory only; documents that the caller
+ *                               gives as files or as text are used as given.
+ * @param operationExcludes      the globs that remove operation documents from the selection. Default empty.
  */
 public record Options(
         Language language,
@@ -100,7 +104,9 @@ public record Options(
         NameConstants nameConstants,
         List<String> includes,
         List<String> excludes,
-        boolean commentsAsDescriptions) {
+        boolean commentsAsDescriptions,
+        List<String> operationIncludes,
+        List<String> operationExcludes) {
 
     /** The default of {@code generatedAnnotation}. */
     public static final String DEFAULT_GENERATED_ANNOTATION = "javax.annotation.processing.Generated";
@@ -119,6 +125,9 @@ public record Options(
 
     /** The default of {@code includes}. */
     public static final List<String> DEFAULT_INCLUDES = List.of("**/*.graphqls", "**/*.graphql");
+
+    /** The default of {@code operationIncludes}. */
+    public static final List<String> DEFAULT_OPERATION_INCLUDES = List.of("**/*.graphql");
 
     /**
      * Creates the options, keeping immutable copies of the lists and the map.
@@ -141,6 +150,8 @@ public record Options(
         interfaceTypes = List.copyOf(interfaceTypes);
         includes = List.copyOf(includes);
         excludes = List.copyOf(excludes);
+        operationIncludes = List.copyOf(operationIncludes);
+        operationExcludes = List.copyOf(operationExcludes);
         typeMappings = Collections.unmodifiableMap(new LinkedHashMap<>(typeMappings));
         typeMappings.forEach((key, value) -> {
             Objects.requireNonNull(key, "typeMappings key");
@@ -181,7 +192,8 @@ public record Options(
                 .contractNameTemplate(contractNameTemplate).kotlinSuspend(kotlinSuspend)
                 .subscriptionReturnType(subscriptionReturnType).typeMappings(typeMappings)
                 .typeMappingsFromDependencies(typeMappingsFromDependencies).nameConstants(nameConstants)
-                .includes(includes).excludes(excludes).commentsAsDescriptions(commentsAsDescriptions);
+                .includes(includes).excludes(excludes).commentsAsDescriptions(commentsAsDescriptions)
+                .operationIncludes(operationIncludes).operationExcludes(operationExcludes);
     }
 
     /**
@@ -269,6 +281,8 @@ public record Options(
         private List<String> includes = DEFAULT_INCLUDES;
         private List<String> excludes = List.of();
         private boolean commentsAsDescriptions;
+        private List<String> operationIncludes = DEFAULT_OPERATION_INCLUDES;
+        private List<String> operationExcludes = List.of();
 
         Builder() {
         }
@@ -516,6 +530,28 @@ public record Options(
         }
 
         /**
+         * Sets {@code operationIncludes}.
+         *
+         * @param value the value
+         * @return this builder
+         */
+        public Builder operationIncludes(List<String> value) {
+            this.operationIncludes = List.copyOf(value);
+            return this;
+        }
+
+        /**
+         * Sets {@code operationExcludes}.
+         *
+         * @param value the value
+         * @return this builder
+         */
+        public Builder operationExcludes(List<String> value) {
+            this.operationExcludes = List.copyOf(value);
+            return this;
+        }
+
+        /**
          * Builds the options.
          *
          * @return the options
@@ -526,7 +562,7 @@ public record Options(
                     modelStyle, interfaceTypes, typeNamePrefix, typeNameSuffix, nullable, rootContracts,
                     contractNameTemplate, kotlinSuspend, subscriptionReturnType, typeMappings,
                     typeMappingsFromDependencies, nameConstants,
-                    includes, excludes, commentsAsDescriptions);
+                    includes, excludes, commentsAsDescriptions, operationIncludes, operationExcludes);
         }
     }
 }

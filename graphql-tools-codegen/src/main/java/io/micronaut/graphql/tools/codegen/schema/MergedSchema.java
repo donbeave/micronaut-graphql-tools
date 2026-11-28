@@ -20,6 +20,7 @@ import graphql.language.EnumValueDefinition;
 import graphql.language.FieldDefinition;
 import graphql.language.InputValueDefinition;
 import graphql.language.Node;
+import graphql.language.SDLDefinition;
 import graphql.language.TypeDefinition;
 import io.micronaut.graphql.tools.codegen.Origin;
 import io.micronaut.graphql.tools.codegen.ir.shared.Operation;
@@ -41,6 +42,9 @@ final class MergedSchema {
 
     final Map<String, MergedType> types = new LinkedHashMap<>();
     final Map<Operation, Root> roots = new EnumMap<>(Operation.class);
+    // every schema definition, base and extension, in the order the files were read: client mode builds a schema from them to validate
+    // the operations
+    final List<SDLDefinition<?>> definitions = new ArrayList<>();
 
     record Root(String typeName, Origin origin) {
     }

@@ -32,6 +32,7 @@ import graphql.language.UnionTypeDefinition;
 import io.micronaut.graphql.tools.codegen.Diagnostic;
 import io.micronaut.graphql.tools.codegen.schema.MergedSchema.MergedType.Kind;
 import io.micronaut.graphql.tools.codegen.schema.MergedSchema.MergedType;
+import io.micronaut.graphql.tools.codegen.Mode;
 import io.micronaut.graphql.tools.codegen.NameConstants;
 import io.micronaut.graphql.tools.codegen.Options;
 import io.micronaut.graphql.tools.codegen.Origin;
@@ -55,6 +56,7 @@ import io.micronaut.graphql.tools.codegen.ir.shared.Coordinate;
 import io.micronaut.graphql.tools.codegen.ir.shared.Docs;
 import io.micronaut.graphql.tools.codegen.ir.shared.Names;
 import io.micronaut.graphql.tools.codegen.ir.shared.Operation;
+import io.micronaut.graphql.tools.codegen.ir.shared.Presence;
 import io.micronaut.graphql.tools.codegen.ir.shared.TypeRef;
 import io.micronaut.graphql.tools.codegen.ir.shared.Wrapper;
 
@@ -107,8 +109,12 @@ final class Lowering {
     private final List<Unit> units = new ArrayList<>();
     private final Set<String> usedMappings = new HashSet<>();
 
-    private Lowering(Options options, MergedSchema schema, Map<String, String> inherited, List<Diagnostic> diagnostics) {
+    private final OperationDocuments.Parsed operations;
+
+    private Lowering(Options options, MergedSchema schema, Map<String, String> inherited, OperationDocuments.Parsed operations,
+                     List<Diagnostic> diagnostics) {
         this.options = options;
+        this.operations = operations;
         this.inherited = inherited;
         this.schema = schema;
         this.diagnostics = diagnostics;
@@ -116,14 +122,18 @@ final class Lowering {
         this.selectedObjects = new HashSet<>(options.interfaceTypes());
     }
 
-    static Ir lower(Options options, MergedSchema schema, Map<String, String> inherited, List<Diagnostic> diagnostics) {
-        return new Lowering(options, schema, inherited, diagnostics).lower();
+    static Ir lower(Options options, MergedSchema schema, Map<String, String> inherited, OperationDocuments.Parsed operations,
+                    List<Diagnostic> diagnostics) {
+        return new Lowering(options, schema, inherited, operations, diagnostics).lower();
     }
 
     private Ir lower() {
         resolveRoots();
         nameTypes();
         relate();
+        if (options.mode() == Mode.CLIENT) {
+            return client();
+        }
         List<ScalarType> scalars = new ArrayList<>();
         List<EnumType> enums = new ArrayList<>();
         List<InputType> inputs = new ArrayList<>();
@@ -144,7 +154,53 @@ final class Lowering {
         List<NameClass> nameClasses = nameClasses();
         collisions();
         checkOptionEntries();
-        return new Ir(enums, inputs, models, abstractTypes, scalars, contracts, nameClasses);
+        return new Ir(enums, inputs, models, abstractTypes, scalars, contracts, nameClasses, List.of(), List.of());
+    }
+
+    // client mode: the operations, the result models that they select, and the enums, inputs and scalars that they reach
+    private Ir client() {
+        ClientLowering.Result result = new ClientLowering(this, schema, diagnostics).lower(operations);
+        List<ScalarType> scalars = new ArrayList<>();
+        List<EnumType> enums = new ArrayList<>();
+        List<InputType> inputs = new ArrayList<>();
+        for (MergedType type : schema.types.values()) {
+            if (!result.reached().contains(type.name)) {
+                continue;
+            }
+            switch (type.kind) {
+                case SCALAR -> scalar(type, scalars);
+                case ENUM -> enumType(type, enums);
+                case INPUT -> inputType(type, inputs);
+                default -> {
+                }
+            }
+        }
+        collisions();
+        checkOptionEntries();
+        return new Ir(enums, inputs, result.models(), result.abstractTypes(), scalars, List.of(), List.of(), result.operations(),
+                result.fragments());
+    }
+
+    Options options() {
+        return options;
+    }
+
+    NodeText text() {
+        return text;
+    }
+
+    Names namesOf(String sdlName) {
+        return names.get(sdlName);
+    }
+
+    // the name of a generated type of a client operation: a result model, a request class or the variables of an operation
+    void unit(String packageName, String simpleName, String description, Origin origin) {
+        String problem = ReservedNames.typeNameProblem(options.language(), simpleName);
+        if (problem != null) {
+            error(Diagnostic.RESERVED_NAME, "The " + description + " cannot be generated as the class " + simpleName + ": it is a "
+                    + problem + ". Rename the operation or the field, or set typeNamePrefix or typeNameSuffix.", origin);
+        }
+        units.add(new Unit(packageName, simpleName, description, origin));
     }
 
     private boolean isRoot(MergedType type) {
@@ -169,7 +225,7 @@ final class Lowering {
         return mapping(name) != null;
     }
 
-    private void error(String code, String message, Origin origin) {
+    void error(String code, String message, Origin origin) {
         diagnostics.add(new Diagnostic(Diagnostic.Severity.ERROR, code, message, null, origin));
     }
 
@@ -387,9 +443,9 @@ final class Lowering {
         for (InputValueDefinition field : type.inputFields) {
             Origin origin = SchemaLoader.origin(field);
             checkField("field", type.name, field.getName(), origin);
-            fields.add(new InputField(field.getName(), field.getName(),
-                    ref(field.getType(), type.name + "." + field.getName(), "field", origin),
-                    NodeText.value(field.getDefaultValue()), text.docs(field, field.getDescription(), field.getDirectives()),
+            TypeRef fieldType = ref(field.getType(), type.name + "." + field.getName(), "field", origin);
+            fields.add(new InputField(field.getName(), field.getName(), fieldType, NodeText.value(field.getDefaultValue()),
+                    Presence.of(fieldType, field.getDefaultValue() != null), text.docs(field, field.getDescription(), field.getDirectives()),
                     text.directives(field.getDirectives()), origin));
         }
         register(type, "input type");
@@ -742,7 +798,7 @@ final class Lowering {
         }
     }
 
-    private void checkField(String what, String owner, String name, Origin origin) {
+    void checkField(String what, String owner, String name, Origin origin) {
         checkReserved(what, owner + "." + name, name, origin);
         if (OBJECT_METHODS.contains(name)) {
             error(Diagnostic.OBJECT_METHOD_NAME, "The " + what + " '" + owner + "." + name + "' (" + origin + ") clashes with a method of"
@@ -763,7 +819,7 @@ final class Lowering {
         return ref(type, true, mappingKey, where, origin);
     }
 
-    private TypeRef ref(Type<?> type, boolean nullable, String mappingKey, String where, Origin origin) {
+    TypeRef ref(Type<?> type, boolean nullable, String mappingKey, String where, Origin origin) {
         if (type instanceof NonNullType nonNull) {
             return ref(nonNull.getType(), false, mappingKey, where, origin);
         } else if (type instanceof ListType list) {
