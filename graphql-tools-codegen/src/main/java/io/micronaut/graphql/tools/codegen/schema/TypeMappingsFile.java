@@ -73,11 +73,14 @@ public final class TypeMappingsFile {
         for (InputType type : ir.inputs()) {
             put(mappings, type.names());
         }
-        for (ModelType type : ir.models()) {
-            put(mappings, type.names());
-        }
-        for (AbstractType type : ir.abstractTypes()) {
-            put(mappings, type.names());
+        // the models of a client are the results of its operations, not the class of a GraphQL type
+        if (ir.operations().isEmpty()) {
+            for (ModelType type : ir.models()) {
+                put(mappings, type.names());
+            }
+            for (AbstractType type : ir.abstractTypes()) {
+                put(mappings, type.names());
+            }
         }
         for (ScalarType type : ir.scalars()) {
             mappings.put(type.names().sdlName(), type.className());

@@ -86,6 +86,8 @@ class CodegenSpecSpec extends Specification {
         spec.includes.set(['**/*.graphqls'])
         spec.excludes.set(['**/internal/**'])
         spec.commentsAsDescriptions.set(true)
+        spec.operationIncludes.set(['ops/**/*.graphql'])
+        spec.operationExcludes.set(['**/draft/**'])
 
         when:
         def result = Options.fromMap(spec.toOptionMap())
@@ -100,7 +102,8 @@ class CodegenSpecSpec extends Specification {
                 .contractNameTemplate('{Field}Contract').kotlinSuspend(true)
                 .subscriptionReturnType('kotlinx.coroutines.flow.Flow')
                 .typeMappings([DateTime: 'java.time.Instant', Url: 'java.net.URI']).nameConstants(NameConstants.TYPES)
-                .includes(['**/*.graphqls']).excludes(['**/internal/**']).commentsAsDescriptions(true).build()
+                .includes(['**/*.graphqls']).excludes(['**/internal/**']).commentsAsDescriptions(true)
+                .operationIncludes(['ops/**/*.graphql']).operationExcludes(['**/draft/**']).build()
     }
 
     def "an empty list option is the default of the generator"() {

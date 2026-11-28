@@ -11,14 +11,14 @@ enum Color -> com.example.model.Color @ model.graphqls:43:1
     description "Cool"
   value YELLOW @ a-extensions.graphqls:8:3
 input ProductFilter -> com.example.model.ProductFilter @ model.graphqls:51:1
-  field minStars: Int! = 3 @ model.graphqls:52:3
-  field color: Color = RED @ model.graphqls:53:3
-  field tags: [String!] = ["new", "sale"] @ model.graphqls:54:3
-  field text: String @ a-extensions.graphqls:14:3
+  field minStars: Int! = 3 omittable @ model.graphqls:52:3
+  field color: Color = RED tri-state @ model.graphqls:53:3
+  field tags: [String!] = ["new", "sale"] tri-state @ model.graphqls:54:3
+  field text: String tri-state @ a-extensions.graphqls:14:3
 input ReviewInput -> com.example.model.ReviewInput @ model.graphqls:57:1
-  field productId: ID! @ model.graphqls:58:3
-  field stars: Int! @ model.graphqls:59:3
-  field body: String @ model.graphqls:60:3
+  field productId: ID! required @ model.graphqls:58:3
+  field stars: Int! required @ model.graphqls:59:3
+  field body: String tri-state @ model.graphqls:60:3
 interface Node -> com.example.model.Node sealed @ model.graphqls:6:1
   description "An object with an identifier."
   members Resource, Product, Review

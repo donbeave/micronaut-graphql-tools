@@ -1,0 +1,174 @@
+scalar DateTime -> java.time.OffsetDateTime @ schema.graphqls:1:1
+enum Role -> com.example.model.Role @ schema.graphqls:42:1
+  value ADMIN @ schema.graphqls:43:3
+  value MEMBER @ schema.graphqls:44:3
+input PostFilter -> com.example.model.PostFilter @ schema.graphqls:47:1
+  field text: String tri-state @ schema.graphqls:48:3
+  field minLikes: Int! = 0 omittable @ schema.graphqls:49:3
+  field role: Role tri-state @ schema.graphqls:50:3
+  field since: mapped(java.time.OffsetDateTime) tri-state @ schema.graphqls:51:3
+  field tags: [String!] tri-state @ schema.graphqls:52:3
+interface Node -> com.example.model.FindNodeNode sealed @ ops/node.graphql:1:1
+  members Folder -> FindNodeNodeFolder, Node -> FindNodeNodeOther
+  field __typename: String! @ ops/node.graphql:1:1
+  field id: ID! @ ops/node.graphql:3:5
+interface FolderBits -> com.example.model.FolderBits open @ ops/node.graphql:8:1
+  field name: String! @ ops/node.graphql:9:3
+  field size: Int! @ ops/node.graphql:10:3
+  field children: [Node -> FolderBitsChildren!]! @ ops/node.graphql:11:3
+interface Node -> com.example.model.FolderBitsChildren sealed @ ops/node.graphql:11:3
+  members Node -> FolderBitsChildrenOther
+  field __typename: String! @ ops/node.graphql:11:3
+  field id: ID! @ ops/node.graphql:12:5
+union SearchResult -> com.example.model.SearchSearch sealed @ ops/search.graphql:1:1
+  members Folder -> SearchSearchFolder, File -> SearchSearchFile, User -> SearchSearchUser, SearchResult -> SearchSearchOther
+  field __typename: String! @ ops/search.graphql:1:1
+interface UserFields -> com.example.model.UserFields open @ ops/user.graphql:12:1
+  field id: ID! @ ops/user.graphql:13:3
+  field name: String! @ ops/user.graphql:14:3
+  field role: Role! @ ops/user.graphql:15:3
+model Node -> com.example.model.FolderBitsChildrenOther @ ops/node.graphql:11:3
+  implements Node -> FolderBitsChildren
+  field __typename: String! @ ops/node.graphql:11:3
+  field id: ID! @ ops/node.graphql:12:5
+model Folder -> com.example.model.FindNodeNodeFolder @ ops/node.graphql:1:1
+  implements Node -> FindNodeNode, FolderBits
+  field __typename: String! @ ops/node.graphql:1:1
+  field id: ID! @ ops/node.graphql:3:5
+  field name: String! @ ops/node.graphql:9:3
+  field size: Int! @ ops/node.graphql:10:3
+  field children: [Node -> FolderBitsChildren!]! @ ops/node.graphql:11:3
+model Node -> com.example.model.FindNodeNodeOther @ ops/node.graphql:1:1
+  implements Node -> FindNodeNode
+  field __typename: String! @ ops/node.graphql:1:1
+  field id: ID! @ ops/node.graphql:3:5
+model Post -> com.example.model.CreatePostCreatePost @ ops/post.graphql:1:1
+  field id: ID! @ ops/post.graphql:3:5
+  field title: String! @ ops/post.graphql:4:5
+model Post -> com.example.model.PostAddedPostAdded @ ops/post.graphql:8:1
+  field id: ID! @ ops/post.graphql:10:5
+  field likes: Int @ ops/post.graphql:11:5
+    @skip(if: "false")
+model Folder -> com.example.model.SearchSearchFolder @ ops/search.graphql:1:1
+  memberOf SearchResult -> SearchSearch
+  field __typename: String! @ ops/search.graphql:1:1
+  field id: ID! @ ops/search.graphql:4:7
+  field name: String! @ ops/search.graphql:5:7
+  field createdAt: mapped(java.time.OffsetDateTime)! @ ops/search.graphql:6:7
+model File -> com.example.model.SearchSearchFile @ ops/search.graphql:1:1
+  memberOf SearchResult -> SearchSearch
+  field __typename: String! @ ops/search.graphql:1:1
+  field id: ID! @ ops/search.graphql:9:7
+  field bytes: Int! @ ops/search.graphql:10:7
+model User -> com.example.model.SearchSearchUser @ ops/search.graphql:1:1
+  memberOf SearchResult -> SearchSearch
+  field __typename: String! @ ops/search.graphql:1:1
+  field id: ID! @ ops/search.graphql:13:7
+model SearchResult -> com.example.model.SearchSearchOther @ ops/search.graphql:1:1
+  memberOf SearchResult -> SearchSearch
+  field __typename: String! @ ops/search.graphql:1:1
+model User -> com.example.model.GetUserUser @ ops/user.graphql:1:1
+  implements UserFields
+  field id: ID! @ ops/user.graphql:13:3
+  field name: String! @ ops/user.graphql:14:3
+  field role: Role! @ ops/user.graphql:15:3
+  field posts: [Post -> GetUserUserPosts!] @ ops/user.graphql:4:5
+    @include(if: "$withPosts")
+model Post -> com.example.model.GetUserUserPosts @ ops/user.graphql:4:5
+  field id: ID! @ ops/user.graphql:5:7
+  field title: String! @ ops/user.graphql:6:7
+  field likes: Int! @ ops/user.graphql:7:7
+model Query -> com.example.model.ViewerData @ ops/viewer.graphql:1:1
+  field viewer: User -> ViewerViewer! @ ops/viewer.graphql:2:3
+  field viewer -> mine: User -> ViewerMine! @ ops/viewer.graphql:6:3
+model User -> com.example.model.ViewerViewer @ ops/viewer.graphql:2:3
+  field id: ID! @ ops/viewer.graphql:3:5
+  field tags: [String!]! @ ops/viewer.graphql:4:5
+model User -> com.example.model.ViewerMine @ ops/viewer.graphql:6:3
+  field name: String @ ops/viewer.graphql:7:5
+    @skip(if: "true")
+  field id: ID! @ ops/viewer.graphql:8:5
+fragment FolderBits -> com.example.model.FolderBits on Folder @ ops/node.graphql:8:1
+  select name: String! @ ops/node.graphql:9:3
+  select size: Int! @ ops/node.graphql:10:3
+  select children: [Node!]! @ ops/node.graphql:11:3
+    select __typename: String! @ ops/node.graphql:11:3
+    select id: ID! @ ops/node.graphql:12:5
+fragment UserFields -> com.example.model.UserFields on User @ ops/user.graphql:12:1
+  select id: ID! @ ops/user.graphql:13:3
+  select name: String! @ ops/user.graphql:14:3
+  select role: Role! @ ops/user.graphql:15:3
+operation FindNode -> com.example.model.FindNode : query @ ops/node.graphql:1:1
+  variables type com.example.model.FindNodeVariables
+  variable id: ID! required @ ops/node.graphql:1:16
+  payload field result Node -> FindNodeNode
+  document "query FindNode($id:ID!){node(id:$id){__typename id ...FolderBits}} fragment FolderBits on Folder {name size children{__typename id}}"
+  hash 28cb04fe072e04f75d44f091fb759034992504a9d65757a62b8c1697d011206f
+  fragments FolderBits
+  select node(id: $id): Node @ ops/node.graphql:2:3
+    select __typename: String! @ ops/node.graphql:2:3
+    select id: ID! @ ops/node.graphql:3:5
+    spread FolderBits @ ops/node.graphql:4:5
+operation CreatePost -> com.example.model.CreatePost : mutation @ ops/post.graphql:1:1
+  variables type com.example.model.CreatePostVariables
+  variable title: String! required @ ops/post.graphql:1:21
+  variable body: String tri-state @ ops/post.graphql:1:38
+  payload field result Post -> CreatePostCreatePost!
+  document "mutation CreatePost($title:String!,$body:String){createPost(title:$title,body:$body){id title}}"
+  hash 4fa904ebbd697fb3aa7ea29b6fe7286f1994e1d64cbd4dce7978774c9c27391f
+  select createPost(title: $title, body: $body): Post! @ ops/post.graphql:2:3
+    select id: ID! @ ops/post.graphql:3:5
+    select title: String! @ ops/post.graphql:4:5
+operation PostAdded -> com.example.model.PostAdded : subscription @ ops/post.graphql:8:1
+  variables type com.example.model.PostAddedVariables
+  payload field result Post -> PostAddedPostAdded!
+  document "subscription PostAdded{postAdded{id likes @skip(if:false)}}"
+  hash 77505f5df8fa96e12de3a8337049b1906fe7a98dec0a867a3991449733e6b025
+  select postAdded: Post! @ ops/post.graphql:9:3
+    select id: ID! @ ops/post.graphql:10:5
+    select likes: Int! @skip(if: false) @ ops/post.graphql:11:5
+operation Search -> com.example.model.Search : query @ ops/search.graphql:1:1
+  variables type com.example.model.SearchVariables
+  variable text: String! required @ ops/search.graphql:1:14
+  variable filter: PostFilter tri-state @ ops/search.graphql:1:30
+  payload field result [SearchResult -> SearchSearch!]!
+  document "query Search($text:String!,$filter:PostFilter){search(text:$text,filter:$filter){__typename ...on Folder{id name createdAt}...on File{id bytes}...on Node{__typename id}}}"
+  hash 485fc28f9036a1b7fc017115763581d329ba72dbded9ad1441df31c48365fbeb
+  select search(text: $text, filter: $filter): [SearchResult!]! @ ops/search.graphql:2:3
+    select __typename: String! @ ops/search.graphql:2:3
+    inline on Folder @ ops/search.graphql:3:5
+      select id: ID! @ ops/search.graphql:4:7
+      select name: String! @ ops/search.graphql:5:7
+      select createdAt: mapped(java.time.OffsetDateTime)! @ ops/search.graphql:6:7
+    inline on File @ ops/search.graphql:8:5
+      select id: ID! @ ops/search.graphql:9:7
+      select bytes: Int! @ ops/search.graphql:10:7
+    inline on Node @ ops/search.graphql:12:5
+      select __typename: String! @ ops/search.graphql:12:5
+      select id: ID! @ ops/search.graphql:13:7
+operation GetUser -> com.example.model.GetUser : query @ ops/user.graphql:1:1
+  variables type com.example.model.GetUserVariables
+  variable id: ID! required @ ops/user.graphql:1:15
+  variable withPosts: Boolean = false tri-state @ ops/user.graphql:1:25
+  variable first: Int tri-state @ ops/user.graphql:1:54
+  payload field result User -> GetUserUser
+  document "query GetUser($id:ID!,$withPosts:Boolean=false,$first:Int){user(id:$id){...UserFields posts(first:$first) @include(if:$withPosts){id title likes}}} fragment UserFields on User {id name role}"
+  hash fbd78ac8c2160addfb4704f3fee61f3534b2dc19c894d811b1804de9d3db6bb0
+  fragments UserFields
+  select user(id: $id): User @ ops/user.graphql:2:3
+    select posts(first: $first): [Post!]! @include(if: $withPosts) @ ops/user.graphql:4:5
+      select id: ID! @ ops/user.graphql:5:7
+      select title: String! @ ops/user.graphql:6:7
+      select likes: Int! @ ops/user.graphql:7:7
+    spread UserFields @ ops/user.graphql:3:5
+operation Viewer -> com.example.model.Viewer : query @ ops/viewer.graphql:1:1
+  variables type com.example.model.ViewerVariables
+  payload data result Query -> ViewerData!
+  document "query Viewer{viewer{id tags}mine:viewer{name @skip(if:true) id}}"
+  hash 76288754d3f486c1b9f9fc1ea09b1a3004649f44abd600e4994f8a9aff1e3cdf
+  select viewer: User! @ ops/viewer.graphql:2:3
+    select id: ID! @ ops/viewer.graphql:3:5
+    select tags: [String!]! @ ops/viewer.graphql:4:5
+  select mine: viewer: User! @ ops/viewer.graphql:6:3
+    select name: String! @skip(if: true) @ ops/viewer.graphql:7:5
+    select id: ID! @ ops/viewer.graphql:8:5
