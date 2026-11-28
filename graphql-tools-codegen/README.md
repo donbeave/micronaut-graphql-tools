@@ -8,7 +8,7 @@ Gradle project `:micronaut-graphql-tools-codegen`, folder `graphql-tools-codegen
 The code generator of the library, as a plain Java library: the Gradle plugin and the Maven plugin map their configuration one
 to one onto it and add only wiring. This module holds the entry point, the options model, the diagnostics, the schema loader and
 the intermediate representation (IR), including the operation IR of client mode. The Java emitter (`JavaEmitter`, behind the package-private `Emitter` interface) writes the
-enums, the object models (records) and the name constants of the IR; the other languages and the bean model style, the inputs,
+enums, the object models (records) and the name constants of the IR; in client mode `ClientEmitter` writes the client models (see "Client models"). The other languages and the bean model style, the inputs of server mode,
 interfaces, unions and contracts produce no source file yet. A record that implements an interface or belongs to a union names it, so
 the output compiles only once the interface emission exists. The type mappings file is written for every run that has no errors: it checks the options, loads the schema files,
 builds the IR and reports what is wrong.
@@ -177,11 +177,11 @@ become character references such as `&#47;`, and line endings become `\n`.
 | `extension-kind-mismatch` | error | An `extend` is of another kind than its base, such as `extend type` of an enum |
 | `unknown-type` | error | A field, argument, union, interface or root operation names a type that is defined nowhere and not in `typeMappings` |
 | `unmapped-scalar` | error | A custom scalar has no `typeMappings` entry; there is no silent `String` |
-| `reserved-name` | error | A type, field, argument or enum value name is a Java keyword (and a Kotlin or Groovy keyword for that language); a generated type or contract name is `record`, `var`, `sealed`, `permits` or `yield`, which Java restricts as type names in every output language |
+| `reserved-name` | error | A type, field, argument, enum value or (client mode) variable name is a Java keyword (and a Kotlin or Groovy keyword for that language); a generated type or contract name is `record`, `var`, `sealed`, `permits` or `yield`, which Java restricts as type names in every output language |
 | `invalid-implements` | error | A type implements a type that is not an interface, such as an object type or an enum |
 | `invalid-union-member` | error | A union has a member that is not an object type |
 | `reserved-contract-name` | error | `contractNameTemplate` resolves a contract to `Query`, `Mutation` or `Subscription`, the name of a root type |
-| `object-method-name` | error | A field is named like a method of `java.lang.Object` (`clone`, `finalize`, `getClass`, `hashCode`, `notify`, `notifyAll`, `toString`, `wait`) |
+| `object-method-name` | error | A field or (client mode) variable is named like a method of `java.lang.Object` (`clone`, `finalize`, `getClass`, `hashCode`, `notify`, `notifyAll`, `toString`, `wait`) |
 | `name-collision` | error | Two schema elements, or an element and a generated helper class (`GraphQLTypeNames`, `<Type>Names`), generate the same class, or two name constants of one class have the same identifier; the class comparison folds the case of the path, because two names such as `Foo` and `foo` overwrite each other on a case-insensitive file system |
 | `root-type-reference` | error | A field or argument has a root operation type as its type (map it with `typeMappings`) |
 | `field-mapping-not-scalar` | error | A `Type.field` entry of `typeMappings` names a field whose type is an object, interface, union, enum or input type |
@@ -229,8 +229,7 @@ With `mode` `CLIENT` the generator reads operation documents as well as the sche
 `io.micronaut.graphql.tools.codegen.ir.client`: `OperationDocument`, `Variable`, `SelectionSet` (with `SelectedField`,
 `SelectedArgument`, `InlineFragment` and `FragmentSpread`) and `FragmentDefinition`. Client mode lists only the enums, inputs and
 custom scalars that an operation reaches (through its variables and the fields it selects), so a custom scalar that no operation uses
-needs no mapping; it has no resolver contract and no name constants. The Java emitter for client models writes these nodes in a later
-change; until then client mode emits the enums.
+needs no mapping; it has no resolver contract and no name constants. The Java emitter writes these nodes as the client models, described under "Client models" below.
 
 **Operation documents.** The documents come from a directory (`withOperationDirectory`, or, without any operation input, the schema
 directory, where the compile-time checks look for them), from files (`withOperationFiles`) or from text (`withOperationSources`, or the
@@ -290,6 +289,44 @@ the `sdlName` of a field is the name in the schema. The `sdlName` of a result mo
 - A leaf field is a `Builtin`, a `Mapped` class (`typeMappings`, also `Type.field`, the same as the server) or a reference to an enum that the
   generator emits.
 
+## Client models
+
+With `mode` `CLIENT` the Java emitter (`ClientEmitter`) turns the client IR into sources for Java, Kotlin and Groovy callers, in the package that the IR names
+(`modelPackage`, which is one package for a client schema), with one `package-info.java` that is `@NullMarked` when `nullableAnnotation` is a JSpecify annotation. Every
+type has `@Generated` (no date, or none when `generatedAnnotation` is empty) and is `@Serdeable`; the output has no Jackson databind type and no
+transport code. The names are the ones that the IR gives, so `typeNamePrefix` and `typeNameSuffix` apply. `modelStyle` has no effect: client models are records.
+
+| IR node | Emitted |
+| --- | --- |
+| Operation | The request class `<Operation>` and the record `<Operation>Variables` |
+| Selection set on an object type | A record with a component for each response key (an alias is the component name), in the order of the selection; `__typename` is a component of the records of an abstract selection |
+| Selection on an interface or union | A `sealed interface` that `permits` the records, with `@JsonTypeInfo(use = NAME, property = "__typename", visible = true, defaultImpl = <Other record>)` and `@JsonSubTypes` naming each object type, and a record `<path>Other` for the types that the selection does not name; a response with a type that the client does not know is read as that record, which keeps `__typename` |
+| Fragment | An interface with the accessors of its fields, implemented by every record that spreads it (and the warning `fragment-interface-skipped` when a record cannot) |
+| Input object | A record with a component for each field; a nullable field, and a non-null field with a default, is a reference type annotated as nullable, left out of the request when it is `null` |
+| Enum | An enum with the constants of the schema and one more, `UNKNOWN__`, marked `@JsonEnumDefaultValue`; a nested `Fallback` deserializer reads a name that no constant has as `UNKNOWN__`, because Micronaut Serialization has no default constant of its own. The name is `UNKNOWN__` followed by underscores until it is not a value of the schema |
+
+A `@skip` or `@include` field, and a nullable schema field, is a nullable component, so a primitive never reads an absent value as `0` or `false`. A non-null `Int`, `Float` or `Boolean` that no directive can remove is a primitive.
+
+**The request class.** It is a final class that describes an operation and sends nothing:
+
+| Member | Holds |
+| --- | --- |
+| `NAME`, `name()` | The operation name |
+| `DOCUMENT`, `document()` | The assembled document, a compile-time constant, so that `@GraphQLOperation(GetUser.DOCUMENT)` works |
+| `HASH`, `hash()` | The SHA-256 of the document, 64 lower-case hexadecimal digits |
+| `TYPE`, `kind()` | `io.micronaut.graphql.tools.client.OperationType`: `QUERY`, `MUTATION` or `SUBSCRIPTION` |
+| `FIELD` | The response key of the one root field, for an operation whose payload is that field; absent when the payload is the `data` object |
+| `RESULT` | The `Argument` of the payload: the value of the root field, or the `data` object |
+| `DATA` | The `Argument` that the `data` object of the response is read as: `RESULT` for a `data` payload, and a `Map` from `FIELD` to the value for a field payload, so `GraphQLRequest.builder(GetUser.DATA)` works with the low-level client |
+| `variables()` | The variables record; the constructor takes it, and an operation without variables also has a constructor without arguments |
+
+A subscription operation is the same class with `TYPE` `SUBSCRIPTION` and its result record; the transport is not part of the generated code. The request class has `equals`, `hashCode` and `toString` over the variables. The members above are the ones that
+later work builds on: the presence of variables and inputs, the scalar wire mappings and the executable descriptor change the types of the components or add members, and do not rename these.
+
+**What the generated sources compile against.** The client module and the JSON implementation of Micronaut Serialization (`io.micronaut.serde:micronaut-serde-jackson`, which the client needs anyway) are enough: the client module exposes JSpecify (`org.jspecify:jspecify`, an annotation-only jar) as an API dependency, Micronaut Serialization
+brings the Jackson annotations that the compile-time checks read for the polymorphic types and the enum default constant, and `Argument` and `Singleton` come with the Micronaut APIs. `ClientEmitterSpec` compiles the output against exactly that class path, with the processors of the compile-time checks over declarative client methods that use the result types, so
+the result types pass the checks of the processor (`client-result-shape`, `client-variable-type`), and calls the types from Java and Kotlin. A Kotlin caller reads the nullability, matches the sealed interfaces without an `else`, and uses the components of a record as properties; the accessors of an interface are methods in Kotlin.
+
 ## Packages
 
 Each package has a `package-info.java`. See the [API map](../CONTRIBUTING.md#api-map).
@@ -342,4 +379,5 @@ skipped files and the merge errors; `IrStructureSpec` the nodes; `IrDiagnosticsS
 presence, the skip and include rules, the abstract selections and the fragments; `ClientDocumentsSpec` the discovery of the documents and
 their diagnostics; `ClientIrGoldenSpec` the IR text snapshot of the schema `src/test/resources/schema/client` (`ir-client-default`); and
 `ClientProcessorEqualitySpec` the equality of the document and the hash with the assembled document of the compile-time checks.
+`ClientEmitterSpec` covers the Java emitter of client mode over the fixture `src/test/resources/schema/client-models` (golden files `golden/client-java`, determinism, the compilation against the documented class path, the compile-time checks over a declarative client, Java and Kotlin callers in `src/test/resources/client-callers`, the Kotlin compiler in a process of its own, and the decoding and encoding with Micronaut Serialization on that class path alone).
 `checkNoBuildToolOrRuntimeDependency` runs as part of `check`.

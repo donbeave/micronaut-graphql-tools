@@ -382,6 +382,17 @@ class ClientOperationSpec extends Specification {
         result.diagnostics()*.code() == [Diagnostic.RESERVED_NAME]
     }
 
+    def "a variable that is a Java keyword or the name of a method of Object is an error, because it names a record component"() {
+        when:
+        def keyword = build('query Q($class: Int) { user { name } count(of: $class) }', client().build(), SCHEMA.replace('count', 'count(of: Int)'))
+        def object = build('query Q($hashCode: Int) { count(of: $hashCode) }', client().build(), SCHEMA.replace('count', 'count(of: Int)'))
+
+        then:
+        keyword.diagnostics()*.code() == [Diagnostic.RESERVED_NAME]
+        keyword.diagnostics()[0].message().contains("variable 'Q.class'")
+        object.diagnostics()*.code() == [Diagnostic.OBJECT_METHOD_NAME]
+    }
+
     def "an operation that selects only __typename at the root returns the type name"() {
         when:
         def result = build('query Q { __typename }')

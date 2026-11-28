@@ -422,6 +422,15 @@ record Variable(String name, TypeRef type, String defaultValue, Presence presenc
 - Variables, selection sets, fragments and abstract types need no new emitter capability: they are records, interfaces and
   sealed interfaces, which the Java emitter already writes. Nullability uses the JSpecify annotation by default in client
   mode (a type-use only annotation works on record components), and the client models are serdeable.
+- The emitter (#671) writes per operation a final request class (the document as a constant, its hash, the name, the kind, the `Argument`
+  types of the payload and of the `data` object, and the variables), a variables record, the result records, the sealed interfaces, the fragment
+  interfaces, and the enums and input records that operations reach. The request class sends nothing, so a subscription is the same class.
+  The polymorphic types carry the Jackson annotations that the compile-time checks of the client read (`@JsonTypeInfo`, `@JsonSubTypes`), and
+  an enum has one more constant, marked `@JsonEnumDefaultValue`, with a nested deserializer that reads an unknown value as it, because
+  Micronaut Serialization has no default constant of its own.
+- The JSpecify decision (#671): the client module exposes `org.jspecify:jspecify` as an API dependency, so the default `nullableAnnotation` of
+  client mode compiles with the client module and `micronaut-serde-jackson` only (which brings the Jackson annotations); a test compiles the
+  output against exactly that class path.
 - Client models are emitted as Java only in 1.0. Kotlin callers read the JSpecify nullability and Groovy compiles jointly.
   The emitter interface leaves room for Kotlin and Groovy client emitters later without an IR change.
 

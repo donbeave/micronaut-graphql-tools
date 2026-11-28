@@ -1,0 +1,16 @@
+query GetUser($id: ID!, $withPosts: Boolean = false, $first: Int) {
+  user(id: $id) {
+    ...UserFields
+    posts(first: $first) @include(if: $withPosts) {
+      id
+      title
+      likes
+    }
+  }
+}
+
+fragment UserFields on User {
+  id
+  name
+  role
+}

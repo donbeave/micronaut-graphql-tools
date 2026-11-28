@@ -24,7 +24,50 @@ dependencies {
     // ModelRecordSpec compiles the generated records, which use @GraphQLType and the JSpecify annotations.
     testImplementation(projects.micronautGraphqlTools)
     testImplementation("org.jspecify:jspecify")
+    // The client emitter specs (#671) compile the generated client sources with the compile-time checks of the client (the visitor of the
+    // processor module, the Micronaut inject and Serde processors) and decode responses with Micronaut Serialization.
+    testImplementation(projects.micronautGraphqlToolsClient)
+    testImplementation(projects.micronautGraphqlToolsProcessor)
+    testImplementation(mn.micronaut.inject.java)
+    testImplementation(mnSerde.micronaut.serde.jackson)
+    testImplementation(mnSerde.micronaut.serde.processor)
     testRuntimeOnly(mnLogging.logback.classic)
+}
+
+// What the generated client sources compile against, as the guide documents it: the client module and the JSON implementation of
+// Micronaut Serialization, with whatever they bring (JSpecify, the Jackson annotations and the Micronaut APIs), and nothing else.
+val generatedClientClasspath by configurations.creating {
+    isCanBeConsumed = false
+    isCanBeResolved = true
+    attributes {
+        attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage.JAVA_API))
+        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
+    }
+}
+// The same, as an application runs it: the class path that the decoding tests start Micronaut Serialization on.
+val generatedClientRuntimeClasspath by configurations.creating {
+    isCanBeConsumed = false
+    isCanBeResolved = true
+    attributes {
+        attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage.JAVA_RUNTIME))
+        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
+    }
+}
+// The Kotlin compiler that compiles the Kotlin callers of the generated Java (CodegenKotlinCallerSpec). Its version is the Kotlin of the
+// test suites, which the Micronaut BOM does not manage (it manages 1.9.x); the compiler runs in a process of its own with this class path.
+val kotlinCompiler by configurations.creating {
+    isCanBeConsumed = false
+    isCanBeResolved = true
+}
+dependencies {
+    generatedClientClasspath(platform(libs.micronaut.platform))
+    generatedClientClasspath(projects.micronautGraphqlToolsClient)
+    generatedClientClasspath(mnSerde.micronaut.serde.jackson)
+    generatedClientRuntimeClasspath(platform(libs.micronaut.platform))
+    generatedClientRuntimeClasspath(projects.micronautGraphqlToolsClient)
+    generatedClientRuntimeClasspath(mnSerde.micronaut.serde.jackson)
+    generatedClientRuntimeClasspath(mnLogging.logback.classic)
+    kotlinCompiler(libs.kotlin.compiler.embeddable)
 }
 
 // The generator is a build-time library: no Gradle API, no Maven API and no Micronaut runtime or injection on a main classpath, and
@@ -61,6 +104,15 @@ tasks.named("check") {
 }
 
 tasks.named<Test>("test") {
+    inputs.files(generatedClientClasspath).withPropertyName("generatedClientClasspath")
+    inputs.files(generatedClientRuntimeClasspath).withPropertyName("generatedClientRuntimeClasspath")
+    inputs.files(kotlinCompiler).withPropertyName("kotlinCompiler")
+    // resolved when the task runs, so that the jar of the client module is built first
+    doFirst {
+        systemProperty("codegen.client.classpath", generatedClientClasspath.asPath)
+        systemProperty("codegen.client.runtime.classpath", generatedClientRuntimeClasspath.asPath)
+        systemProperty("codegen.kotlin.compiler", kotlinCompiler.asPath)
+    }
     // OptionsDocumentationSpec reads the Javadoc of Options behind Gradle's back.
     systemProperty("codegen.sources", layout.projectDirectory.dir("src/main/java/io/micronaut/graphql/tools/codegen").asFile.absolutePath)
     // IrGoldenSpec compares the IR snapshots in src/test/resources/golden; -Pcodegen.golden.update=true rewrites them.

@@ -1,0 +1,14 @@
+query FindNode($id: ID!) {
+  node(id: $id) {
+    id
+    ...FolderBits
+  }
+}
+
+fragment FolderBits on Folder {
+  name
+  size
+  children {
+    id
+  }
+}

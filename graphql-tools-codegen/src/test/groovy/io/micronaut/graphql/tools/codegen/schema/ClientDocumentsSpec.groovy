@@ -132,7 +132,7 @@ class ClientDocumentsSpec extends Specification {
         e.message.contains('alternatives')
     }
 
-    def "client mode generates the enums that an operation reaches"() {
+    def "client mode generates the enums that an operation reaches, and the request and variables of the operation"() {
         given:
         write('schema/schema.graphqls', 'enum Role { A B }\ntype Query { users(role: Role): [String!]! }')
         write('schema/q.graphql', 'query Q($role: Role) { users(role: $role) }')
@@ -144,7 +144,9 @@ class ClientDocumentsSpec extends Specification {
         then:
         result.diagnostics().empty
         result.files()*.path().contains('com/example/model/Role.java')
-        result.files()*.path().findAll { it.startsWith('com/example/model/') && !it.endsWith('package-info.java') } == ['com/example/model/Role.java']
+        result.files()*.path().findAll { it.startsWith('com/example/model/') && !it.endsWith('package-info.java') } ==
+                ['com/example/model/Q.java', 'com/example/model/QVariables.java', 'com/example/model/Role.java']
+        !result.files()*.path().any { it.contains('Unused') }
     }
 
     def "the type mappings file of a client lists the enums, inputs and scalars, and not the result models"() {

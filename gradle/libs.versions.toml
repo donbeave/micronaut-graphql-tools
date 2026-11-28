@@ -35,6 +35,10 @@ maven = "3.9.11"
 maven-plugin-annotations = "3.15.2"
 maven-plugin-testing-harness = "3.4.0"
 
+# The Kotlin compiler of the codegen tests, which compiles Kotlin callers of the generated client sources: the Kotlin of the test suites
+# (the root build declares the plugin at the same version); the Micronaut BOM manages the 1.9 line of Kotlin.
+kotlin-compiler = "2.1.21"
+
 # test oracle for the scalar SPI: the date/time scalars many graphql-java applications use
 graphql-java-datetime = "6.0.0"
 
@@ -78,6 +82,7 @@ micronaut-logging = { module = "io.micronaut.logging:micronaut-logging-bom", ver
 graphql-java-extended-validation = { module = "com.graphql-java:graphql-java-extended-validation", version.ref = "graphql-java-extended-validation" }
 
 archunit = { module = "com.tngtech.archunit:archunit", version.ref = "archunit" }
+kotlin-compiler-embeddable = { module = "org.jetbrains.kotlin:kotlin-compiler-embeddable", version.ref = "kotlin-compiler" }
 jetbrains-annotations = { module = "org.jetbrains:annotations", version.ref = "jetbrains-annotations" }
 micronaut-reactor = { module = "io.micronaut.reactor:micronaut-reactor", version.ref = "micronaut-reactor" }
 graphql-java-datetime = { module = "com.tailrocks.graphql:graphql-java-datetime", version.ref = "graphql-java-datetime" }
