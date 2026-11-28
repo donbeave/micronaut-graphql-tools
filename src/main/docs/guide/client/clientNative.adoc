@@ -18,8 +18,11 @@ A type that the client decodes must be known to Micronaut Serialization at build
 | Java: `:test-suite-java:nativeSerdeTest`
 | The client tests of the Java suite (the low-level client, the declarative client, headers, cookies, the filter of a service id and retries) run in a native executable of the example application, on Micronaut Serialization. It is part of the native command of the `native` job.
 
-| Kotlin: `:test-suite-kotlin:serdeTest`, Groovy: `:test-suite-groovy:serdeTest`
-| The same client examples run on the JVM. They have no native run yet: the Kotlin native test of the client and a native smoke test of the Groovy client are tracked in #681.
+| Kotlin: `:test-suite-kotlin:nativeSerdeTest`
+| The client tests of the Kotlin suite run in a native executable of the Kotlin example application, on Micronaut Serialization. It is part of the native command of the `native` job.
+
+| Groovy: `:test-suite-groovy:nativeSmokeTest`
+| The Groovy client examples are built into a native executable of their own, which runs the query, mutation, union, error and scalar cases (declarative and low-level client) against the native executable of the Groovy example application, and exits with a non-zero status on a failed case. It is the `native Groovy smoke` job.
 |===
 
-The guide does not claim a native result for Kotlin or Groovy before #681 is done. The Groovy suite cannot run its Spock tests natively in any case, see <<nativeImage,Native Image>>. The native tests and their commands are listed on that page, with the results of a run.
+The Groovy suite cannot run its Spock tests natively, see <<nativeImage,Native Image>>, which is why the Groovy client has a smoke executable instead of a test. The native tests and their commands are listed on that page, with the results of a run.
