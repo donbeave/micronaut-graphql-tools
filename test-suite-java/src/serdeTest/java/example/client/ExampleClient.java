@@ -24,11 +24,12 @@ import io.micronaut.graphql.tools.client.annotation.GraphQLOperation;
 import io.micronaut.http.annotation.Header;
 import io.micronaut.serde.annotation.Serdeable;
 
+import java.time.Instant;
 import java.util.List;
 
 /**
  * The declarative client of the tests: it calls the application of this suite, whose address is the embedded server. The processor
- * checks each operation, a document of {@code src/test/graphql/client/server}, against the schema of the application and compiles it.
+ * checks each operation, a document of {@code src/serdeTest/graphql/client/server}, against the schema of the application and compiles it.
  * The result models are hand-written, because the client mode of the generator does not emit models yet.
  */
 @GraphQLClient(value = "/", schema = "server")
@@ -47,6 +48,7 @@ public interface ExampleClient {
         INCORRECT_CREDENTIALS, NOT_AUTHENTICATED
     }
 
+    // tag::union[]
     /**
      * The union Error as the operations select it: one subtype for each member that a fragment names, chosen by the field
      * {@code __typename} that the processor adds to the selection, and a default branch for a member that a later schema adds.
@@ -71,6 +73,7 @@ public interface ExampleClient {
     @Serdeable
     record OtherError() implements OperationError {
     }
+    // end::union[]
 
     @Serdeable
     record SignUpInput(String username, String password, String firstName, String lastName) {
@@ -109,11 +112,21 @@ public interface ExampleClient {
     }
 
     @Serdeable
+    record ProfileName(String username) {
+    }
+
+    @Serdeable
+    record Partial(String introduced, @Nullable String unreliable) {
+    }
+
+    @Serdeable
     record Directives(String shout, String tagged, Schema __schema) {
     }
 
+    // tag::envelope[]
     @GraphQLOperation("allBooks")
     GraphQLResponse<List<Book>> allBooks();
+    // end::envelope[]
 
     @GraphQLOperation("currentUser")
     GraphQLResponse<User> currentUser(@Nullable @Header(USER_HEADER) String user);
@@ -127,12 +140,37 @@ public interface ExampleClient {
     @GraphQLOperation("searchProfile")
     GraphQLResponse<List<Profile>> searchProfile(String contains, @Nullable Integer limit);
 
+    // tag::payload[]
+    @GraphQLOperation("searchProfile")
+    List<Profile> profiles(String contains, @Nullable Integer limit);
+    // end::payload[]
+
+    // tag::fragment[]
+    @GraphQLOperation("profileNames")
+    List<ProfileName> profileNames(String contains);
+    // end::fragment[]
+
     @GraphQLOperation("signIn")
     GraphQLResponse<AuthPayload> signIn(String username, String password);
 
+    // tag::mutation[]
     @GraphQLOperation("signUp")
     GraphQLResponse<AuthPayload> signUp(SignUpInput input);
+    // end::mutation[]
 
     @GraphQLOperation("addBook")
     GraphQLResponse<AddBookPayload> addBook(String id, @Nullable @Header(USER_HEADER) String user);
+
+    // tag::scalars[]
+    @GraphQLOperation("query EchoInstant($at: Instant!) { echoInstant(at: $at) }")
+    Instant echoInstant(Instant at);
+
+    @GraphQLOperation("query EchoLong($value: Long!) { echoLong(value: $value) }")
+    Long echoLong(Long value);
+    // end::scalars[]
+
+    // tag::partial-data[]
+    @GraphQLOperation("query Partial { introduced unreliable }")
+    GraphQLResponse<Partial> partial();
+    // end::partial-data[]
 }

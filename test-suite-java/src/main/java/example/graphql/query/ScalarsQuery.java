@@ -38,4 +38,8 @@ public class ScalarsQuery {
         return tag;
     }
 
+    public Long echoLong(Long value) {
+        return value;
+    }
+
 }

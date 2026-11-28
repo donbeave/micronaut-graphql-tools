@@ -154,6 +154,50 @@ tasks.matching { it.name == "kspValidationFixturesKotlin" }.configureEach {
         CommandLineArgumentProvider { listOf("micronaut.graphql.tools.processor.checks=false") })
 }
 
+// The Micronaut Serialization stack: the library's GraphQL client needs Micronaut Serialization, and micronaut-serde-jackson makes its
+// JsonMapper win over the Jackson databind of this application, so the two stacks cannot share a classpath (test-suite-serde has the
+// same rule). The tests that call the application with the client, and the declarative clients with their result models, are in the
+// source set `serdeTest`, which has its own task; `test` keeps the Jackson databind stack. KSP checks each operation of a declarative
+// client against the schema of the application (the reserved client schema `server`, documents in src/serdeTest/graphql/client/server)
+// and compiles it.
+val serdeTest: SourceSet by sourceSets.creating {
+    compileClasspath += sourceSets.main.get().output
+    runtimeClasspath += sourceSets.main.get().output
+}
+configurations {
+    named(serdeTest.implementationConfigurationName) { extendsFrom(implementation.get()) }
+}
+dependencies {
+    "serdeTestImplementation"(projects.micronautGraphqlToolsClient)
+    "serdeTestImplementation"(mnSerde.micronaut.serde.jackson)
+    "serdeTestImplementation"(mn.micronaut.http.client)
+    "serdeTestImplementation"(mn.micronaut.retry)
+    "serdeTestImplementation"(mnTest.micronaut.test.junit5)
+    "kspSerdeTest"(mn.micronaut.inject.kotlin)
+    "kspSerdeTest"(mnSerde.micronaut.serde.processor)
+    "kspSerdeTest"(projects.micronautGraphqlToolsProcessor)
+    "serdeTestRuntimeOnly"(mnLogging.logback.classic)
+    "serdeTestRuntimeOnly"("org.junit.jupiter:junit-jupiter-engine")
+    "serdeTestRuntimeOnly"("org.junit.platform:junit-platform-launcher")
+}
+val graphqlClientDirs = files("src/serdeTest/graphql/client")
+tasks.matching { it.name == "kspSerdeTestKotlin" }.configureEach {
+    inputs.files(graphqlClientDirs).withPropertyName("graphqlClientDirs").withPathSensitivity(PathSensitivity.RELATIVE)
+    (this as com.google.devtools.ksp.gradle.KspAATask).commandLineArgumentProviders.add(CommandLineArgumentProvider {
+        listOf("micronaut.graphql.tools.processor.client.dirs=" + graphqlClientDirs.files.joinToString(File.pathSeparator) { it.absolutePath },
+            "micronaut.graphql.tools.processor.client.checks=true")
+    })
+}
+val serdeTestTask = tasks.register<Test>("serdeTest") {
+    description = "Runs the tests on the Micronaut Serialization stack: the library client against this application."
+    group = "verification"
+    testClassesDirs = serdeTest.output.classesDirs
+    classpath = serdeTest.runtimeClasspath
+    useJUnitPlatform()
+    shouldRunAfter(tasks.named("test"))
+}
+tasks.named("check") { dependsOn(serdeTestTask) }
+
 // A class that drifts from the schema on purpose, compiled with the processor and the options of `main`: driftFixtureTest asserts
 // that the compilation fails with the expected `[code] coordinate` line.
 val driftFixture: SourceSet by sourceSets.creating {

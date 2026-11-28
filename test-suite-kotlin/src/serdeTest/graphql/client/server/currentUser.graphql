@@ -1,0 +1,12 @@
+query currentUser {
+  currentUser {
+    username
+    firstName
+    lastName
+    books {
+      id
+      title
+      year
+    }
+  }
+}
