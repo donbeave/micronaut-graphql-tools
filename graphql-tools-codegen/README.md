@@ -7,7 +7,7 @@ Gradle project `:micronaut-graphql-tools-codegen`, folder `graphql-tools-codegen
 
 The code generator of the library, as a plain Java library: the Gradle plugin and the Maven plugin map their configuration one
 to one onto it and add only wiring. This module holds the entry point, the options model, the diagnostics, the schema loader and
-the intermediate representation (IR). The Java emitter (`JavaEmitter`, behind the package-private `Emitter` interface) writes the
+the intermediate representation (IR), including the operation IR of client mode. The Java emitter (`JavaEmitter`, behind the package-private `Emitter` interface) writes the
 enums, the object models (records) and the name constants of the IR; the other languages and the bean model style, the inputs,
 interfaces, unions and contracts produce no source file yet. A record that implements an interface or belongs to a union names it, so
 the output compiles only once the interface emission exists. The type mappings file is written for every run that has no errors: it checks the options, loads the schema files,
@@ -20,7 +20,7 @@ Each package that holds a generated type gets a `package-info.java`.
   which returns a `GenerationResult(files, diagnostics)`. It validates the options, loads the schema files and builds the IR
   (`toIr()` returns it). The schema is given as files, as a directory (`withSchemaDirectory`), or by default as
   `src/main/resources/graphql`.
-- `IrBuilder` (package `schema`; `fromDirectory`, `fromFiles`, `fromSources`): the two steps that turn schema text and `Options` into an `IrResult(ir,
+- `IrBuilder` (package `schema`; `fromDirectory`, `fromFiles`, `fromSources`, each with an `OperationInput` overload for client mode): the two steps that turn schema text and `Options` into an `IrResult(ir,
   diagnostics, skippedFiles)`. The loader reads with the graphql-java parser only and merges; the rules lower the merged
   definitions into the IR. The packages `io.micronaut.graphql.tools.codegen.ir` and `ir.shared` hold the IR records and `IrSnapshot`, which prints an
   IR as the text that the golden tests compare.
@@ -70,6 +70,7 @@ reference; this is the summary.
 | `nameConstants` | `NONE`, `TYPES` or `FIELDS` | `FIELDS` |
 | `includes`, `excludes` | list of globs | `**/*.graphqls` and `**/*.graphql`; none |
 | `commentsAsDescriptions` | `true` or `false` | `false`; must match the runtime setting |
+| `operationIncludes`, `operationExcludes` | list of globs | `**/*.graphql`; none. Client mode only: the operation documents of a directory |
 
 An unmapped custom scalar is always a diagnostic, never an option: there is no silent fallback to `String`.
 
@@ -160,6 +161,17 @@ become character references such as `&#47;`, and line endings become `\n`.
 | --- | --- | --- |
 | `schema-file-unreadable` | error | A schema file or directory does not exist or cannot be read |
 | `no-schema-files` | error | No file under the directory matches `includes` and `excludes` |
+| `operation-file-unreadable` | error | Client mode: an operation document or directory does not exist or cannot be read |
+| `operation-syntax-error` | error | Client mode: an operation document is not valid GraphQL |
+| `no-operation-documents` | error | Client mode: no document is given, none matches `operationIncludes` and `operationExcludes`, or the documents define no operation |
+| `duplicate-operation` | error | Client mode: two operations have one name; the message names both places |
+| `anonymous-operation` | error | Client mode: an operation has no name, which names its request class |
+| `duplicate-fragment` | error | Client mode: two fragments have one name |
+| `operation-invalid` | error | Client mode: the assembled document is not valid against the schema (graphql-java validation, the same as the compile-time checks), or the operation spreads a fragment that no document defines |
+| `client-schema-invalid` | error | Client mode: the schema cannot be built to validate the operations |
+| `reserved-typename-alias` | error | Client mode: a field is aliased to `__typename`, which the injection of the type name reserves |
+| `document-too-large` | error | Client mode: the assembled document is longer than a string constant of a class file (65,535 bytes) |
+| `fragment-interface-skipped` | warning | Client mode: a result model keeps the fields of a fragment it spreads but does not implement the fragment's interface (see below) |
 | `schema-syntax-error` | error | A file is not valid GraphQL |
 | `duplicate-definition` | error | A type, field, argument, enum value or root operation is defined twice; the message names both places |
 | `extension-without-base` | error | An `extend` names a type that no file defines |
@@ -233,6 +245,73 @@ holds its SDL name; its identifier is the name in upper case with an underscore 
 `HTTPStatus` gives `HTTP_STATUS`). Two names of one class with the same identifier are a `name-collision` error that names both
 schema locations, and so is a field named `type` in a type, which would clash with `TYPE`. Argument names have no constants yet.
 
+## Client mode and the operation IR
+
+With `mode` `CLIENT` the generator reads operation documents as well as the schema and fills the IR nodes of the package
+`io.micronaut.graphql.tools.codegen.ir.client`: `OperationDocument`, `Variable`, `SelectionSet` (with `SelectedField`,
+`SelectedArgument`, `InlineFragment` and `FragmentSpread`) and `FragmentDefinition`. Client mode lists only the enums, inputs and
+custom scalars that an operation reaches (through its variables and the fields it selects), so a custom scalar that no operation uses
+needs no mapping; it has no resolver contract and no name constants. The Java emitter for client models writes these nodes in a later
+change; until then client mode emits the enums.
+
+**Operation documents.** The documents come from a directory (`withOperationDirectory`, or, without any operation input, the schema
+directory, where the compile-time checks look for them), from files (`withOperationFiles`) or from text (`withOperationSources`, or the
+`OperationInput` argument of `IrBuilder`); the three are alternatives. The files of a directory are those whose path relative to it matches
+a glob of `operationIncludes` (default `**/*.graphql`) and no glob of `operationExcludes`, with the globs of `includes` and `excludes`.
+Files and text are used as given. Every form reads the documents in the order of their relative paths in UTF-8 bytes, an operation is
+in the order of its document, and the same documents in any order give the same IR. An operation needs a name, which names its request
+class; an operation or fragment name that two places define is an error.
+
+**One document for the generator and the checks.** For each operation the generator assembles the document as the compile-time checks of
+the processor do, and a test compares the two. The operation and the fragments it uses, transitively, become one document that
+graphql-java validates against the schema (`operation-invalid` lists what it reports); `__typename` is then put first in every selection
+set of an interface or a union that does not select it (the polymorphic result needs it to choose the member, and an alias of
+`__typename` is the error `reserved-typename-alias`); the document is printed compactly, the operation first and then its fragments in the
+order of their names. `OperationDocument.documentText` is that text and `documentHash` is the SHA-256 of its UTF-8 bytes as 64
+lower-case hex digits. The generator builds the schema that validates the documents on a thread with a large stack, as the checks do,
+so a long chain of type references is a diagnostic and not a crash. The generator does not call the code of the checks, because this module depends on no other module of the repository; `ClientProcessorEqualitySpec` runs the checks of `graphql-tools-binding` over the same files and compares the text, the hash, the variables and the payload, so a change to the rules is made in both places. `payload` is `FIELD` when the operation selects one root field by
+its response key (through fragments), and `DATA` otherwise.
+
+**Variables and presence.** A `Variable` has the type of its declaration, its default value in GraphQL syntax and a `Presence`, which
+holds for `InputField` too, in every mode: `REQUIRED` for a non-null type without a default, `OMITTABLE` for a non-null type with a
+default (the key may be left out and is never `null`), and `TRI_STATE` for a nullable type, with or without a default, where a left-out key, an explicit `null`
+and a value mean three things (an argument that a variable fills is left out when the variable is not provided, and the default of the
+argument or of the variable then applies). A generated request type shows `TRI_STATE` with the presence representation that the server
+inputs use (`ArgumentValue`) and serializes it so that a left-out key is not written.
+
+**Selections.** `SelectionSet` keeps the fields, the inline fragments and the fragment spreads of the assembled document, each with its
+directives. A `SelectedField` has its alias, the schema type and its arguments as the document writes them; a field with a selection
+set refers to its schema type by name, because its generated type belongs to the result models.
+
+**Result models.** The result models are ordinary `ModelType` and `AbstractType` nodes, derived from the selection sets and named by
+the path from the operation (with `typeNamePrefix` and `typeNameSuffix` around each name). For the operation `GetUser` the request is
+`GetUser`, its variables `GetUserVariables` and, when the payload is `DATA`, the `data` object `GetUserData`; a field below `data`
+or a root field of a `FIELD` payload is named by the path of its parent and its response key (`GetUserUser`, `GetUserUserPosts`).
+The components of a record are named by the response key, so the name of the property in the response is the name of the component;
+the `sdlName` of a field is the name in the schema. The `sdlName` of a result model is the schema type its selection is on.
+
+- A selection set on an object type is one record with the fields it selects, merged by response key, through inline fragments and
+  spreads that apply to the type.
+- A selection set on an interface or a union is a sealed `AbstractType` (the interface carries the fields selected on the abstract type,
+  `__typename` first), one record for each object type that a type condition of the selection singles out, in schema order, and a record
+  `<path>Other` for every other object type, so a response with a type the client does not know still decodes. The records are the
+  `members` of the sealed interface; a record is in `implemented` of the interface, or in `memberOf` when the type is a union. The
+  `sdlName` of a member is the object type, which the emitter matches with `__typename`, and the `Other` record has the `sdlName` of the
+  abstract type.
+- A named fragment is an `AbstractType` of the kind `INTERFACE` with the same names as its `FragmentDefinition`, and every record that
+  spreads it implements it, so a function can take any record of the fragment. A fragment that selects a nested object gets its own types
+  for it, named by the path from the fragment, and a record that selects exactly that shares them. Java generics are invariant, so a record implements the
+  interface of a fragment only when each of its fields has the same type there, and a field with a selection set selects exactly what the
+  interface selects; when it does not, the record keeps all the fields, does not implement the interface, and the warning
+  `fragment-interface-skipped` says which field differs. For the same reason a field with a selection set that a record of an abstract
+  selection extends is not declared on the sealed interface.
+- A field that carries `@skip` or `@include`, or sits in an inline fragment or a spread that does, is absent from the response when it is
+  skipped even when its schema type is non-null, so its type is nullable and an emitter never turns it into a primitive that reads
+  `0` or `false`. A field that another selection of the same record always selects stays non-null. The same holds below a field that is selected more than once: the fields of an occurrence that carries `@skip` or `@include` can be missing from the merged object, so they are nullable. An introspection field at the root (`__schema`, `__type`) is the error `operation-invalid`; `__typename` at the root is a `String`. The field keeps the directives, and so does the
+  `SelectedField`.
+- A leaf field is a `Builtin`, a `Mapped` class (`typeMappings`, also `Type.field`, the same as the server) or a reference to an enum that the
+  generator emits.
+
 ## Packages
 
 Each package has a `package-info.java`. See the [API map](../CONTRIBUTING.md#api-map).
@@ -240,9 +319,10 @@ Each package has a `package-info.java`. See the [API map](../CONTRIBUTING.md#api
 | Package | Audience | Holds |
 | --- | --- | --- |
 | `io.micronaut.graphql.tools.codegen` | Public API | `GraphQLCodeGenerator`, `Options`, its enums, `OptionsResult`, `GenerationResult`, `GeneratedFile`, `Diagnostic` and `Origin` |
-| `io.micronaut.graphql.tools.codegen.schema` | Public API | `IrBuilder`, `IrResult`, `SchemaSource`, `SchemaFileSelector`, `ScalarPresets` and `TypeMappingsFile`; the loader and the rules are package-private |
+| `io.micronaut.graphql.tools.codegen.schema` | Public API | `IrBuilder`, `IrResult`, `SchemaSource`, `OperationInput`, `SchemaFileSelector`, `ScalarPresets` and `TypeMappingsFile`; the loader and the rules are package-private |
 | `io.micronaut.graphql.tools.codegen.ir` | Public API | The IR nodes (`Ir`, `ModelType`, `InputType`, `EnumType`, `AbstractType`, `ScalarType`, `ResolverContract`, `Field`, `Argument` and the rest) and `IrSnapshot` |
-| `io.micronaut.graphql.tools.codegen.ir.shared` | Public API | The pieces of the nodes: `Names`, `Docs`, `AppliedDirective`, `TypeRef`, `BuiltinScalar`, `Coordinate`, `Operation` and `Wrapper` |
+| `io.micronaut.graphql.tools.codegen.ir.shared` | Public API | The pieces of the nodes: `Names`, `Docs`, `AppliedDirective`, `TypeRef`, `BuiltinScalar`, `Coordinate`, `Operation`, `Presence` and `Wrapper` |
+| `io.micronaut.graphql.tools.codegen.ir.client` | Public API | The nodes of client mode: `OperationDocument`, `Variable`, `Payload`, `SelectionSet`, `SelectedField`, `SelectedArgument`, `InlineFragment`, `FragmentSpread` and `FragmentDefinition` |
 
 ## Who uses it
 
@@ -257,7 +337,7 @@ application does not depend on it.
 
 ## Relation to other modules
 
-- Depends on graphql-java (`api`, used for the parser only), on the Micronaut sourcegen generator (`implementation`,
+- Depends on graphql-java (`api`, used for the parser, and in client mode to build the schema and validate the operations as the compile-time checks do), on the Micronaut sourcegen generator (`implementation`,
   non-transitive: only its JavaPoet fork is used, and the fork runs with the JDK alone) and on KotlinPoet (`implementation`).
   The Micronaut platform manages the versions of the last two, so none is declared here and the version catalog has no entry
   for them. They stay on the generator classpath of the plugins and never reach an application.
@@ -280,5 +360,8 @@ and `GraphQLCodeGeneratorSpec` covers the entry point. `SchemaLoaderSpec` covers
 skipped files and the merge errors; `IrStructureSpec` the nodes; `IrDiagnosticsSpec` each failure with its text and location;
 `IrDeterminismSpec` the identical IR for any file order and a schema of 1,000 types and 20,000 fields; `NodeTextSpec` the escaping; and
 `IrGoldenSpec` compares the IR text snapshots of the sample schema through the golden harness, in
-`src/test/resources/golden/ir-sample-default` and `ir-sample-styled`.
+`src/test/resources/golden/ir-sample-default` and `ir-sample-styled`. Client mode: `ClientOperationSpec` covers the operations, the
+presence, the skip and include rules, the abstract selections and the fragments; `ClientDocumentsSpec` the discovery of the documents and
+their diagnostics; `ClientIrGoldenSpec` the IR text snapshot of the schema `src/test/resources/schema/client` (`ir-client-default`); and
+`ClientProcessorEqualitySpec` the equality of the document and the hash with the assembled document of the compile-time checks.
 `checkNoBuildToolOrRuntimeDependency` runs as part of `check`.

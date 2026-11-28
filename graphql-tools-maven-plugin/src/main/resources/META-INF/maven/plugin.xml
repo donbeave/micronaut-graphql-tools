@@ -227,6 +227,20 @@
           <editable>true</editable>
           <description>Whether # comments before a definition are its description; it must match the runtime setting.</description>
         </parameter>
+        <parameter>
+          <name>operationIncludes</name>
+          <type>java.util.List</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>The globs that select the operation documents of client mode, relative to the directory that holds them.</description>
+        </parameter>
+        <parameter>
+          <name>operationExcludes</name>
+          <type>java.util.List</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>The globs that remove operation documents from the selection.</description>
+        </parameter>
       </parameters>
       <configuration>
         <project implementation="org.apache.maven.project.MavenProject" default-value="${project}"/>
@@ -257,6 +271,8 @@
         <includes implementation="java.util.List" default-value="**/*.graphqls,**/*.graphql">${micronaut.graphql.tools.codegen.includes}</includes>
         <excludes implementation="java.util.List">${micronaut.graphql.tools.codegen.excludes}</excludes>
         <commentsAsDescriptions implementation="boolean" default-value="false">${micronaut.graphql.tools.codegen.comments.as.descriptions}</commentsAsDescriptions>
+        <operationIncludes implementation="java.util.List" default-value="**/*.graphql">${micronaut.graphql.tools.codegen.operation.includes}</operationIncludes>
+        <operationExcludes implementation="java.util.List">${micronaut.graphql.tools.codegen.operation.excludes}</operationExcludes>
       </configuration>
     </mojo>
   </mojos>

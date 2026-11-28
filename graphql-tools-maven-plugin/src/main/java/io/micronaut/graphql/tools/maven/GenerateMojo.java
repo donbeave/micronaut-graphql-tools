@@ -179,6 +179,14 @@ public class GenerateMojo extends AbstractMojo {
     @Parameter(property = PROPERTY + "comments.as.descriptions", defaultValue = "false")
     private boolean commentsAsDescriptions;
 
+    /** The globs that select the operation documents of client mode, relative to the directory that holds them. */
+    @Parameter(property = PROPERTY + "operation.includes", defaultValue = "**/*.graphql")
+    private List<String> operationIncludes;
+
+    /** The globs that remove operation documents from the selection. */
+    @Parameter(property = PROPERTY + "operation.excludes")
+    private List<String> operationExcludes;
+
     /**
      * Creates the mojo. Maven instantiates it and sets the parameters.
      */
@@ -318,6 +326,8 @@ public class GenerateMojo extends AbstractMojo {
         putList(map, "includes", includes);
         putList(map, "excludes", excludes);
         map.put("commentsAsDescriptions", Boolean.toString(commentsAsDescriptions));
+        putList(map, "operationIncludes", operationIncludes);
+        putList(map, "operationExcludes", operationExcludes);
         return map;
     }
 

@@ -50,9 +50,11 @@ A parameter is a component of `Options` of the generator, with the same name and
 | `includes` | `micronaut.graphql.tools.codegen.includes` (comma separated) | `**/*.graphqls`, `**/*.graphql`
 | `excludes` | `micronaut.graphql.tools.codegen.excludes` (comma separated) | empty
 | `commentsAsDescriptions` | `micronaut.graphql.tools.codegen.comments.as.descriptions` | `false`
+| `operationIncludes` | `micronaut.graphql.tools.codegen.operation.includes` (comma separated) | `**/*.graphql`
+| `operationExcludes` | `micronaut.graphql.tools.codegen.operation.excludes` (comma separated) | empty
 |===
 
-`includes` and `excludes` are globs relative to `schemaDirectory`; the selected files are read in the order of their relative path. An empty element is an absent value in Maven, which has the default, so the options that name a class and are empty for none (`generatedAnnotation` and `nullableAnnotation`) take the word `none` for no annotation. A list is written as child elements, a map by key:
+`includes` and `excludes` are globs relative to `schemaDirectory`; the selected files are read in the order of their relative path. `operationIncludes` and `operationExcludes` select the operation documents of client mode in the same way, from the directory that holds them. An empty element is an absent value in Maven, which has the default, so the options that name a class and are empty for none (`generatedAnnotation` and `nullableAnnotation`) take the word `none` for no annotation. A list is written as child elements, a map by key:
 
 [source,xml]
 ----

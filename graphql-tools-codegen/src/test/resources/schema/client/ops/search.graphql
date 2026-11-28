@@ -1,0 +1,16 @@
+query Search($text: String!, $filter: PostFilter) {
+  search(text: $text, filter: $filter) {
+    ... on Folder {
+      id
+      name
+      createdAt
+    }
+    ... on File {
+      id
+      bytes
+    }
+    ... on Node {
+      id
+    }
+  }
+}

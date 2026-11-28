@@ -246,6 +246,20 @@ public abstract class CodegenSpec implements Named {
     public abstract Property<Boolean> getCommentsAsDescriptions();
 
     /**
+     * The globs that select the operation documents of client mode, relative to the directory that holds them.
+     *
+     * @return the property
+     */
+    public abstract ListProperty<String> getOperationIncludes();
+
+    /**
+     * The globs that remove operation documents from the selection.
+     *
+     * @return the property
+     */
+    public abstract ListProperty<String> getOperationExcludes();
+
+    /**
      * The options in their string form: the keys of the generator's {@code Options.fromMap}, only for the options that are set.
      *
      * @return the options, in key order
@@ -275,6 +289,8 @@ public abstract class CodegenSpec implements Named {
         putList(map, "includes", getIncludes());
         putList(map, "excludes", getExcludes());
         put(map, "commentsAsDescriptions", getCommentsAsDescriptions());
+        putList(map, "operationIncludes", getOperationIncludes());
+        putList(map, "operationExcludes", getOperationExcludes());
         return map;
     }
 

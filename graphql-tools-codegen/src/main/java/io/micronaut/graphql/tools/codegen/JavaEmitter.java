@@ -66,15 +66,18 @@ final class JavaEmitter implements Emitter {
             files.add(new GeneratedFile(path(names.packageName(), names.simpleName()), enumFile(type, options)));
             packages.add(names.packageName());
         }
-        Set<String> permitted = permittedNames(ir);
-        for (AbstractType type : ir.abstractTypes()) {
-            Names names = type.names();
-            files.add(new GeneratedFile(path(names.packageName(), names.simpleName()),
-                    interfaceFile(type, permitted.contains(qualified(names)), options)));
-            packages.add(names.packageName());
-            modelPackages.add(names.packageName());
+        // the models of a client are result models, which the emitter of the client models writes
+        if (options.mode() == Mode.SERVER) {
+            Set<String> permitted = permittedNames(ir);
+            for (AbstractType type : ir.abstractTypes()) {
+                Names names = type.names();
+                files.add(new GeneratedFile(path(names.packageName(), names.simpleName()),
+                        interfaceFile(type, permitted.contains(qualified(names)), options)));
+                packages.add(names.packageName());
+                modelPackages.add(names.packageName());
+            }
         }
-        if (options.modelStyle() == ModelStyle.RECORD) {
+        if (options.modelStyle() == ModelStyle.RECORD && options.mode() == Mode.SERVER) {
             for (ModelType type : ir.models()) {
                 Names names = type.names();
                 files.add(new GeneratedFile(path(names.packageName(), names.simpleName()), recordFile(type, options)));

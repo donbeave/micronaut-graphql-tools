@@ -82,6 +82,8 @@ class GenerateMojoSpec extends Specification {
             <includes><include>**/*.gql</include></includes>
             <excludes><exclude>**/draft/**</exclude></excludes>
             <commentsAsDescriptions>true</commentsAsDescriptions>
+            <operationIncludes><operationInclude>ops/**/*.graphql</operationInclude></operationIncludes>
+            <operationExcludes><operationExclude>**/draft/**</operationExclude></operationExcludes>
         ''')
 
         then:
@@ -93,7 +95,7 @@ class GenerateMojoSpec extends Specification {
                 .kotlinSuspend(true).subscriptionReturnType('kotlinx.coroutines.flow.Flow')
                 .typeMappings([Date: 'java.time.LocalDate', 'Book.title': 'example.Title'])
                 .nameConstants(NameConstants.TYPES).includes(['**/*.gql']).excludes(['**/draft/**'])
-                .commentsAsDescriptions(true).build()
+                .commentsAsDescriptions(true).operationIncludes(['ops/**/*.graphql']).operationExcludes(['**/draft/**']).build()
     }
 
     def "the string form of the parameters is the string form of the options"() {

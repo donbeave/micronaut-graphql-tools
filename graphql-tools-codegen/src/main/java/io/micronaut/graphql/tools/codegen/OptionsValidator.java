@@ -74,6 +74,11 @@ final class OptionsValidator {
         }
         patterns("includes", options.includes());
         patterns("excludes", options.excludes());
+        patterns("operationIncludes", options.operationIncludes());
+        patterns("operationExcludes", options.operationExcludes());
+        if (options.operationIncludes().isEmpty()) {
+            invalid("operationIncludes", "The option operationIncludes selects no operation document: it has no glob.");
+        }
         if (options.includes().isEmpty()) {
             invalid("includes", "The option includes selects no schema file: it has no glob.");
         }

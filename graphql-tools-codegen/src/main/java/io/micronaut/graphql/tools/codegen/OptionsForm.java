@@ -63,6 +63,8 @@ final class OptionsForm {
         putList(map, "includes", o.includes(), defaults.includes());
         putList(map, "excludes", o.excludes(), defaults.excludes());
         put(map, "commentsAsDescriptions", o.commentsAsDescriptions(), defaults.commentsAsDescriptions());
+        putList(map, "operationIncludes", o.operationIncludes(), defaults.operationIncludes());
+        putList(map, "operationExcludes", o.operationExcludes(), defaults.operationExcludes());
         return Collections.unmodifiableMap(new LinkedHashMap<>(map));
     }
 
@@ -108,6 +110,8 @@ final class OptionsForm {
         reader.list("includes", b::includes);
         reader.list("excludes", b::excludes);
         reader.bool("commentsAsDescriptions", b::commentsAsDescriptions);
+        reader.list("operationIncludes", b::operationIncludes);
+        reader.list("operationExcludes", b::operationExcludes);
         reader.rejectUnknown();
         return new OptionsResult(b.build(), reader.diagnostics);
     }
