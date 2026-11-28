@@ -39,7 +39,8 @@ schema files --> loader --> IR --> rules --> emitter --> files
 ```
 
 - The loader reads files in a defined order, parses them with graphql-java's parser and merges type extensions. No other
-  stage touches graphql-java.
+  stage touches graphql-java, except that client mode builds a schema with it to validate the operation documents (see
+  "Client mode").
 - The rules lower the merged definitions plus the `Options` into the IR: they apply names, type mappings, model style and
   contract grouping, and they report diagnostics. After lowering, every decision is in the IR.
 - An emitter takes the IR and returns files. It makes no naming or mapping decision; it only turns IR nodes into the
@@ -174,6 +175,7 @@ under the same rules):
 | Names | `nameConstants` | enum `NONE`, `TYPES`, `FIELDS` | `FIELDS` |
 | Schema | `includes`, `excludes` | list of globs | `**/*.graphqls`, `**/*.graphql`; none |
 | Schema | `commentsAsDescriptions` | boolean | `false` (must match the runtime setting) |
+| Client | `operationIncludes`, `operationExcludes` | list of globs | `**/*.graphql`; none |
 
 An unmapped custom scalar is always a diagnostic, never an option, because the third-party generators' silent fallback
 to `String` is the failure this generator exists to avoid.
@@ -379,28 +381,44 @@ and drop almost all of that cost.
 Client mode uses the same loader, the same IR core and the same emitter interface. It adds nodes and rules; it adds no
 second pipeline, and the work is shared with the operation IR (#667) and the Java emitter for client models (#671).
 
-Extra IR nodes, filled only when `mode = CLIENT`:
+Extra IR nodes, filled only when `mode = CLIENT` (the final shapes are in `ir.client`; the module README describes them):
 
 ```java
-record OperationDocument(Names names, OperationKind kind, List<Variable> variables,
-                         SelectionSet selection, String documentText, String documentHash,
+record OperationDocument(Names names, Operation kind, List<Variable> variables, Names variablesType, Payload payload,
+                         TypeRef result, SelectionSet selection, String documentText, String documentHash,
                          List<String> fragments, Origin origin) {}
 record FragmentDefinition(Names names, String typeCondition, SelectionSet selection, Origin origin) {}
 record SelectionSet(List<SelectedField> fields, List<InlineFragment> inlineFragments,
-                    List<String> fragmentSpreads) {}
-record SelectedField(String alias, String fieldName, List<Argument> arguments,
-                     TypeRef type, SelectionSet selection) {}
-record Variable(String name, TypeRef type, String defaultValue) {}
+                    List<FragmentSpread> fragmentSpreads) {}
+record SelectedField(String alias, String fieldName, List<SelectedArgument> arguments, TypeRef type,
+                     SelectionSet selection, List<AppliedDirective> directives, Origin origin) {}
+record InlineFragment(String typeCondition, SelectionSet selection, List<AppliedDirective> directives, Origin origin) {}
+record FragmentSpread(String name, List<AppliedDirective> directives, Origin origin) {}
+record Variable(String name, TypeRef type, String defaultValue, Presence presence, Origin origin) {}
 ```
 
 - The result models of an operation are derived from its selection set by the rules: one record per selection set, named
   by the path from the operation, a fragment interface for each named fragment that the records spreading it implement,
   and a sealed interface for an abstract selection with one record per type condition and an `Other` record. The emitter
   sees them as ordinary `ModelType` and `AbstractType` nodes plus the operation request class.
+- A nullable variable and a nullable field of an input object tell an omitted key from an explicit `null`, so `Variable` and
+  `InputField` carry a `Presence` (`REQUIRED`, `OMITTABLE`, `TRI_STATE`), and the generated request models show `TRI_STATE` with
+  the representation that the server inputs use (`ArgumentValue`), with matching Serde behaviour.
+- A field selected with `@skip` or `@include` can be absent from the response although its schema type is non-null. The selection IR
+  carries the directives of fields, inline fragments and spreads, and the result model types such a field as nullable, so a
+  primitive component never turns an absent value into `0` or `false`.
+- An abstract selection (an interface or a union) selects `__typename`: the generator injects it, first, when the document omits it,
+  exactly as the compile-time checks do, and the polymorphic model maps it, because Serde cannot choose the member without it.
+- Client mode has an explicit operation-document input: files, text, or a directory selected by the options `operationIncludes`
+  (default `**/*.graphql`) and `operationExcludes`. Discovery is deterministic: sorted by relative path in UTF-8 byte order, with the
+  globs of the schema files, and without any operation input the schema directory is read, where the checks look for documents.
 - Input objects, enums and custom scalars that an operation reaches reuse `InputType`, `EnumType` and `ScalarType` and the
   same `typeMappings`.
-- `documentText` and `documentHash` are the assembled document that the compile-time processor also validates, so the two
-  agree by construction (#667 asserts equality).
+- `documentText` and `documentHash` are the assembled document that the compile-time processor also validates (the operation, the
+  fragments it uses by name, `__typename` injected, printed compactly; the hash is a SHA-256 of its UTF-8 bytes). The generator
+  applies the same rules in its own code, because it depends on no other module, and a test compares the two outputs on the same
+  files. Validating the documents builds a schema with graphql-java, so the client stage is the one place after the loader that
+  uses more of graphql-java than the parser.
 - Variables, selection sets, fragments and abstract types need no new emitter capability: they are records, interfaces and
   sealed interfaces, which the Java emitter already writes. Nullability uses the JSpecify annotation by default in client
   mode (a type-use only annotation works on record components), and the client models are serdeable.

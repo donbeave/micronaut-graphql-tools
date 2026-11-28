@@ -1,0 +1,69 @@
+scalar DateTime
+
+scalar Unused
+
+interface Node {
+  id: ID!
+}
+
+type Folder implements Node {
+  id: ID!
+  name: String!
+  size: Int!
+  createdAt: DateTime!
+  children: [Node!]!
+}
+
+type File implements Node {
+  id: ID!
+  name: String!
+  bytes: Int!
+  owner: User
+}
+
+type User implements Node {
+  id: ID!
+  name: String!
+  tags: [String!]!
+  role: Role!
+  posts(first: Int = 10): [Post!]!
+}
+
+type Post {
+  id: ID!
+  title: String!
+  body: String
+  likes: Int!
+  author: User!
+}
+
+union SearchResult = Folder | File | User
+
+enum Role {
+  ADMIN
+  MEMBER
+}
+
+input PostFilter {
+  text: String
+  minLikes: Int! = 0
+  role: Role
+  since: DateTime
+  tags: [String!]
+}
+
+type Query {
+  node(id: ID!): Node
+  search(text: String!, filter: PostFilter): [SearchResult!]!
+  user(id: ID!): User
+  posts(filter: PostFilter): [Post!]!
+  viewer: User!
+}
+
+type Mutation {
+  createPost(title: String!, body: String): Post!
+}
+
+type Subscription {
+  postAdded: Post!
+}

@@ -9,11 +9,17 @@ public final class io.micronaut.graphql.tools.codegen.Diagnostic extends java.la
   public java.lang.String code();
   public java.lang.String message();
   public java.lang.String optionName();
+  public static final java.lang.String ANONYMOUS_OPERATION = "anonymous-operation";
+  public static final java.lang.String CLIENT_SCHEMA_INVALID = "client-schema-invalid";
   public static final java.lang.String DEPENDENCY_TYPE_MAPPINGS = "dependency-type-mappings";
+  public static final java.lang.String DOCUMENT_TOO_LARGE = "document-too-large";
   public static final java.lang.String DUPLICATE_DEFINITION = "duplicate-definition";
+  public static final java.lang.String DUPLICATE_FRAGMENT = "duplicate-fragment";
+  public static final java.lang.String DUPLICATE_OPERATION = "duplicate-operation";
   public static final java.lang.String EXTENSION_KIND_MISMATCH = "extension-kind-mismatch";
   public static final java.lang.String EXTENSION_WITHOUT_BASE = "extension-without-base";
   public static final java.lang.String FIELD_MAPPING_NOT_SCALAR = "field-mapping-not-scalar";
+  public static final java.lang.String FRAGMENT_INTERFACE_SKIPPED = "fragment-interface-skipped";
   public static final java.lang.String INTERFACE_FIELD_CONFLICT = "interface-field-conflict";
   public static final java.lang.String INVALID_IMPLEMENTS = "invalid-implements";
   public static final java.lang.String INVALID_OPTION_COMBINATION = "invalid-option-combination";
@@ -23,10 +29,15 @@ public final class io.micronaut.graphql.tools.codegen.Diagnostic extends java.la
   public static final java.lang.String MISSING_OPTION = "missing-option";
   public static final java.lang.String NAME_COLLISION = "name-collision";
   public static final java.lang.String NARROWED_LIST_FIELD = "narrowed-list-field";
+  public static final java.lang.String NO_OPERATION_DOCUMENTS = "no-operation-documents";
   public static final java.lang.String NO_SCHEMA_FILES = "no-schema-files";
   public static final java.lang.String OBJECT_METHOD_NAME = "object-method-name";
+  public static final java.lang.String OPERATION_FILE_UNREADABLE = "operation-file-unreadable";
+  public static final java.lang.String OPERATION_INVALID = "operation-invalid";
+  public static final java.lang.String OPERATION_SYNTAX_ERROR = "operation-syntax-error";
   public static final java.lang.String RESERVED_CONTRACT_NAME = "reserved-contract-name";
   public static final java.lang.String RESERVED_NAME = "reserved-name";
+  public static final java.lang.String RESERVED_TYPENAME_ALIAS = "reserved-typename-alias";
   public static final java.lang.String ROOT_TYPE_REFERENCE = "root-type-reference";
   public static final java.lang.String SCHEMA_FILE_UNREADABLE = "schema-file-unreadable";
   public static final java.lang.String SCHEMA_SYNTAX_ERROR = "schema-syntax-error";
@@ -75,6 +86,10 @@ public final class io.micronaut.graphql.tools.codegen.GraphQLCodeGenerator {
 public static final class io.micronaut.graphql.tools.codegen.GraphQLCodeGenerator$Builder {
   public io.micronaut.graphql.tools.codegen.GraphQLCodeGenerator build();
   public io.micronaut.graphql.tools.codegen.GraphQLCodeGenerator$Builder withDependencies(java.util.Collection<java.nio.file.Path>);
+  public io.micronaut.graphql.tools.codegen.GraphQLCodeGenerator$Builder withOperationDirectory(java.nio.file.Path);
+  public io.micronaut.graphql.tools.codegen.GraphQLCodeGenerator$Builder withOperationFiles(java.nio.file.Path...);
+  public io.micronaut.graphql.tools.codegen.GraphQLCodeGenerator$Builder withOperationFiles(java.util.Collection<java.nio.file.Path>);
+  public io.micronaut.graphql.tools.codegen.GraphQLCodeGenerator$Builder withOperationSources(java.util.Collection<io.micronaut.graphql.tools.codegen.schema.SchemaSource>);
   public io.micronaut.graphql.tools.codegen.GraphQLCodeGenerator$Builder withOptions(io.micronaut.graphql.tools.codegen.Options);
   public io.micronaut.graphql.tools.codegen.GraphQLCodeGenerator$Builder withOutputDirectory(java.nio.file.Path);
   public io.micronaut.graphql.tools.codegen.GraphQLCodeGenerator$Builder withSchemaDirectory(java.nio.file.Path);
@@ -125,7 +140,7 @@ public final class io.micronaut.graphql.tools.codegen.Options extends java.lang.
   public io.micronaut.graphql.tools.codegen.ModelStyle modelStyle();
   public io.micronaut.graphql.tools.codegen.NameConstants nameConstants();
   public io.micronaut.graphql.tools.codegen.Options$Builder toBuilder();
-  public io.micronaut.graphql.tools.codegen.Options(io.micronaut.graphql.tools.codegen.Language, io.micronaut.graphql.tools.codegen.Mode, java.lang.String, java.lang.String, java.lang.String, java.lang.String, java.lang.String, io.micronaut.graphql.tools.codegen.ModelStyle, java.util.List<java.lang.String>, java.lang.String, java.lang.String, java.lang.String, boolean, java.lang.String, boolean, java.lang.String, java.util.Map<java.lang.String, java.lang.String>, boolean, io.micronaut.graphql.tools.codegen.NameConstants, java.util.List<java.lang.String>, java.util.List<java.lang.String>, boolean);
+  public io.micronaut.graphql.tools.codegen.Options(io.micronaut.graphql.tools.codegen.Language, io.micronaut.graphql.tools.codegen.Mode, java.lang.String, java.lang.String, java.lang.String, java.lang.String, java.lang.String, io.micronaut.graphql.tools.codegen.ModelStyle, java.util.List<java.lang.String>, java.lang.String, java.lang.String, java.lang.String, boolean, java.lang.String, boolean, java.lang.String, java.util.Map<java.lang.String, java.lang.String>, boolean, io.micronaut.graphql.tools.codegen.NameConstants, java.util.List<java.lang.String>, java.util.List<java.lang.String>, boolean, java.util.List<java.lang.String>, java.util.List<java.lang.String>);
   public java.lang.String contractNameTemplate();
   public java.lang.String effectiveModelPackage();
   public java.lang.String effectiveNamesPackage();
@@ -143,6 +158,8 @@ public final class io.micronaut.graphql.tools.codegen.Options extends java.lang.
   public java.util.List<java.lang.String> excludes();
   public java.util.List<java.lang.String> includes();
   public java.util.List<java.lang.String> interfaceTypes();
+  public java.util.List<java.lang.String> operationExcludes();
+  public java.util.List<java.lang.String> operationIncludes();
   public java.util.Map<java.lang.String, java.lang.String> toMap();
   public java.util.Map<java.lang.String, java.lang.String> typeMappings();
   public static final java.lang.String DEFAULT_CLIENT_NULLABLE_ANNOTATION = "org.jspecify.annotations.Nullable";
@@ -151,6 +168,7 @@ public final class io.micronaut.graphql.tools.codegen.Options extends java.lang.
   public static final java.lang.String DEFAULT_SERVER_NULLABLE_ANNOTATION = "io.micronaut.core.annotation.Nullable";
   public static final java.lang.String DEFAULT_SUBSCRIPTION_RETURN_TYPE = "org.reactivestreams.Publisher";
   public static final java.util.List<java.lang.String> DEFAULT_INCLUDES;
+  public static final java.util.List<java.lang.String> DEFAULT_OPERATION_INCLUDES;
   public static io.micronaut.graphql.tools.codegen.Options$Builder builder();
   public static io.micronaut.graphql.tools.codegen.OptionsResult fromMap(java.util.Map<java.lang.String, java.lang.String>);
   public static java.lang.String defaultNullableAnnotation(io.micronaut.graphql.tools.codegen.Mode);
@@ -172,6 +190,8 @@ public static final class io.micronaut.graphql.tools.codegen.Options$Builder {
   public io.micronaut.graphql.tools.codegen.Options$Builder nameConstants(io.micronaut.graphql.tools.codegen.NameConstants);
   public io.micronaut.graphql.tools.codegen.Options$Builder namesPackage(java.lang.String);
   public io.micronaut.graphql.tools.codegen.Options$Builder nullableAnnotation(java.lang.String);
+  public io.micronaut.graphql.tools.codegen.Options$Builder operationExcludes(java.util.List<java.lang.String>);
+  public io.micronaut.graphql.tools.codegen.Options$Builder operationIncludes(java.util.List<java.lang.String>);
   public io.micronaut.graphql.tools.codegen.Options$Builder packageName(java.lang.String);
   public io.micronaut.graphql.tools.codegen.Options$Builder resolverPackage(java.lang.String);
   public io.micronaut.graphql.tools.codegen.Options$Builder rootContracts(boolean);
@@ -299,8 +319,9 @@ public final class io.micronaut.graphql.tools.codegen.ir.InputField extends java
   public final int hashCode();
   public final java.lang.String toString();
   public io.micronaut.graphql.tools.codegen.Origin origin();
-  public io.micronaut.graphql.tools.codegen.ir.InputField(java.lang.String, java.lang.String, io.micronaut.graphql.tools.codegen.ir.shared.TypeRef, java.lang.String, io.micronaut.graphql.tools.codegen.ir.shared.Docs, java.util.List<io.micronaut.graphql.tools.codegen.ir.shared.AppliedDirective>, io.micronaut.graphql.tools.codegen.Origin);
+  public io.micronaut.graphql.tools.codegen.ir.InputField(java.lang.String, java.lang.String, io.micronaut.graphql.tools.codegen.ir.shared.TypeRef, java.lang.String, io.micronaut.graphql.tools.codegen.ir.shared.Presence, io.micronaut.graphql.tools.codegen.ir.shared.Docs, java.util.List<io.micronaut.graphql.tools.codegen.ir.shared.AppliedDirective>, io.micronaut.graphql.tools.codegen.Origin);
   public io.micronaut.graphql.tools.codegen.ir.shared.Docs docs();
+  public io.micronaut.graphql.tools.codegen.ir.shared.Presence presence();
   public io.micronaut.graphql.tools.codegen.ir.shared.TypeRef type();
   public java.lang.String defaultValue();
   public java.lang.String name();
@@ -324,7 +345,7 @@ public final class io.micronaut.graphql.tools.codegen.ir.Ir extends java.lang.Re
   public final boolean equals(java.lang.Object);
   public final int hashCode();
   public final java.lang.String toString();
-  public io.micronaut.graphql.tools.codegen.ir.Ir(java.util.List<io.micronaut.graphql.tools.codegen.ir.EnumType>, java.util.List<io.micronaut.graphql.tools.codegen.ir.InputType>, java.util.List<io.micronaut.graphql.tools.codegen.ir.ModelType>, java.util.List<io.micronaut.graphql.tools.codegen.ir.AbstractType>, java.util.List<io.micronaut.graphql.tools.codegen.ir.ScalarType>, java.util.List<io.micronaut.graphql.tools.codegen.ir.ResolverContract>, java.util.List<io.micronaut.graphql.tools.codegen.ir.NameClass>);
+  public io.micronaut.graphql.tools.codegen.ir.Ir(java.util.List<io.micronaut.graphql.tools.codegen.ir.EnumType>, java.util.List<io.micronaut.graphql.tools.codegen.ir.InputType>, java.util.List<io.micronaut.graphql.tools.codegen.ir.ModelType>, java.util.List<io.micronaut.graphql.tools.codegen.ir.AbstractType>, java.util.List<io.micronaut.graphql.tools.codegen.ir.ScalarType>, java.util.List<io.micronaut.graphql.tools.codegen.ir.ResolverContract>, java.util.List<io.micronaut.graphql.tools.codegen.ir.NameClass>, java.util.List<io.micronaut.graphql.tools.codegen.ir.client.OperationDocument>, java.util.List<io.micronaut.graphql.tools.codegen.ir.client.FragmentDefinition>);
   public java.util.List<io.micronaut.graphql.tools.codegen.ir.AbstractType> abstractTypes();
   public java.util.List<io.micronaut.graphql.tools.codegen.ir.EnumType> enums();
   public java.util.List<io.micronaut.graphql.tools.codegen.ir.InputType> inputs();
@@ -332,6 +353,8 @@ public final class io.micronaut.graphql.tools.codegen.ir.Ir extends java.lang.Re
   public java.util.List<io.micronaut.graphql.tools.codegen.ir.NameClass> nameClasses();
   public java.util.List<io.micronaut.graphql.tools.codegen.ir.ResolverContract> contracts();
   public java.util.List<io.micronaut.graphql.tools.codegen.ir.ScalarType> scalars();
+  public java.util.List<io.micronaut.graphql.tools.codegen.ir.client.FragmentDefinition> fragments();
+  public java.util.List<io.micronaut.graphql.tools.codegen.ir.client.OperationDocument> operations();
   public static final io.micronaut.graphql.tools.codegen.ir.Ir EMPTY;
 }
 
@@ -395,6 +418,109 @@ public final class io.micronaut.graphql.tools.codegen.ir.ScalarType extends java
   public io.micronaut.graphql.tools.codegen.ir.shared.Names names();
   public java.lang.String className();
   public java.util.List<io.micronaut.graphql.tools.codegen.ir.shared.AppliedDirective> directives();
+}
+
+public final class io.micronaut.graphql.tools.codegen.ir.client.FragmentDefinition extends java.lang.Record {
+  public final boolean equals(java.lang.Object);
+  public final int hashCode();
+  public final java.lang.String toString();
+  public io.micronaut.graphql.tools.codegen.Origin origin();
+  public io.micronaut.graphql.tools.codegen.ir.client.FragmentDefinition(io.micronaut.graphql.tools.codegen.ir.shared.Names, java.lang.String, io.micronaut.graphql.tools.codegen.ir.client.SelectionSet, io.micronaut.graphql.tools.codegen.Origin);
+  public io.micronaut.graphql.tools.codegen.ir.client.SelectionSet selection();
+  public io.micronaut.graphql.tools.codegen.ir.shared.Names names();
+  public java.lang.String typeCondition();
+}
+
+public final class io.micronaut.graphql.tools.codegen.ir.client.FragmentSpread extends java.lang.Record {
+  public final boolean equals(java.lang.Object);
+  public final int hashCode();
+  public final java.lang.String toString();
+  public io.micronaut.graphql.tools.codegen.Origin origin();
+  public io.micronaut.graphql.tools.codegen.ir.client.FragmentSpread(java.lang.String, java.util.List<io.micronaut.graphql.tools.codegen.ir.shared.AppliedDirective>, io.micronaut.graphql.tools.codegen.Origin);
+  public java.lang.String name();
+  public java.util.List<io.micronaut.graphql.tools.codegen.ir.shared.AppliedDirective> directives();
+}
+
+public final class io.micronaut.graphql.tools.codegen.ir.client.InlineFragment extends java.lang.Record {
+  public final boolean equals(java.lang.Object);
+  public final int hashCode();
+  public final java.lang.String toString();
+  public io.micronaut.graphql.tools.codegen.Origin origin();
+  public io.micronaut.graphql.tools.codegen.ir.client.InlineFragment(java.lang.String, io.micronaut.graphql.tools.codegen.ir.client.SelectionSet, java.util.List<io.micronaut.graphql.tools.codegen.ir.shared.AppliedDirective>, io.micronaut.graphql.tools.codegen.Origin);
+  public io.micronaut.graphql.tools.codegen.ir.client.SelectionSet selection();
+  public java.lang.String typeCondition();
+  public java.util.List<io.micronaut.graphql.tools.codegen.ir.shared.AppliedDirective> directives();
+}
+
+public final class io.micronaut.graphql.tools.codegen.ir.client.OperationDocument extends java.lang.Record {
+  public final boolean equals(java.lang.Object);
+  public final int hashCode();
+  public final java.lang.String toString();
+  public io.micronaut.graphql.tools.codegen.Origin origin();
+  public io.micronaut.graphql.tools.codegen.ir.client.OperationDocument(io.micronaut.graphql.tools.codegen.ir.shared.Names, io.micronaut.graphql.tools.codegen.ir.shared.Operation, java.util.List<io.micronaut.graphql.tools.codegen.ir.client.Variable>, io.micronaut.graphql.tools.codegen.ir.shared.Names, io.micronaut.graphql.tools.codegen.ir.client.Payload, io.micronaut.graphql.tools.codegen.ir.shared.TypeRef, io.micronaut.graphql.tools.codegen.ir.client.SelectionSet, java.lang.String, java.lang.String, java.util.List<java.lang.String>, io.micronaut.graphql.tools.codegen.Origin);
+  public io.micronaut.graphql.tools.codegen.ir.client.Payload payload();
+  public io.micronaut.graphql.tools.codegen.ir.client.SelectionSet selection();
+  public io.micronaut.graphql.tools.codegen.ir.shared.Names names();
+  public io.micronaut.graphql.tools.codegen.ir.shared.Names variablesType();
+  public io.micronaut.graphql.tools.codegen.ir.shared.Operation kind();
+  public io.micronaut.graphql.tools.codegen.ir.shared.TypeRef result();
+  public java.lang.String documentHash();
+  public java.lang.String documentText();
+  public java.util.List<io.micronaut.graphql.tools.codegen.ir.client.Variable> variables();
+  public java.util.List<java.lang.String> fragments();
+}
+
+public final class io.micronaut.graphql.tools.codegen.ir.client.Payload extends java.lang.Enum<io.micronaut.graphql.tools.codegen.ir.client.Payload> {
+  public static final io.micronaut.graphql.tools.codegen.ir.client.Payload FIELD;
+  public static final io.micronaut.graphql.tools.codegen.ir.client.Payload DATA;
+  public static io.micronaut.graphql.tools.codegen.ir.client.Payload valueOf(java.lang.String);
+  public static io.micronaut.graphql.tools.codegen.ir.client.Payload[] values();
+}
+
+public final class io.micronaut.graphql.tools.codegen.ir.client.SelectedArgument extends java.lang.Record {
+  public final boolean equals(java.lang.Object);
+  public final int hashCode();
+  public final java.lang.String toString();
+  public io.micronaut.graphql.tools.codegen.ir.client.SelectedArgument(java.lang.String, java.lang.String);
+  public java.lang.String name();
+  public java.lang.String value();
+}
+
+public final class io.micronaut.graphql.tools.codegen.ir.client.SelectedField extends java.lang.Record {
+  public final boolean equals(java.lang.Object);
+  public final int hashCode();
+  public final java.lang.String toString();
+  public io.micronaut.graphql.tools.codegen.Origin origin();
+  public io.micronaut.graphql.tools.codegen.ir.client.SelectedField(java.lang.String, java.lang.String, java.util.List<io.micronaut.graphql.tools.codegen.ir.client.SelectedArgument>, io.micronaut.graphql.tools.codegen.ir.shared.TypeRef, io.micronaut.graphql.tools.codegen.ir.client.SelectionSet, java.util.List<io.micronaut.graphql.tools.codegen.ir.shared.AppliedDirective>, io.micronaut.graphql.tools.codegen.Origin);
+  public io.micronaut.graphql.tools.codegen.ir.client.SelectionSet selection();
+  public io.micronaut.graphql.tools.codegen.ir.shared.TypeRef type();
+  public java.lang.String alias();
+  public java.lang.String fieldName();
+  public java.lang.String responseKey();
+  public java.util.List<io.micronaut.graphql.tools.codegen.ir.client.SelectedArgument> arguments();
+  public java.util.List<io.micronaut.graphql.tools.codegen.ir.shared.AppliedDirective> directives();
+}
+
+public final class io.micronaut.graphql.tools.codegen.ir.client.SelectionSet extends java.lang.Record {
+  public final boolean equals(java.lang.Object);
+  public final int hashCode();
+  public final java.lang.String toString();
+  public io.micronaut.graphql.tools.codegen.ir.client.SelectionSet(java.util.List<io.micronaut.graphql.tools.codegen.ir.client.SelectedField>, java.util.List<io.micronaut.graphql.tools.codegen.ir.client.InlineFragment>, java.util.List<io.micronaut.graphql.tools.codegen.ir.client.FragmentSpread>);
+  public java.util.List<io.micronaut.graphql.tools.codegen.ir.client.FragmentSpread> fragmentSpreads();
+  public java.util.List<io.micronaut.graphql.tools.codegen.ir.client.InlineFragment> inlineFragments();
+  public java.util.List<io.micronaut.graphql.tools.codegen.ir.client.SelectedField> fields();
+}
+
+public final class io.micronaut.graphql.tools.codegen.ir.client.Variable extends java.lang.Record {
+  public final boolean equals(java.lang.Object);
+  public final int hashCode();
+  public final java.lang.String toString();
+  public io.micronaut.graphql.tools.codegen.Origin origin();
+  public io.micronaut.graphql.tools.codegen.ir.client.Variable(java.lang.String, io.micronaut.graphql.tools.codegen.ir.shared.TypeRef, java.lang.String, io.micronaut.graphql.tools.codegen.ir.shared.Presence, io.micronaut.graphql.tools.codegen.Origin);
+  public io.micronaut.graphql.tools.codegen.ir.shared.Presence presence();
+  public io.micronaut.graphql.tools.codegen.ir.shared.TypeRef type();
+  public java.lang.String defaultValue();
+  public java.lang.String name();
 }
 
 public final class io.micronaut.graphql.tools.codegen.ir.shared.AppliedDirective extends java.lang.Record {
@@ -462,6 +588,15 @@ public final class io.micronaut.graphql.tools.codegen.ir.shared.Operation extend
   public static io.micronaut.graphql.tools.codegen.ir.shared.Operation[] values();
 }
 
+public final class io.micronaut.graphql.tools.codegen.ir.shared.Presence extends java.lang.Enum<io.micronaut.graphql.tools.codegen.ir.shared.Presence> {
+  public static final io.micronaut.graphql.tools.codegen.ir.shared.Presence REQUIRED;
+  public static final io.micronaut.graphql.tools.codegen.ir.shared.Presence OMITTABLE;
+  public static final io.micronaut.graphql.tools.codegen.ir.shared.Presence TRI_STATE;
+  public static io.micronaut.graphql.tools.codegen.ir.shared.Presence of(io.micronaut.graphql.tools.codegen.ir.shared.TypeRef, boolean);
+  public static io.micronaut.graphql.tools.codegen.ir.shared.Presence valueOf(java.lang.String);
+  public static io.micronaut.graphql.tools.codegen.ir.shared.Presence[] values();
+}
+
 public interface io.micronaut.graphql.tools.codegen.ir.shared.TypeRef permits io.micronaut.graphql.tools.codegen.ir.shared.TypeRef$Builtin, io.micronaut.graphql.tools.codegen.ir.shared.TypeRef$ListOf, io.micronaut.graphql.tools.codegen.ir.shared.TypeRef$Mapped, io.micronaut.graphql.tools.codegen.ir.shared.TypeRef$Reference {
   public default boolean isNullable();
 }
@@ -525,10 +660,13 @@ public static final class io.micronaut.graphql.tools.codegen.ir.shared.Wrapper$S
 public final class io.micronaut.graphql.tools.codegen.schema.IrBuilder {
   public static io.micronaut.graphql.tools.codegen.schema.IrResult fromDirectory(java.nio.file.Path, io.micronaut.graphql.tools.codegen.Options);
   public static io.micronaut.graphql.tools.codegen.schema.IrResult fromDirectory(java.nio.file.Path, io.micronaut.graphql.tools.codegen.Options, java.util.Collection<java.nio.file.Path>);
+  public static io.micronaut.graphql.tools.codegen.schema.IrResult fromDirectory(java.nio.file.Path, io.micronaut.graphql.tools.codegen.Options, java.util.Collection<java.nio.file.Path>, io.micronaut.graphql.tools.codegen.schema.OperationInput);
   public static io.micronaut.graphql.tools.codegen.schema.IrResult fromFiles(java.util.Collection<java.nio.file.Path>, io.micronaut.graphql.tools.codegen.Options);
   public static io.micronaut.graphql.tools.codegen.schema.IrResult fromFiles(java.util.Collection<java.nio.file.Path>, io.micronaut.graphql.tools.codegen.Options, java.util.Collection<java.nio.file.Path>);
+  public static io.micronaut.graphql.tools.codegen.schema.IrResult fromFiles(java.util.Collection<java.nio.file.Path>, io.micronaut.graphql.tools.codegen.Options, java.util.Collection<java.nio.file.Path>, io.micronaut.graphql.tools.codegen.schema.OperationInput);
   public static io.micronaut.graphql.tools.codegen.schema.IrResult fromSources(java.util.Collection<io.micronaut.graphql.tools.codegen.schema.SchemaSource>, io.micronaut.graphql.tools.codegen.Options);
   public static io.micronaut.graphql.tools.codegen.schema.IrResult fromSources(java.util.Collection<io.micronaut.graphql.tools.codegen.schema.SchemaSource>, io.micronaut.graphql.tools.codegen.Options, java.util.Collection<java.nio.file.Path>);
+  public static io.micronaut.graphql.tools.codegen.schema.IrResult fromSources(java.util.Collection<io.micronaut.graphql.tools.codegen.schema.SchemaSource>, io.micronaut.graphql.tools.codegen.Options, java.util.Collection<java.nio.file.Path>, io.micronaut.graphql.tools.codegen.schema.OperationInput);
 }
 
 public final class io.micronaut.graphql.tools.codegen.schema.IrResult extends java.lang.Record {
@@ -540,6 +678,13 @@ public final class io.micronaut.graphql.tools.codegen.schema.IrResult extends ja
   public io.micronaut.graphql.tools.codegen.schema.IrResult(io.micronaut.graphql.tools.codegen.ir.Ir, java.util.List<io.micronaut.graphql.tools.codegen.Diagnostic>, java.util.List<java.lang.String>);
   public java.util.List<io.micronaut.graphql.tools.codegen.Diagnostic> diagnostics();
   public java.util.List<java.lang.String> skippedFiles();
+}
+
+public final class io.micronaut.graphql.tools.codegen.schema.OperationInput {
+  public static io.micronaut.graphql.tools.codegen.schema.OperationInput directory(java.nio.file.Path);
+  public static io.micronaut.graphql.tools.codegen.schema.OperationInput files(java.util.Collection<java.nio.file.Path>);
+  public static io.micronaut.graphql.tools.codegen.schema.OperationInput none();
+  public static io.micronaut.graphql.tools.codegen.schema.OperationInput sources(java.util.Collection<io.micronaut.graphql.tools.codegen.schema.SchemaSource>);
 }
 
 public final class io.micronaut.graphql.tools.codegen.schema.ScalarPresets {

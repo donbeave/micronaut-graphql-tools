@@ -30,6 +30,7 @@ import graphql.language.Node;
 import graphql.language.ObjectTypeDefinition;
 import graphql.language.ObjectTypeExtensionDefinition;
 import graphql.language.OperationTypeDefinition;
+import graphql.language.SDLDefinition;
 import graphql.language.ScalarTypeExtensionDefinition;
 import graphql.language.SchemaDefinition;
 import graphql.language.SchemaExtensionDefinition;
@@ -128,6 +129,9 @@ final class SchemaLoader {
         List<Definition> definitions = document.getDefinitions();
         boolean schemaContent = false;
         for (Definition<?> definition : definitions) {
+            if (definition instanceof SDLDefinition<?> sdl) {
+                schema.definitions.add(sdl);
+            }
             if (isExtension(definition)) {
                 extensions.add((TypeDefinition<?>) definition);
                 schemaContent = true;
@@ -179,6 +183,10 @@ final class SchemaLoader {
         }
         return new Origin(location.getSourceName() == null ? "<unknown>" : location.getSourceName(), location.getLine(),
                 location.getColumn());
+    }
+
+    static Origin origin(Node<?> node, SourceLocation at) {
+        return new Origin(at.getSourceName() == null ? origin(node).path() : at.getSourceName(), at.getLine(), at.getColumn());
     }
 
     private void addBase(TypeDefinition<?> type) {
