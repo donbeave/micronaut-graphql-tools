@@ -43,6 +43,13 @@ class KotlinErrorReferenceSpec extends Specification {
     KotlinBatchCompiler kotlin = new KotlinBatchCompiler(corpus, Path.of(System.getProperty('corpus.kotlin.errors.dir', 'build/corpus-kotlin-errors')).toAbsolutePath(),
             KotlinBatchCompiler.Processor.KSP, '^(' + examples.keySet().collect { Pattern.quote(it) }.join('|') + ')$')
 
+    // the Gradle build of the examples is a fixture of the spec, not of the first example (see KotlinCorpusSpec)
+    void setupSpec() {
+        if (!examples.empty) {
+            kotlin.prepare()
+        }
+    }
+
     void "the page has Kotlin examples"() {
         expect:
         !examples.empty
