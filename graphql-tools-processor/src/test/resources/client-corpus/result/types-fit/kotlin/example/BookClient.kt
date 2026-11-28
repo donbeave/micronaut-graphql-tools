@@ -45,6 +45,12 @@ interface BookClient {
     @GraphQLOperation("query Labels { labels }")
     fun labels(): List<List<String>>
 
+    @GraphQLOperation("query Scores { scores }")
+    fun scores(): IntArray?
+
+    @GraphQLOperation("query Names(\$show: Boolean!) { names @include(if: \$show) }")
+    fun names(show: Boolean): List<String>?
+
     @GraphQLOperation("query Aliased { first: book(id: \"1\") { name: title } }")
     fun aliased(): Named?
 

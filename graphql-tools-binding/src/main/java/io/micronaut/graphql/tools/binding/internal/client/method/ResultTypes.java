@@ -100,19 +100,26 @@ final class ResultTypes {
         if (optional) {
             value = JavaTypes.held(declared);
         }
-        if (!nonNull && !optional && (declared.primitive() || declared.kotlin() && declared.nullability() == Nullability.NON_NULL)) {
-            add(at, "the type of " + describe(path) + " is " + (declared.primitive() ? "the primitive " : "non-null ")
+        // a primitive array is a reference: only the type of one of its elements is a primitive that cannot hold null
+        boolean primitive = declared.primitive() && !declared.array();
+        if (!nonNull && !optional && (primitive || declared.kotlin() && declared.nullability() == Nullability.NON_NULL)) {
+            add(at, "the type of " + describe(path) + " is " + (primitive ? "the primitive " : "non-null ")
                     + JavaTypes.simple(declared.rawName()) + ", and the " + (absent && type instanceof GraphQLNonNull
                     ? "field can be left out of the response by @skip or @include" : "GraphQL type " + GraphQLTypeUtil.simplePrint(type)
                     + " is nullable") + ", so a null cannot be read",
-                    declared.primitive() ? "declare the wrapper type (" + JavaTypes.simple(JavaTypes.box(declared.rawName()))
+                    primitive ? "declare the wrapper type (" + JavaTypes.simple(JavaTypes.box(declared.rawName()))
                             + ") or an Optional, or make the schema type non-null" : "declare the type nullable");
         }
         if (value == null || JavaTypes.OBJECT.equals(value.rawName()) || isMap(value)) {
             return;
         }
+        if (value.array() && !(inner instanceof GraphQLList)) {
+            add(at, "the type of " + describe(path) + " is an array, and the GraphQL type " + GraphQLTypeUtil.simplePrint(type) + " is not a list",
+                    "declare the type of the value, or make the schema type a list");
+            return;
+        }
         if (inner instanceof GraphQLList list) {
-            matchList(value, list, fields, path, absent);
+            matchList(value, list, fields, path);
         } else if (inner instanceof GraphQLScalarType scalar) {
             matchScalar(value, scalar, path, at);
         } else if (inner instanceof GraphQLEnumType enumeration) {
@@ -183,7 +190,7 @@ final class ResultTypes {
         }
     }
 
-    private void matchList(TypeRef value, GraphQLList list, List<ClientSelections.SelectedField> fields, String path, boolean absent) {
+    private void matchList(TypeRef value, GraphQLList list, List<ClientSelections.SelectedField> fields, String path) {
         TypeRef element;
         DocumentLocation at = location(fields);
         if (value.array()) {
@@ -198,7 +205,8 @@ final class ResultTypes {
             element = value.typeArguments().isEmpty() ? null : value.typeArguments().get(0);
         }
         if (element != null) {
-            match(element, list.getWrappedType(), fields, path + "[]", absent);
+            // a directive can leave the list out, it cannot make an element of a present list null
+            match(element, list.getWrappedType(), fields, path + "[]", false);
         }
     }
 

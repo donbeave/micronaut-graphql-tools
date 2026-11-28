@@ -12,7 +12,9 @@ BookClient#both type=query name=Both payload=data variables=- document=queryBoth
 BookClient#count type=query name=Count payload=field variables=- document=queryCount{count}
 BookClient#labels type=query name=Labels payload=field variables=- document=queryLabels{labels}
 BookClient#maybe type=query name=Maybe payload=field variables=- document=queryMaybe{maybeBooks{id}}
+BookClient#names type=query name=Names payload=field variables=show document=queryNames($show:Boolean!){names@include(if:$show)}
 BookClient#nothing type=query name=Void payload=field variables=- document=queryVoid{version}
 BookClient#save type=mutation name=Save payload=field variables=title document=mutationSave($title:String!){save(title:$title){id}}
+BookClient#scores type=query name=Scores payload=field variables=- document=queryScores{scores}
 BookClient#stamp type=query name=Stamp payload=field variables=- document=queryStamp{stamp}
 BookClient#version type=query name=Version payload=field variables=- document=queryVersion{version}

@@ -45,6 +45,12 @@ public interface BookClient {
     @GraphQLOperation("query Labels { labels }")
     java.util.List<java.util.List<String>> labels();
 
+    @GraphQLOperation("query Scores { scores }")
+    int[] scores();
+
+    @GraphQLOperation("query Names($show: Boolean!) { names @include(if: $show) }")
+    java.util.List<String> names(boolean show);
+
     @GraphQLOperation("query Aliased { first: book(id: \"1\") { name: title } }")
     Named aliased();
 

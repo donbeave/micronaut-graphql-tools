@@ -8,6 +8,8 @@ type Query {
   count: Int!
   stamp: DateTime
   labels: [[String!]!]!
+  scores: [Int!]
+  names: [String!]!
 }
 
 type Mutation {
