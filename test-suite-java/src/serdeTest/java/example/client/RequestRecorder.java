@@ -1,0 +1,59 @@
+/*
+ * Copyright 2021-2026 original authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package example.client;
+
+import io.micronaut.core.annotation.Nullable;
+import io.micronaut.http.HttpRequest;
+import io.micronaut.http.HttpResponse;
+import io.micronaut.http.HttpStatus;
+import io.micronaut.http.annotation.RequestFilter;
+import io.micronaut.http.annotation.ServerFilter;
+
+import java.util.concurrent.atomic.AtomicInteger;
+
+/**
+ * A server filter in front of the GraphQL endpoint of the application: it records what the clients of the tests send, and it
+ * answers 503 to the next requests when a test asks for failures.
+ */
+@ServerFilter("/graphql")
+public class RequestRecorder {
+
+    private final AtomicInteger requests = new AtomicInteger();
+    private final AtomicInteger failures = new AtomicInteger();
+    private volatile HttpRequest<?> last;
+
+    @RequestFilter
+    @Nullable
+    public HttpResponse<?> record(HttpRequest<?> request) {
+        requests.incrementAndGet();
+        last = request;
+        return failures.getAndUpdate(left -> Math.max(0, left - 1)) > 0 ? HttpResponse.status(HttpStatus.SERVICE_UNAVAILABLE) : null;
+    }
+
+    public void failNext(int count) {
+        failures.set(count);
+    }
+
+    public int requests() {
+        return requests.get();
+    }
+
+    @Nullable
+    public String header(String name) {
+        return last == null ? null : last.getHeaders().get(name);
+    }
+
+}

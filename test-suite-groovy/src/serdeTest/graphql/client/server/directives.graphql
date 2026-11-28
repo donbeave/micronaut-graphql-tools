@@ -1,0 +1,7 @@
+query directives {
+  shout
+  tagged
+  __schema {
+    description
+  }
+}

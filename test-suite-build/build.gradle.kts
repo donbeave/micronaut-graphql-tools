@@ -85,7 +85,8 @@ val profilerProjects = layout.buildDirectory.dir("profiler/projects")
 val profilerOutput = layout.buildDirectory.dir("profiler/output")
 val profilerWarmups = providers.gradleProperty("profiler.warmups").orElse("2")
 val profilerIterations = providers.gradleProperty("profiler.iterations").orElse("5")
-val profiledSamples = listOf("java-gradle", "kotlin-ksp", "kotlin-kapt", "groovy-gradle", "multi-module-gradle")
+val profiledSamples = listOf("java-gradle", "kotlin-ksp", "kotlin-kapt", "groovy-gradle", "multi-module-gradle",
+    "java-client-gradle", "kotlin-ksp-client", "groovy-client-gradle")
 
 val prepareCompileTimeProfile by tasks.registering(Sync::class) {
     description = "Copies the profiled samples with the properties and the init script that the scenarios need."

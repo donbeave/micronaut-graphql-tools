@@ -30,4 +30,6 @@ class ScalarsQuery {
     fun echoJson(data: Any?): Any? = data
 
     fun echoLocale(@GraphQLArgument("tag") tag: Locale): Locale = tag
+
+    fun echoLong(value: Long): Long = value
 }

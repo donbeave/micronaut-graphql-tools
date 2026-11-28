@@ -1,0 +1,12 @@
+query allBooks {
+  allBooks {
+    id
+    title
+    year
+    label
+    sellers {
+      name
+      price
+    }
+  }
+}

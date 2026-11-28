@@ -38,4 +38,8 @@ class ScalarsQuery {
     Locale echoLocale(@GraphQLArgument("tag") Locale tag) {
         tag
     }
+
+    long echoLong(long value) {
+        value
+    }
 }

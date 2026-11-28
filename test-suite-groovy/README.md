@@ -17,6 +17,12 @@ as a native executable instead.
   closure classes). Add an entry there when you add a closure that a Groovy method calls.
 - `src/test/groovy/example`: Spock specs: `GraphQLSmokeSpec`, `discovery`, and `tck`, which holds the fixtures of the
   execution-behaviour scenarios and `GraphQLToolsTckSpec`.
+- `src/serdeTest/groovy/example/client`: the client examples of the guide, the Groovy version of `example.client` in `test-suite-java`
+  (`ExampleClient` and `ServiceClient` with `@CompileStatic` result classes, `LowLevelClientTest`, `DeclarativeClientTest` and
+  `ServiceClientTest` as Spock specs), on the Micronaut Serialization stack: the client needs Serde, and `micronaut-serde-jackson` makes its
+  `JsonMapper` win over Jackson databind, so the two stacks cannot share a classpath and `test` keeps the Jackson databind stack. The Groovy
+  compiler checks the operation documents of `src/serdeTest/graphql/client/server` against the schema of the application (`client.dirs`, the
+  client schema `server`). `checkClientExampleParity` in `test-suite-java` compares the class names, the tags and the documents with the Java suite.
 - `src/nativeSmoke/groovy/NativeSmoke.groovy`: the native smoke test. It starts the native executable, posts the queries of
   the Java and Kotlin smoke tests to `/graphql`, asserts the bodies and stops the process.
 
@@ -54,10 +60,11 @@ Run from the repository root. JDK 21 or 25.
 ```
 ./gradlew :test-suite-groovy:test
 ./gradlew :test-suite-groovy:test --tests 'example.tck.*'
+./gradlew :test-suite-groovy:serdeTest
 ./gradlew :test-suite-groovy:nativeSmokeTest --no-parallel
 ```
 
-- `test` runs the Spock specs on the JVM.
+- `test` runs the Spock specs on the JVM (Jackson databind stack); `serdeTest` runs the client examples (Micronaut Serialization stack). Both are part of `check`.
 - `nativeSmokeTest` builds the native executable with `:test-suite-groovy:nativeCompile` and smoke-tests it. It needs
   Oracle GraalVM 25, about 5 minutes and 5 GB of memory. It is the native check for this suite in CI.
 - Add `-PgraphqlJavaLeg=floor|ceiling` to run on another graphql-java leg.

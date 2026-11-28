@@ -65,7 +65,9 @@ The example applications are four separate Gradle projects:
 | `test-suite-java`, source set `serdeTest` | Java, the library client on Micronaut Serialization (the application of `test-suite-java`) | `./gradlew :test-suite-java:serdeTest` | `./gradlew :test-suite-java:nativeSerdeTest` |
 | `test-suite-serde` | Java, Micronaut Serialization instead of Jackson databind | `./gradlew :test-suite-serde:test` | `./gradlew :test-suite-serde:nativeTest` |
 | `test-suite-kotlin` | Kotlin 2.1.21 with KSP2 (Java and Kotlin target 21) | `./gradlew :test-suite-kotlin:test` | `./gradlew :test-suite-kotlin:nativeTest` |
+| `test-suite-kotlin`, source set `serdeTest` | Kotlin, the library client on Micronaut Serialization (the application of `test-suite-kotlin`) | `./gradlew :test-suite-kotlin:serdeTest` | not yet (#681) |
 | `test-suite-groovy` | Groovy (Spock) | `./gradlew :test-suite-groovy:test` | no native test: `./gradlew :test-suite-groovy:nativeSmokeTest` (see below) |
+| `test-suite-groovy`, source set `serdeTest` | Groovy (Spock), the library client on Micronaut Serialization (the application of `test-suite-groovy`) | `./gradlew :test-suite-groovy:serdeTest` | not yet (#681) |
 
 Each native test takes about 5 to 7 minutes and 5 GB of memory: run them one after another.
 

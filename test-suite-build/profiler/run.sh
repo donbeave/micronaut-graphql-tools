@@ -17,8 +17,10 @@ mkdir -p "$output"
 for project in "$projects"/*/; do
   name="$(basename "$project")"
   mkdir -p "$output/$name"
+  # the client samples edit their client document, the others their schema (the same rule as CompileTimeBudget.edits)
+  case "$name" in *client*) edit=document ;; *) edit=schema ;; esac
   export COMPILE_TIME_LOG="$output/$name/compile-tasks.txt"
   "$profiler" --benchmark --project-dir "$project" --scenario-file "$scenarios" --output-dir "$output/$name" \
     --warmups "$warmups" --iterations "$iterations" --gradle-version "$gradle_version" --gradle-user-home "$gradle_user_home" \
-    "$name-clean-on" "$name-clean-off" "$name-body-on" "$name-body-off" "$name-schema-on" "$name-schema-off"
+    "$name-clean-on" "$name-clean-off" "$name-body-on" "$name-body-off" "$name-$edit-on" "$name-$edit-off"
 done

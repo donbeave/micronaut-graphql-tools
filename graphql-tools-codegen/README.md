@@ -8,8 +8,9 @@ Gradle project `:micronaut-graphql-tools-codegen`, folder `graphql-tools-codegen
 The code generator of the library, as a plain Java library: the Gradle plugin and the Maven plugin map their configuration one
 to one onto it and add only wiring. This module holds the entry point, the options model, the diagnostics, the schema loader and
 the intermediate representation (IR). The Java emitter (`JavaEmitter`, behind the package-private `Emitter` interface) writes the
-enums and the name constants of the IR; the other languages and the models, inputs, interfaces, unions and contracts produce no
-source file yet. The type mappings file is written for every run that has no errors: it checks the options, loads the schema files,
+enums, the object models (records) and the name constants of the IR; the other languages and the bean model style, the inputs,
+interfaces, unions and contracts produce no source file yet. A record that implements an interface or belongs to a union names it, so
+the output compiles only once the interface emission exists. The type mappings file is written for every run that has no errors: it checks the options, loads the schema files,
 builds the IR and reports what is wrong.
 Each package that holds a generated type gets a `package-info.java`.
 
@@ -181,6 +182,26 @@ become character references such as `&#47;`, and line endings become `\n`.
 
 The option diagnostics (`unknown-option`, `invalid-option-value`, `missing-option`, `invalid-option-combination`) are described under the
 options above. A keyword or `Object` method name is an error until a renaming rule exists; there is no renaming option yet.
+
+**Models.** With `modelStyle` `RECORD` (the default), the Java emitter writes one record for each object type that is not a root type and
+that `interfaceTypes` does not select, in `modelPackage`. The record has `@Generated` (no date), `@Introspected`, the description as Javadoc
+and `@Deprecated` for a deprecated type or field, and `@GraphQLType(name = "<SDL name>")` when a prefix or suffix makes the generated name
+differ from the SDL name. It carries no serialization annotation: the library reads a server model through its introspection.
+
+| Rule | Result |
+| --- | --- |
+| Components | The fields in schema order, the fields of an extension after those of the base definition. A field with arguments is not a component: a type contract resolves it |
+| `ID`, `String` | `String` |
+| `Int`, `Float`, `Boolean` | `int`, `double`, `boolean` for a non-null value in a component; `Integer`, `Double`, `Boolean` for a nullable one, and for a non-null field with `boxed` set (it implements a nullable interface field) |
+| A list | `java.util.List` of its element, with no wildcard; the elements are always reference types; no `Set` and no array |
+| A nullable position | The `nullableAnnotation` as a type annotation on the component and on each nullable list element (`@Nullable List<@Nullable String>`); a primitive is never annotated. An empty `nullableAnnotation` writes none |
+| An enum, input, model or interface | The generated class |
+| A mapped type or scalar | The class of `typeMappings` |
+| Interfaces and unions | `implements` lists the interfaces of `implemented`, then the unions of `memberOf` |
+| Docs | The description is the Javadoc of the record; a component with a description or a deprecation gets a `@param` line (a record component has no Javadoc of its own), and a deprecation reads `Deprecated: <reason>` |
+| JSpecify | When `nullableAnnotation` is in `org.jspecify.annotations`, the `package-info.java` of the model package is `@NullMarked` |
+
+`modelStyle` `BEAN` writes no model yet.
 
 **Name constants.** With `nameConstants` other than `NONE`, the rules emit name classes in `namesPackage`. Each object, interface and input
 type gets one class `<Type>Names` (or `<generated name>Names` with a prefix or suffix), with the constant `TYPE` holding the SDL type name and
