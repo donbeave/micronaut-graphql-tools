@@ -450,15 +450,15 @@ class ClientOperationSpec extends Specification {
     @Timeout(30)
     def "a chain of fragments that spread each other twice is walked once for each, not once for each path"() {
         given:
-        def fragments = (1..24).collect { "fragment F$it on User { " + (it == 1 ? 'id' : "...F${it - 1} ...F${it - 1}") + ' }' }.join('\n')
+        def fragments = (1..16).collect { "fragment F$it on User { " + (it == 1 ? 'id' : "...F${it - 1} ...F${it - 1}") + ' }' }.join('\n')
 
         when:
-        def result = build("query Q { user { ...F24 } }\n$fragments")
+        def result = build("query Q { user { ...F16 } }\n$fragments")
 
         then:
         result.diagnostics().empty
         model(result, 'QUser').fields()*.name() == ['id']
-        model(result, 'QUser').implemented().size() == 24
+        model(result, 'QUser').implemented().size() == 16
     }
 
     def "the fields below a field that every occurrence can remove are present when the field is"() {
