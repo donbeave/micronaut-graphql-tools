@@ -59,6 +59,12 @@ class VisitorArchitectureSpec extends Specification {
             'visitServiceDescriptor', 'addGeneratedResource', 'createNewFile', 'mkdir', 'mkdirs', 'renameTo', 'deleteOnExit',
     ] as Set
 
+    // The one lookup of a class by name that is allowed: ClientElements finds the subtypes that @JsonSubTypes on a client result type names. The
+    // annotation is read by its name and its class values are names, so the visitor has no dependency on Jackson and no class literal; the
+    // class file of the result type refers to every subtype, so the verdict for a client interface still depends on its own dependencies.
+    static final String SUBTYPE_LOOKUP_FILE = 'ClientElements.java'
+    static final String SUBTYPE_LOOKUP_METHOD = 'getClassElement'
+
     // calls by receiver and method name: ambient state of the JVM, class loading by name, and writes through java.nio
     static final Map<String, Set<String>> FORBIDDEN_QUALIFIED = [
             System: ['getProperty', 'getProperties', 'setProperty', 'clearProperty', 'getenv', 'exit'] as Set,
@@ -215,7 +221,8 @@ class Good {
                     String name = select instanceof MemberSelectTree ? select.identifier.toString() : select.toString()
                     String receiver = select instanceof MemberSelectTree ? select.expression.toString() : ''
                     String simpleReceiver = receiver.substring(receiver.lastIndexOf('.') + 1)
-                    if (FORBIDDEN_METHODS.contains(name) && !(name == 'getClassesOutputPath' && file.endsWith('ModuleOwnership.java'))) {
+                    if (FORBIDDEN_METHODS.contains(name) && !(name == 'getClassesOutputPath' && file.endsWith('ModuleOwnership.java'))
+                            && !(name == SUBTYPE_LOOKUP_METHOD && file.endsWith(SUBTYPE_LOOKUP_FILE))) {
                         found << "${file}: calls ${name}".toString()
                     }
                     if (FORBIDDEN_QUALIFIED.getOrDefault(simpleReceiver, [] as Set).contains(name)) {

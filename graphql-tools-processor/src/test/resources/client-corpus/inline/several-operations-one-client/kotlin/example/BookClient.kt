@@ -7,12 +7,12 @@ import io.micronaut.graphql.tools.client.annotation.GraphQLOperation
 interface BookClient {
 
     @GraphQLOperation("query Book(\$id: ID!) { book(id: \$id) { title } }")
-    fun book(id: String): String
+    fun book(id: String): Any?
 
     @GraphQLOperation("{ version }")
-    fun versionOnly(): String
+    fun versionOnly(): Any?
 
     @GraphQLOperation
-    fun plain(): String
+    fun plain(): Any?
 
 }

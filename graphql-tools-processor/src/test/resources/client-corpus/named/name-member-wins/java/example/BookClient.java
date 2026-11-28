@@ -7,6 +7,6 @@ import io.micronaut.graphql.tools.client.annotation.GraphQLOperation;
 public interface BookClient {
 
     @GraphQLOperation(value = "Ignored", name = "FindBooks")
-    String other();
+    Object other();
 
 }

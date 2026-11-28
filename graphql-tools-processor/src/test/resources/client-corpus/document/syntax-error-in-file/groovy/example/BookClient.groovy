@@ -7,9 +7,9 @@ import io.micronaut.graphql.tools.client.annotation.GraphQLOperation
 interface BookClient {
 
     @GraphQLOperation('Good')
-    String first()
+    Object first()
 
     @GraphQLOperation('Good')
-    String second()
+    Object second()
 
 }

@@ -7,6 +7,6 @@ import io.micronaut.graphql.tools.client.annotation.GraphQLOperation
 interface BookClient {
 
     @GraphQLOperation("{ books {\n  ...Missing } }")
-    fun books(): String
+    fun books(): Any?
 
 }

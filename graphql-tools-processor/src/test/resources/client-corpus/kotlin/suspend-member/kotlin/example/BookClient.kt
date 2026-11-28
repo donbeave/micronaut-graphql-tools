@@ -7,6 +7,6 @@ import io.micronaut.graphql.tools.client.annotation.GraphQLOperation
 interface BookClient {
 
     @GraphQLOperation("{ nope }")
-    suspend fun broken(id: String, limit: Int): String
+    suspend fun broken(id: String, limit: Int): Any?
 
 }

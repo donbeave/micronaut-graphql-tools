@@ -7,6 +7,6 @@ import io.micronaut.graphql.tools.client.annotation.GraphQLOperation
 interface BookClient {
 
     @GraphQLOperation("query Book(\$id: ID!) { book(id: \$id) { title } }")
-    suspend fun book(id: String): String
+    suspend fun book(id: String): Any?
 
 }

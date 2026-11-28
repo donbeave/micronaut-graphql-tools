@@ -16,6 +16,7 @@
 package io.micronaut.graphql.tools.visitor;
 
 import io.micronaut.core.annotation.AnnotationClassValue;
+import io.micronaut.core.annotation.AnnotationValue;
 import io.micronaut.core.annotation.AnnotationMetadata;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.graphql.tools.binding.internal.model.AnnotationView;
@@ -38,6 +39,7 @@ import io.micronaut.inject.ast.PropertyElement;
 import io.micronaut.inject.ast.PropertyElementQuery;
 import io.micronaut.inject.ast.WildcardElement;
 
+import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -46,6 +48,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -54,8 +57,9 @@ import java.util.stream.Stream;
  * The compile-time adapter of the type model: it reads {@link ClassElement} and {@link MethodElement}, and the annotation
  * metadata that the Micronaut visitor context builds for them. It looks only at types that the visited class reaches, its
  * supertypes and the member, parameter and return types of what it reads; it never looks a class up by name, so the
- * decision about a class depends on nothing that Gradle does not associate with it. An instance belongs to one visitor
- * start and caches per instance.
+ * decision about a class depends on nothing that Gradle does not associate with it. The one exception is the lookup that the
+ * client visitor passes, for the subtypes that {@code @JsonSubTypes} on a result type names: the class file of the result type refers
+ * to them. An instance belongs to one visitor start and caches per instance.
  */
 final class ElementTypeModel implements TypeModel {
 
@@ -87,8 +91,26 @@ final class ElementTypeModel implements TypeModel {
     private final Map<String, ElementClass> classes = new HashMap<>();
     private final Map<String, MethodElement> methods = new HashMap<>();
 
+    // looks a class up by name, for a class that an annotation names and no type of the visited class reaches (a subtype in
+    // @JsonSubTypes); null for the resolver visitor, which never does
+    @Nullable
+    private final Function<String, ClassElement> lookup;
+
     ElementTypeModel(ModelCoverage coverage) {
+        this(coverage, null);
+    }
+
+    ElementTypeModel(ModelCoverage coverage, @Nullable Function<String, ClassElement> lookup) {
         this.coverage = coverage;
+        this.lookup = lookup;
+    }
+
+    /**
+     * @param method a method of a class that was read here
+     * @return the method as the rules see it
+     */
+    JMethod method(MethodElement method) {
+        return new ElementMethod(method);
     }
 
     /**
@@ -120,6 +142,12 @@ final class ElementTypeModel implements TypeModel {
     @Override
     public JClass resolve(TypeRef ref) {
         ClassElement element = reachable.get(ref.rawName());
+        if (element == null && lookup != null) {
+            element = lookup.apply(ref.rawName());
+            if (element != null) {
+                reachable.put(ref.rawName(), element);
+            }
+        }
         if (element == null) {
             throw new IllegalArgumentException(ref.rawName() + " is not reachable from a class that was resolved here.");
         }
@@ -324,6 +352,18 @@ final class ElementTypeModel implements TypeModel {
                 }
             });
             return names;
+        }
+
+        @Override
+        public List<NamedClass> namedClasses(String annotation, String member, String classMember, String nameMember) {
+            List<NamedClass> result = new ArrayList<>();
+            metadata.findAnnotation(annotation).ifPresent(value -> {
+                for (AnnotationValue<Annotation> nested : value.getAnnotations(member)) {
+                    nested.annotationClassValue(classMember).ifPresent(it -> result.add(new NamedClass(it.getName(),
+                            nested.stringValue(nameMember).orElse(""))));
+                }
+            });
+            return result;
         }
     }
 

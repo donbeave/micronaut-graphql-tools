@@ -7,9 +7,9 @@ import io.micronaut.graphql.tools.client.annotation.GraphQLOperation
 interface BookClient {
 
     @GraphQLOperation("{ version }")
-    fun version(): String
+    fun version(): Any?
 
     @GraphQLOperation("FromServerDirectory")
-    fun named(): String
+    fun named(): Any?
 
 }

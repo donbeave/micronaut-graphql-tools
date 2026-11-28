@@ -1,0 +1,2 @@
+BookClient#search type=query name=Search payload=field variables=term document=querySearch($term:String!){search(term:$term){__typename...onBook{titlepages}...onMagazine{issue}}}
+BookClient#spread type=query name=Spread payload=field variables=term document=querySpread($term:String!){search(term:$term){__typename...BookFields...onMagazine{issue}}}fragmentBookFieldsonBook{titlepages}

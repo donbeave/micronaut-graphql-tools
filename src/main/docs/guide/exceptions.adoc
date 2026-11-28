@@ -142,6 +142,7 @@ A conditional bean (`@Requires`, `@Replaces`) gets the same per-class compile-ti
 |`client-variable-type` |failure |yes |The declared type of a GraphQL client parameter does not fit the type of the variable it binds.
 |`client-parameter-unbound` |failure |yes |A parameter of a GraphQL client operation method binds no variable of the operation, or two parameters bind one.
 |`client-scalar-conflict` |failure |yes |One GraphQL client maps a custom scalar to two different Java types.
+|`client-result-shape` |failure |yes |The Java result type of a GraphQL client operation does not fit the selection set of the operation.
 // end generated: failures
 |===
 
@@ -935,6 +936,23 @@ Each entry gives the cause, a message and the fix. The message is the text that 
 ----
 
 *Fix.* Declare one Java type for the scalar in the interface.
+
+*See.* <<clientCompileTime,Client compile-time checks>>.
+
+[[example-client-result-shape]]
+=== `client-result-shape`
+
+*Cause.* The declared result type of an operation method does not fit the selection of its operation: a selected field has no property, a primitive or a non-null Kotlin type sits at a field that can be null (or that `@skip` or `@include` can leave out), a list and a single value are mixed, a scalar is not one that the catalog accepts for the field, a Java enum has no constant for a value of the schema enum, an object field is read into a scalar type, or a selection of an interface or union that names object types is not read into a polymorphic type with a subtype for each named object type, a default branch and `__typename` as the type property. The position is the field in the document. A `Map` or an `Object` is not checked.
+
+// client: result-shape
+[source,text]
+----
+[client-result-shape] example.BookClient#book(java.lang.String): the type of book is String, and the GraphQL type is the object type Book, whose selected fields are read into the properties of a class.
+    document inline:1:24
+    fix: declare a class, a record or a data class with a property for each selected field, or a Map
+----
+
+*Fix.* Change the declared type, or the selection, as the sentence and the fix line say.
 
 *See.* <<clientCompileTime,Client compile-time checks>>.
 

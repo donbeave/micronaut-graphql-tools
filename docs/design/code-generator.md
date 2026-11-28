@@ -80,7 +80,8 @@ Shared pieces:
   or `ListOf`, and every node carries `nullable`. The IR keeps the GraphQL nullability exactly. Primitive or boxed
   representation is an emitter rule over `nullable`: a non-null `Int`, `Float` or `Boolean` in a direct value position (a field, component,
   argument or return type) is a primitive, and everything else, including every list element and every generic type
-  argument, is a reference type. The golden snapshots pin it.
+  argument, is a reference type. The golden snapshots pin it. One exception is lowered into the IR as `Field.boxed`: see
+  "Fields that implement an interface field".
 - `Docs(String description, Deprecation deprecation)`: the SDL description (or the comment, under
   `commentsAsDescriptions`) and the deprecation reason. Emitters turn them into Javadoc or KDoc and `@Deprecated`.
 - `Origin(String path, int line, int column)`: the schema file relative to the schema root, with `/` separators. It is
@@ -94,6 +95,28 @@ Shared pieces:
 Diagnostics are produced while lowering, as `Diagnostic(severity, code, message, optionName, origin)`: an unmapped custom
 scalar, a keyword or `Object`-method name used as a field or enum value, a name that two types resolve to, an invalid
 option combination. The message names the option or the schema element and gives its location.
+
+## Fields that implement an interface field
+
+A generated interface and its implementations must compile, so two cases of a field that implements an interface field are
+decided while lowering, and the emitter only reads the result. They apply to every object type and every interface that
+implements an interface, through the interfaces that it implements, directly or by a chain.
+
+- **A narrowed list keeps the element type of the interface.** Java generics are invariant: a record component
+  `List<Folder> children` does not implement `List<Node> children()`, and wildcard generics are out of version 1. A single value is
+  covariant, so `Folder parent` implements `Node parent()` and is left alone. For a list (at any depth) whose element type is another
+  type than the one the interface declares, the field takes the interface's element type with the nullability of its own schema type
+  at each level, and lowering reports the warning `narrowed-list-field`. The generated model is then wider than the schema says (a
+  `List<Node>`); the runtime still returns the narrower objects, and the generated code never reads the narrower type. The
+  alternative of an error would reject a valid schema with no way to fix it in the schema, and the wildcard `List<? extends Node>`
+  needs a rule for every consumer of the type, which is why it stays out.
+- **A strengthened scalar keeps the boxed representation.** A non-null `Int`, `Float` or `Boolean` is a primitive in a direct value
+  position, and a primitive return cannot override the boxed return of the interface. When any implemented interface declares the
+  field as a nullable scalar, or as one that is itself boxed for this reason, the field has `boxed` set and the emitter writes the
+  boxed class (`Integer`), with the non-null nullability of the schema kept in the IR.
+- **A conflict is an error.** When two implemented interfaces declare one field with different list element types, or one as a
+  primitive and the other as a nullable scalar, no single type implements both, and lowering reports `interface-field-conflict` at the
+  implementing field.
 
 ## Options model
 

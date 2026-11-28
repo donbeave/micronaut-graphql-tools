@@ -67,6 +67,16 @@ final class KotlinClientBatch implements ClientCaseCompiler {
         return corpusCase.name.replace('/', '-')
     }
 
+    /**
+     * Builds the Gradle projects of all the cases, once. The first case does it otherwise, and the build (294 s of a CI runner for 90
+     * cases) would count as the run time of that one test against the limit of 5 minutes that stops a hung test.
+     */
+    synchronized void prepare() {
+        if (result == null) {
+            build()
+        }
+    }
+
     @Override
     synchronized ClientCompiled compile(ClientCorpusCase corpusCase, Path work) {
         if (result == null) {
