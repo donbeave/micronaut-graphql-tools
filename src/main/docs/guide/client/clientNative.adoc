@@ -1,0 +1,25 @@
+[[clientNative]]
+The client works in a native image without reflection and without runtime metadata of its own. This page says why, and what the repository verifies.
+
+== Why it works
+
+* The declarative client is implemented by Micronaut at compile time, with introduction advice and no `java.lang.reflect.Proxy`. The annotation processor compiles each operation into the annotation metadata of its method, so the runtime parses no GraphQL and reads no schema.
+* The request and the response are encoded and decoded by Micronaut Serialization, which builds its serializers at compile time for a `@Serdeable` type. The client does not use Jackson databind and no `ObjectMapper`.
+* The client adds no resource to read at run time: the documents are in the metadata, and the client directories are read by the compiler only.
+
+A type that the client decodes must be known to Micronaut Serialization at build time, which means `@Serdeable` (or a supported type) on the result and the input classes, as in every example of this guide. A dynamic request decodes into a `Map`, which needs nothing.
+
+== What is verified
+
+[cols="3,4", options="header"]
+|===
+| Check | Result
+
+| Java: `:test-suite-java:nativeSerdeTest`
+| The client tests of the Java suite (the low-level client, the declarative client, headers, cookies, the filter of a service id and retries) run in a native executable of the example application, on Micronaut Serialization. It is part of the native command of the `native` job.
+
+| Kotlin: `:test-suite-kotlin:serdeTest`, Groovy: `:test-suite-groovy:serdeTest`
+| The same client examples run on the JVM. They have no native run yet: the Kotlin native test of the client and a native smoke test of the Groovy client are tracked in #681.
+|===
+
+The guide does not claim a native result for Kotlin or Groovy before #681 is done. The Groovy suite cannot run its Spock tests natively in any case, see <<nativeImage,Native Image>>. The native tests and their commands are listed on that page, with the results of a run.
