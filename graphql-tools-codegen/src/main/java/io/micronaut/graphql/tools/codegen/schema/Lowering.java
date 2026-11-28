@@ -36,6 +36,7 @@ import io.micronaut.graphql.tools.codegen.Mode;
 import io.micronaut.graphql.tools.codegen.NameConstants;
 import io.micronaut.graphql.tools.codegen.Options;
 import io.micronaut.graphql.tools.codegen.Origin;
+import io.micronaut.graphql.tools.codegen.SealedAbstractTypes;
 import io.micronaut.graphql.tools.codegen.ir.AbstractType;
 import io.micronaut.graphql.tools.codegen.ir.Argument;
 import io.micronaut.graphql.tools.codegen.ir.ContractMethod;
@@ -298,10 +299,15 @@ final class Lowering {
         return ((TypeName) type).getName();
     }
 
-    private void warnMappedMembers(MergedType owner, Iterable<String> members) {
+    private boolean warnMappedMembers(MergedType owner, Iterable<String> members) {
+        boolean found = false;
         for (String member : members) {
             MergedType type = schema.types.get(member);
             if (type != null && type.kind != Kind.SCALAR && external(member)) {
+                found = true;
+                if (options.sealedAbstractTypes() != SealedAbstractTypes.AUTO) {
+                    continue;
+                }
                 diagnostics.add(new Diagnostic(Diagnostic.Severity.WARNING, Diagnostic.MAPPED_MEMBER, "The "
                         + owner.kind.name().toLowerCase(Locale.ROOT) + " '" + owner.name + "' (" + owner.origin + ") has the member '"
                         + member + "', which typeMappings." + member + " maps to the external class " + mapping(member)
@@ -310,6 +316,7 @@ final class Lowering {
                         "typeMappings." + member, owner.origin));
             }
         }
+        return found;
     }
 
     private void resolveRoots() {
@@ -484,7 +491,7 @@ final class Lowering {
         register(type, "interface type");
         abstractTypes.add(new AbstractType(AbstractType.Kind.INTERFACE, generated,
                 text.docs(type.base, description(type), type.directives), fields(type), generatedNames(type.implemented), members,
-                !members.isEmpty() && members.size() == implementing.size(), text.directives(type.directives), type.origin));
+                sealed(members, implementing.size()), text.directives(type.directives), type.origin));
     }
 
     private void unionType(MergedType type, List<AbstractType> abstractTypes) {
@@ -493,11 +500,34 @@ final class Lowering {
             return;
         }
         List<Names> members = generatedNames(type.members);
-        warnMappedMembers(type, type.members);
+        boolean mappedMember = warnMappedMembers(type, type.members);
+        boolean selectedMember = warnSelectedMembers(type, mappedMember);
         register(type, "union type");
         abstractTypes.add(new AbstractType(AbstractType.Kind.UNION, generated,
                 text.docs(type.base, description(type), type.directives), List.of(), List.of(), members,
-                !members.isEmpty() && members.size() == type.members.size(), text.directives(type.directives), type.origin));
+                !selectedMember && sealed(members, type.members.size()), text.directives(type.directives), type.origin));
+    }
+
+    private boolean sealed(List<Names> members, int declared) {
+        return options.sealedAbstractTypes() == SealedAbstractTypes.AUTO && !members.isEmpty() && members.size() == declared;
+    }
+
+    private boolean warnSelectedMembers(MergedType union, boolean reported) {
+        boolean found = false;
+        for (String member : union.members) {
+            if (selectedObjects.contains(member) && names.containsKey(member)) {
+                found = true;
+                if (!reported && options.sealedAbstractTypes() == SealedAbstractTypes.AUTO) {
+                    reported = true;
+                    diagnostics.add(new Diagnostic(Diagnostic.Severity.WARNING, Diagnostic.SELECTED_MEMBER, "The union '" + union.name
+                            + "' (" + union.origin + ") has the member '" + member + "', which the option interfaceTypes generates as an"
+                            + " interface. An interface cannot implement the union, so '" + union.name + "' is generated as a plain"
+                            + " interface, not a sealed one, and a class that implements '" + member + "' implements the union itself.",
+                            "interfaceTypes", union.origin));
+                }
+            }
+        }
+        return found;
     }
 
     private List<Field> fields(MergedType owner) {

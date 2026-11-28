@@ -58,6 +58,7 @@ reference; this is the summary.
 | `generatedAnnotation` | class name, empty for none | `javax.annotation.processing.Generated` |
 | `modelStyle` | `RECORD` or `BEAN` | `RECORD` |
 | `interfaceTypes` | list of SDL object type names | empty |
+| `sealedAbstractTypes` | `AUTO` or `NEVER` | `AUTO`; `NEVER` writes plain interfaces |
 | `typeNamePrefix`, `typeNameSuffix` | string | empty |
 | `nullableAnnotation` | class name, empty for none | `io.micronaut.core.annotation.Nullable`; `org.jspecify.annotations.Nullable` in client mode |
 | `rootContracts` | `true` or `false` | `true` |
@@ -137,8 +138,8 @@ name side by side (`Names`), `Docs` (description and deprecation), the applied d
 reference (`TypeRef`) keeps its nullability exactly; primitive or boxed is a rule of the emitter, except that a `Field` has a `boxed` flag (below). A reference is a `Builtin`, a `Mapped` external class
 (`typeMappings`, by SDL name or by `Type.field`, which replaces the named type of that field inside any list), a `Reference` to a generated
 type, or a `ListOf`. An interface that implements an interface keeps it in `implemented`. A sealed interface lists its `members`
-(the object types and interfaces that implement it, or the members of a union) and is open when it has no member or when a member is
-mapped to an external class. A model lists the unions it belongs to in `memberOf`.
+(the object types and interfaces that implement it, or the members of a union) and is open when it has no member, when a member is
+mapped to an external class, when a union has a member that `interfaceTypes` selects, or when `sealedAbstractTypes` is `NEVER`. A model lists the unions it belongs to in `memberOf`.
 A field that implements an interface field follows two rules, so that the generated types compile: a list whose element type the
 implementation narrows (`[Node!]!` in the interface, `[Folder!]!` in the object) keeps the element type of the interface in the IR,
 because Java generics are invariant and the generator writes no wildcards, and the diagnostic `narrowed-list-field` says so; a non-null
@@ -185,7 +186,8 @@ become character references such as `&#47;`, and line endings become `\n`.
 | `name-collision` | error | Two schema elements, or an element and a generated helper class (`GraphQLTypeNames`, `<Type>Names`), generate the same class, or two name constants of one class have the same identifier; the class comparison folds the case of the path, because two names such as `Foo` and `foo` overwrite each other on a case-insensitive file system |
 | `root-type-reference` | error | A field or argument has a root operation type as its type (map it with `typeMappings`) |
 | `field-mapping-not-scalar` | error | A `Type.field` entry of `typeMappings` names a field whose type is an object, interface, union, enum or input type |
-| `mapped-member` | warning | A union has a member, or an interface an implementing type, that `typeMappings` maps to an external class; the union or interface is not sealed |
+| `mapped-member` | warning | A union has a member, or an interface an implementing type, that `typeMappings` maps to an external class; the union or interface is not sealed (reported with `sealedAbstractTypes` `AUTO` only) |
+| `selected-member` | warning | A union has a member that `interfaceTypes` generates as an interface; an interface cannot implement the union, so the union is not sealed |
 | `narrowed-list-field` | warning | A field implements an interface field of a list type with a narrower element type; the generated type keeps the element type of the interface, because Java generics are invariant |
 | `interface-field-conflict` | error | Two interfaces that a type implements declare one field with a different list element type, or one as a primitive-capable non-null scalar and the other as a nullable scalar, so no single Java type implements both |
 | `dependency-type-mappings` | warning | The mappings of a dependency conflict with another's, are unreadable or are not class names |
@@ -214,6 +216,26 @@ differ from the SDL name. It carries no serialization annotation: the library re
 | JSpecify | When `nullableAnnotation` is in `org.jspecify.annotations`, the `package-info.java` of the model package is `@NullMarked` |
 
 `modelStyle` `BEAN` writes no model yet.
+
+**Unions and interfaces.** The Java emitter writes one interface in `modelPackage` for each union, each interface type and each object type
+that `interfaceTypes` selects. A sealed one is `public sealed interface X permits A, B`, listing its `members` in schema order; every
+member implements it, and a record is implicitly final, so a `switch` over the interface needs no `default` branch (a pattern `switch`
+needs Java 21) and a new member makes the `switch` fail to compile. An interface that is not sealed but is a member of a sealed one
+(an interface type that no type implements, or an object type that `interfaceTypes` selects) is `non-sealed`, which Java requires. The
+sealed interfaces are in one package, as Java needs without a named module.
+
+| Rule | Result |
+| --- | --- |
+| `sealedAbstractTypes` `AUTO` | Sealed when every member is a generated type and the union has no member that `interfaceTypes` selects; otherwise a plain interface, and the warning `mapped-member` or `selected-member` says why |
+| `sealedAbstractTypes` `NEVER` | A plain interface, with no diagnostic; the members still implement it |
+| Accessors | One abstract method named like the field for each field without arguments, with the type rules of the record components (the boxed class for a strengthened scalar, the element type of the interface for a narrowed list, the `nullableAnnotation` on a nullable type); a union has none |
+| Extending | An interface that implements an interface extends it, and re-declares its fields |
+| Annotations | `@Generated`, and for an interface with accessors `@Introspected` and `@AccessorsStyle(readPrefixes = "")`, because the library reads the properties of an interface through its own introspection and the accessors have no `get` prefix |
+| Docs | The description is the Javadoc of the interface and of each accessor; a deprecation is `@Deprecated` with a `@deprecated` line |
+| Resolver contracts | Never sealed: Micronaut AOP subclasses the implementations |
+
+Hand-written classes cannot join a sealed interface; with `NEVER`, or with a member mapped to an external class, the interface is open
+and a class implements it directly.
 
 **Name constants.** With `nameConstants` other than `NONE`, the rules emit name classes in `namesPackage`. Each object, interface and input
 type gets one class `<Type>Names` (or `<generated name>Names` with a prefix or suffix), with the constant `TYPE` holding the SDL type name and

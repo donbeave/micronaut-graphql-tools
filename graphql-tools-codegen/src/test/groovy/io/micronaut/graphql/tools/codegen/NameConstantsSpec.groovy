@@ -55,19 +55,13 @@ scalar Date
 
     static final Map<String, String> MAPPINGS = [Date: 'java.time.LocalDate']
 
-    // The interface and the union of SCHEMA are written by the sealed-interface emission (#127); the record Pet needs them to compile.
-    static final List<GeneratedFile> INTERFACES = [
-            new GeneratedFile('com/example/model/Node.java', 'package com.example.model;\n\npublic interface Node {\n    String id();\n}\n'),
-            new GeneratedFile('com/example/model/Thing.java', 'package com.example.model;\n\npublic interface Thing {\n}\n')
-    ]
-
     def "the name classes of a schema compile in memory and match the golden snapshot"() {
         given:
         def files = generate(Options.builder().packageName('com.example').typeMappings(MAPPINGS), write('a.graphqls', SCHEMA))
 
         expect:
         new GoldenFiles().assertMatches('name-constants-java', files)
-        new JavaInMemoryCompiler().assertCompiles(files + INTERFACES)
+        new JavaInMemoryCompiler().assertCompiles(files)
     }
 
     def "the constants are the same for every order of the schema files"() {

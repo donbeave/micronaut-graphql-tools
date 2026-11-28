@@ -86,17 +86,19 @@ class IrStructureSpec extends Specification {
         byName.Result.members()*.sdlName() == ['Book']
     }
 
-    def "an object type that interfaceTypes selects is an open interface and not a model"() {
+    def "an object type that interfaceTypes selects is an open interface and not a model, and a union with it is open too"() {
         when:
-        def ir = build('type Query { q: Int }\ntype Book { id: ID! }\nunion U = Book',
-                OPTIONS.toBuilder().interfaceTypes(['Book']).build()).ir()
+        def result = IrBuilder.fromSources([new SchemaSource('schema.graphqls', 'type Query { q: Int }\ntype Book { id: ID! }\nunion U = Book')],
+                OPTIONS.toBuilder().interfaceTypes(['Book']).build())
+        def ir = result.ir()
 
         then:
+        result.diagnostics()*.code() == ['selected-member']
         ir.models().empty
         ir.abstractTypes()*.kind() == [AbstractType.Kind.OBJECT, AbstractType.Kind.UNION]
         !ir.abstractTypes()[0].sealed()
         ir.abstractTypes()[1].members()*.sdlName() == ['Book']
-        ir.abstractTypes()[1].sealed()
+        !ir.abstractTypes()[1].sealed()
     }
 
     def "the default grouping is one contract for each root field, named by the template, in operation order"() {

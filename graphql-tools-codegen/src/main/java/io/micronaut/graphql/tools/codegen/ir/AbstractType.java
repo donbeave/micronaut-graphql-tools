@@ -36,8 +36,10 @@ import java.util.Objects;
  * @param members     the generated types that belong to this one, in schema order: the member types of a union, the object
  *                    types and the interfaces that implement an interface; empty for a selected object type
  * @param sealed      whether the interface is sealed and permits exactly {@code members}. It is {@code false} for a selected
- *                    object type, for a type without members, and for a type that has a member that the {@code typeMappings}
- *                    option maps to an external class, because an external class cannot be listed.
+ *                    object type, for a type without members, for a type that has a member that the {@code typeMappings}
+ *                    option maps to an external class, because an external class cannot be listed, for a union that has a member
+ *                    that {@code interfaceTypes} selects, because an interface cannot implement the union, and for every type
+ *                    when {@code sealedAbstractTypes} is {@code NEVER}.
  * @param directives  the applied directives, without {@code @deprecated}
  * @param origin      where the type is defined
  */

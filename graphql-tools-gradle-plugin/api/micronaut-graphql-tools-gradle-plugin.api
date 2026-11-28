@@ -23,6 +23,7 @@ public abstract class io.micronaut.graphql.tools.gradle.CodegenSpec implements o
   public abstract org.gradle.api.provider.Property<java.lang.String> getNullableAnnotation();
   public abstract org.gradle.api.provider.Property<java.lang.String> getPackageName();
   public abstract org.gradle.api.provider.Property<java.lang.String> getResolverPackage();
+  public abstract org.gradle.api.provider.Property<java.lang.String> getSealedAbstractTypes();
   public abstract org.gradle.api.provider.Property<java.lang.String> getSubscriptionReturnType();
   public abstract org.gradle.api.provider.Property<java.lang.String> getTypeNamePrefix();
   public abstract org.gradle.api.provider.Property<java.lang.String> getTypeNameSuffix();

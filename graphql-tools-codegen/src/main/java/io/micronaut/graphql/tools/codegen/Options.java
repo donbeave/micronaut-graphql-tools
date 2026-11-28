@@ -49,6 +49,9 @@ import java.util.Objects;
  *                               {@code javax.annotation.processing.Generated}, written without a date.
  * @param modelStyle             the shape of a model type. Default {@code RECORD}.
  * @param interfaceTypes         the SDL names of the object types that are generated as interfaces. Default empty.
+ * @param sealedAbstractTypes    whether a union and an interface are generated as {@code sealed} interfaces that permit their
+ *                               members. Default {@code AUTO}: sealed when every member is a generated model type, and a plain
+ *                               interface, with a diagnostic that says why, otherwise. {@code NEVER} generates plain interfaces.
  * @param typeNamePrefix         a prefix for the name of every generated type. Default is the empty string.
  * @param typeNameSuffix         a suffix for the name of every generated type. Default is the empty string.
  * @param nullableAnnotation     the class name of the annotation on a nullable type, or the empty string for none. Default
@@ -92,6 +95,7 @@ public record Options(
         String generatedAnnotation,
         ModelStyle modelStyle,
         List<String> interfaceTypes,
+        SealedAbstractTypes sealedAbstractTypes,
         String typeNamePrefix,
         String typeNameSuffix,
         String nullableAnnotation,
@@ -141,6 +145,7 @@ public record Options(
         Objects.requireNonNull(namesPackage, "namesPackage");
         Objects.requireNonNull(generatedAnnotation, "generatedAnnotation");
         Objects.requireNonNull(modelStyle, "modelStyle");
+        Objects.requireNonNull(sealedAbstractTypes, "sealedAbstractTypes");
         Objects.requireNonNull(typeNamePrefix, "typeNamePrefix");
         Objects.requireNonNull(typeNameSuffix, "typeNameSuffix");
         Objects.requireNonNull(nullableAnnotation, "nullableAnnotation");
@@ -187,7 +192,8 @@ public record Options(
         return new Builder()
                 .language(language).mode(mode).packageName(packageName).modelPackage(modelPackage)
                 .resolverPackage(resolverPackage).namesPackage(namesPackage).generatedAnnotation(generatedAnnotation)
-                .modelStyle(modelStyle).interfaceTypes(interfaceTypes).typeNamePrefix(typeNamePrefix)
+                .modelStyle(modelStyle).interfaceTypes(interfaceTypes).sealedAbstractTypes(sealedAbstractTypes)
+                .typeNamePrefix(typeNamePrefix)
                 .typeNameSuffix(typeNameSuffix).nullableAnnotation(nullableAnnotation).rootContracts(rootContracts)
                 .contractNameTemplate(contractNameTemplate).kotlinSuspend(kotlinSuspend)
                 .subscriptionReturnType(subscriptionReturnType).typeMappings(typeMappings)
@@ -268,6 +274,7 @@ public record Options(
         private String generatedAnnotation = DEFAULT_GENERATED_ANNOTATION;
         private ModelStyle modelStyle = ModelStyle.RECORD;
         private List<String> interfaceTypes = List.of();
+        private SealedAbstractTypes sealedAbstractTypes = SealedAbstractTypes.AUTO;
         private String typeNamePrefix = "";
         private String typeNameSuffix = "";
         private String nullableAnnotation;
@@ -383,6 +390,17 @@ public record Options(
          */
         public Builder interfaceTypes(List<String> value) {
             this.interfaceTypes = List.copyOf(value);
+            return this;
+        }
+
+        /**
+         * Sets {@code sealedAbstractTypes}.
+         *
+         * @param value the value
+         * @return this builder
+         */
+        public Builder sealedAbstractTypes(SealedAbstractTypes value) {
+            this.sealedAbstractTypes = value;
             return this;
         }
 
@@ -559,7 +577,7 @@ public record Options(
         public Options build() {
             String nullable = nullableAnnotation != null ? nullableAnnotation : defaultNullableAnnotation(mode);
             return new Options(language, mode, packageName, modelPackage, resolverPackage, namesPackage, generatedAnnotation,
-                    modelStyle, interfaceTypes, typeNamePrefix, typeNameSuffix, nullable, rootContracts,
+                    modelStyle, interfaceTypes, sealedAbstractTypes, typeNamePrefix, typeNameSuffix, nullable, rootContracts,
                     contractNameTemplate, kotlinSuspend, subscriptionReturnType, typeMappings,
                     typeMappingsFromDependencies, nameConstants,
                     includes, excludes, commentsAsDescriptions, operationIncludes, operationExcludes);

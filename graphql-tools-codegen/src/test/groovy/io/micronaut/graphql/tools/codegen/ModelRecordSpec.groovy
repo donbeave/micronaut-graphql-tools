@@ -91,40 +91,13 @@ type Query {
 }
 '''
 
-    // What the sealed-interface emission (#127) writes for the interfaces of SCHEMA, by hand, so that the records can be compiled.
-    static final String INTERFACES = '''package com.example.model;
-
-import java.util.List;
-
-public interface Node {
-    String id();
-
-    List<Node> children();
-}
-'''
-
-    static final List<GeneratedFile> STUBS = [
-            new GeneratedFile('com/example/model/Node.java', INTERFACES),
-            new GeneratedFile('com/example/model/Counted.java', '''package com.example.model;
-
-public interface Counted {
-    Integer count();
-
-    Double ratio();
-
-    Boolean flag();
-}
-'''),
-            new GeneratedFile('com/example/model/SearchResult.java', 'package com.example.model;\n\npublic interface SearchResult {\n}\n')
-    ]
-
-    def "the object types are records that match the golden snapshot and compile with their interfaces"() {
+    def "the object types are records that match the golden snapshot and compile with the emitted interfaces"() {
         given:
         def files = generate(SCHEMA)
 
         expect:
         new GoldenFiles().assertMatches('model-record-java', files)
-        new JavaInMemoryCompiler().assertCompiles(files + STUBS)
+        new JavaInMemoryCompiler().assertCompiles(files)
     }
 
     def "the output is identical for every order of the schema files"() {
@@ -166,6 +139,10 @@ public interface Counted {
         product.getRecordComponents().find { it.name == 'ratio' }.genericType == Double
         elements(folder.recordComponents.find { it.name == 'children' }.genericType) == node
         node.isAssignableFrom(folder)
+        elements(node.getMethod('children').genericReturnType) == node
+        loader.loadClass('com.example.model.Counted').getMethod('count').returnType == Integer
+        loader.loadClass('com.example.model.Counted').getMethod('ratio').returnType == Double
+        loader.loadClass('com.example.model.Counted').getMethod('flag').returnType == Boolean
     }
 
     def "a field with arguments is not a component, and the components keep the schema order"() {
@@ -275,7 +252,7 @@ public interface Counted {
     }
 
     private ClassLoader load() {
-        new JavaInMemoryCompiler().load(generate(SCHEMA) + STUBS)
+        new JavaInMemoryCompiler().load(generate(SCHEMA))
     }
 
     private static java.lang.reflect.Type elements(java.lang.reflect.Type type) {

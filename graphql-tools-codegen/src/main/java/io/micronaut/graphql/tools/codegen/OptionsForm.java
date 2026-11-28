@@ -49,6 +49,7 @@ final class OptionsForm {
         put(map, "generatedAnnotation", o.generatedAnnotation(), defaults.generatedAnnotation());
         put(map, "modelStyle", o.modelStyle(), defaults.modelStyle());
         putList(map, "interfaceTypes", o.interfaceTypes(), defaults.interfaceTypes());
+        put(map, "sealedAbstractTypes", o.sealedAbstractTypes(), defaults.sealedAbstractTypes());
         put(map, "typeNamePrefix", o.typeNamePrefix(), defaults.typeNamePrefix());
         put(map, "typeNameSuffix", o.typeNameSuffix(), defaults.typeNameSuffix());
         put(map, "nullableAnnotation", o.nullableAnnotation(), Options.defaultNullableAnnotation(o.mode()));
@@ -95,6 +96,7 @@ final class OptionsForm {
         reader.string("generatedAnnotation", b::generatedAnnotation);
         reader.enumValue("modelStyle", ModelStyle.values(), b::modelStyle);
         reader.list("interfaceTypes", b::interfaceTypes);
+        reader.enumValue("sealedAbstractTypes", SealedAbstractTypes.values(), b::sealedAbstractTypes);
         reader.string("typeNamePrefix", b::typeNamePrefix);
         reader.string("typeNameSuffix", b::typeNameSuffix);
         reader.string("nullableAnnotation", b::nullableAnnotation);
