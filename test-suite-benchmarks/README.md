@@ -196,7 +196,7 @@ The full description, including the cold start procedure, is the "Benchmarks" se
 
 `ClientColdStartBenchmark` starts an application context with no server and resolves 10 clients of 20 operations each: declarative
 (`@GraphQLClient`, `@GraphQLOperation`) against plain (`@Client`, `@Post`). It measures the creation of the clients, not a call (the call is
-measured by the loopback cases). Command: `python3 test-suite-benchmarks/scripts/client-coldstart-ab.py --forks 30 plain=plain.jar declarative=declarative.jar`,
+measured by the loopback cases). The time includes closing the context, in both modes. Command: `python3 test-suite-benchmarks/scripts/client-coldstart-ab.py --forks 30 plain=plain.jar declarative=declarative.jar`,
 one jar per `-PcoldStartMode`. Graphql-java default leg (the client does not use it), Apple M1 Max shared with other users' processes, 30 cold JVMs per mode, interleaved.
 The machine was busy: the one-minute load average at the start of a fork had a median of 18.7 (JDK 21) and 12.8 (JDK 25).
 
