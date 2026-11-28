@@ -36,6 +36,7 @@ A parameter is a component of `Options` of the generator, with the same name and
 | `generatedAnnotation` | `micronaut.graphql.tools.codegen.generated.annotation` | `javax.annotation.processing.Generated`
 | `modelStyle` | `micronaut.graphql.tools.codegen.model.style` | `RECORD`
 | `interfaceTypes` | none (a list) | empty
+| `sealedAbstractTypes` | `micronaut.graphql.tools.codegen.sealed.abstract.types` | `AUTO`
 | `typeNamePrefix` | `micronaut.graphql.tools.codegen.type.name.prefix` | empty
 | `typeNameSuffix` | `micronaut.graphql.tools.codegen.type.name.suffix` | empty
 | `nullableAnnotation` | `micronaut.graphql.tools.codegen.nullable.annotation` | `io.micronaut.core.annotation.Nullable` (client mode: `org.jspecify.annotations.Nullable`)

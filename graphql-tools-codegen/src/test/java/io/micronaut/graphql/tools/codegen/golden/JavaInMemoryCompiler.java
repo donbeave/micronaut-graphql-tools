@@ -35,10 +35,26 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * The javac of the running JDK, with {@code --release 17} and no annotation processing, on the class path of the tests. The classes
+ * The javac of the running JDK, with {@code --release 17} (or another release, see {@link #JavaInMemoryCompiler(int)}) and no annotation processing, on the class path of the tests. The classes
  * are kept in memory only for {@link #load}.
  */
 public final class JavaInMemoryCompiler implements InMemoryCompiler {
+
+    private final int release;
+
+    /** A compiler for Java 17, the release of the generated code. */
+    public JavaInMemoryCompiler() {
+        this(17);
+    }
+
+    /**
+     * A compiler for another release, for a test that needs a language feature that Java 17 lacks, such as a pattern {@code switch}.
+     *
+     * @param release the {@code --release} value; the running JDK must support it
+     */
+    public JavaInMemoryCompiler(int release) {
+        this.release = release;
+    }
 
     @Override
     public List<String> compile(List<GeneratedFile> files) {
@@ -83,7 +99,7 @@ public final class JavaInMemoryCompiler implements InMemoryCompiler {
         }
         try (StandardJavaFileManager standard = compiler.getStandardFileManager(diagnostics, null, null);
              Collecting manager = new Collecting(standard, classes)) {
-            Boolean ok = compiler.getTask(null, manager, diagnostics, List.of("--release", "17", "-proc:none", "-Xlint:none"), null, sources).call();
+            Boolean ok = compiler.getTask(null, manager, diagnostics, List.of("--release", Integer.toString(release), "-proc:none", "-Xlint:none"), null, sources).call();
             List<String> errors = new ArrayList<>();
             for (Diagnostic<? extends JavaFileObject> d : diagnostics.getDiagnostics()) {
                 if (d.getKind() == Diagnostic.Kind.ERROR) {

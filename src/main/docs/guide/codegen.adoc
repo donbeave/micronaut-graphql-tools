@@ -1,7 +1,15 @@
 The code generator turns a GraphQL schema into Java, Kotlin or Groovy sources in the application's own source set. It is one library, `micronaut-graphql-tools-codegen`, and the build plugins map their configuration onto its options one to one and add only wiring. The generator runs on the build's class path, never on the application's, and it uses no Jackson.
 
-NOTE: This version of the generator checks the options, parses the schema files and reports what is wrong. It emits the enums, the object models as records and the name constants of Java and no other source file yet: the other emitters arrive in later changes, and the plugin already writes whatever the generator returns, reconciles the output directory and registers the source roots, so the build wiring below is final.
+NOTE: This version of the generator checks the options, parses the schema files and reports what is wrong. It emits the enums, the unions and interfaces as sealed interfaces, the object models as records and the name constants of Java and no other source file yet: the other emitters arrive in later changes, and the plugin already writes whatever the generator returns, reconciles the output directory and registers the source roots, so the build wiring below is final.
 
 The section has one page so far:
 
 * <<codegenMavenPlugin,Maven Plugin>> shows the `generate` goal, its parameters, the source directories of the three languages and the incremental behaviour.
+
+== Unions and interfaces
+
+The generator writes each union and each interface type as a Java interface in the model package. With the default `sealedAbstractTypes` of `AUTO` it is a `sealed` interface that permits its members, and every generated member implements it, so a `switch` over a generated union or interface (a pattern `switch` needs Java 21) needs no `default` branch, and a new member of the schema makes it fail to compile. Sealing changes nothing at runtime: the library resolves a member by its class, and derives the members of a sealed type from its permitted subclasses.
+
+An interface is a plain interface, and the generator reports why, when a member is an existing class that `typeMappings` names (the warning `mapped-member`) or when a union has a member that `interfaceTypes` generates as an interface (the warning `selected-member`). `NEVER` writes plain interfaces without a diagnostic. A plain interface is open: a hand-written class implements it directly and registers itself as a member. A sealed interface is closed, and a class that is not generated cannot join it. Resolver contracts are never sealed, because Micronaut AOP subclasses their implementations.
+
+An interface type has one abstract accessor for each of its fields that has no arguments, and the interface is `@Introspected` with `@AccessorsStyle(readPrefixes = "")`, which is what the library needs to read the fluent accessors of an interface (see the models page).

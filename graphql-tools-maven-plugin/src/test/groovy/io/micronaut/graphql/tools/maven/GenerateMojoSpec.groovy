@@ -19,6 +19,7 @@ import io.micronaut.graphql.tools.codegen.Language
 import io.micronaut.graphql.tools.codegen.Mode
 import io.micronaut.graphql.tools.codegen.ModelStyle
 import io.micronaut.graphql.tools.codegen.NameConstants
+import io.micronaut.graphql.tools.codegen.SealedAbstractTypes
 import io.micronaut.graphql.tools.codegen.Options
 import org.apache.maven.plugin.MojoFailureException
 import org.apache.maven.plugin.testing.MojoRule
@@ -68,6 +69,7 @@ class GenerateMojoSpec extends Specification {
             <generatedAnnotation>jakarta.annotation.Generated</generatedAnnotation>
             <modelStyle>BEAN</modelStyle>
             <interfaceTypes><interfaceType>Node</interfaceType><interfaceType>Entity</interfaceType></interfaceTypes>
+            <sealedAbstractTypes>NEVER</sealedAbstractTypes>
             <typeNamePrefix>Gql</typeNamePrefix>
             <typeNameSuffix>Dto</typeNameSuffix>
             <nullableAnnotation>example.Nullable</nullableAnnotation>
@@ -88,7 +90,7 @@ class GenerateMojoSpec extends Specification {
         built.mojo.options() == Options.builder()
                 .language(Language.KOTLIN).mode(Mode.SERVER).packageName('example.api').modelPackage('example.m')
                 .resolverPackage('example.r').namesPackage('example.n').generatedAnnotation('jakarta.annotation.Generated')
-                .modelStyle(ModelStyle.BEAN).interfaceTypes(['Node', 'Entity']).typeNamePrefix('Gql').typeNameSuffix('Dto')
+                .modelStyle(ModelStyle.BEAN).interfaceTypes(['Node', 'Entity']).sealedAbstractTypes(SealedAbstractTypes.NEVER).typeNamePrefix('Gql').typeNameSuffix('Dto')
                 .nullableAnnotation('example.Nullable').rootContracts(false).contractNameTemplate('{Operation}{Field}')
                 .kotlinSuspend(true).subscriptionReturnType('kotlinx.coroutines.flow.Flow')
                 .typeMappings([Date: 'java.time.LocalDate', 'Book.title': 'example.Title'])

@@ -119,6 +119,10 @@ public class GenerateMojo extends AbstractMojo {
     @Parameter
     private List<String> interfaceTypes;
 
+    /** Whether unions and interfaces are sealed interfaces: {@code AUTO} or {@code NEVER}. */
+    @Parameter(property = PROPERTY + "sealed.abstract.types", defaultValue = "AUTO")
+    private String sealedAbstractTypes;
+
     /** A prefix for the name of every generated type. */
     @Parameter(property = PROPERTY + "type.name.prefix")
     private String typeNamePrefix;
@@ -306,6 +310,7 @@ public class GenerateMojo extends AbstractMojo {
         putClassName(map, "generatedAnnotation", generatedAnnotation);
         put(map, "modelStyle", modelStyle);
         putList(map, "interfaceTypes", interfaceTypes);
+        put(map, "sealedAbstractTypes", sealedAbstractTypes);
         put(map, "typeNamePrefix", typeNamePrefix);
         put(map, "typeNameSuffix", typeNameSuffix);
         putClassName(map, "nullableAnnotation", nullableAnnotation);
