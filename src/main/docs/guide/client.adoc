@@ -1,5 +1,7 @@
 The `micronaut-graphql-tools-client` module is the GraphQL client of the library: a runtime for an application that calls a GraphQL server. It runs on the Micronaut HTTP client, so `micronaut.http.services.<id>.*`, filters and TLS apply unchanged. This page describes the low-level client, api:io.micronaut.graphql.tools.client.GraphQLHttpClient[], the declarative client (an interface that you annotate and Micronaut implements at compile time), its annotations and the compile-time checks of its operations.
 
+The HTTP client is the Netty client (`micronaut-http-client`) or the JDK client (`micronaut-http-client-jdk`); the client runs on either. The tests of the library run the low-level client, the declarative client and the sessions on both. When both are on the class path, Micronaut picks the Netty client, so a build that wants the JDK client leaves `micronaut-http-client` out.
+
 == The low-level client
 
 `GraphQLHttpClient` sends a `GraphQLRequest` that your code builds, with a document and variables of your own, and returns a `GraphQLResponse`. The data is typed (`GraphQLRequest.builder(Book.class)`, a `@Serdeable` type) or dynamic (`GraphQLRequest.builder()`, a `Map`). Inject it with `@GraphQLClient` on the field or the parameter, naming the service:
