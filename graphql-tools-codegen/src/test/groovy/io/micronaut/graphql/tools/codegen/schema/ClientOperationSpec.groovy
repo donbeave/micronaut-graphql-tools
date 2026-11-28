@@ -25,6 +25,7 @@ import io.micronaut.graphql.tools.codegen.ir.shared.Operation
 import io.micronaut.graphql.tools.codegen.ir.shared.Presence
 import io.micronaut.graphql.tools.codegen.ir.shared.TypeRef
 import spock.lang.Specification
+import spock.lang.Timeout
 
 class ClientOperationSpec extends Specification {
 
@@ -429,6 +430,35 @@ class ClientOperationSpec extends Specification {
         then:
         result.diagnostics().empty
         field(model(result, 'QUser'), 'age').type() == new TypeRef.Builtin(BuiltinScalar.INT, false)
+    }
+
+    def "the fields below occurrences that carry their own conditions are removable, as the merged object has them only when they hold"() {
+        when:
+        def result = build('''
+            query Q($a: Boolean!, $b: Boolean!) {
+              user @include(if: $a) { id }
+              user @include(if: $b) { age }
+            }
+        ''')
+
+        then:
+        result.diagnostics().empty
+        field(model(result, 'QUser'), 'id').type() == new TypeRef.Builtin(BuiltinScalar.ID, true)
+        field(model(result, 'QUser'), 'age').type() == new TypeRef.Builtin(BuiltinScalar.INT, true)
+    }
+
+    @Timeout(30)
+    def "a chain of fragments that spread each other twice is walked once for each, not once for each path"() {
+        given:
+        def fragments = (1..24).collect { "fragment F$it on User { " + (it == 1 ? 'id' : "...F${it - 1} ...F${it - 1}") + ' }' }.join('\n')
+
+        when:
+        def result = build("query Q { user { ...F24 } }\n$fragments")
+
+        then:
+        result.diagnostics().empty
+        model(result, 'QUser').fields()*.name() == ['id']
+        model(result, 'QUser').implemented().size() == 24
     }
 
     def "the fields below a field that every occurrence can remove are present when the field is"() {

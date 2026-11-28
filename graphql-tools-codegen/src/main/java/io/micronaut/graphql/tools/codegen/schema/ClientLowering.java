@@ -469,12 +469,12 @@ final class ClientLowering {
     private Flat flatten(List<Sub> sets, String scope) {
         Flat flat = new Flat();
         for (Sub sub : sets) {
-            walk(sub.set(), scope, sub.conditional(), flat, new HashSet<>());
+            walk(sub.set(), scope, sub.conditional(), flat, new HashSet<>(), new HashSet<>());
         }
         return flat;
     }
 
-    private void walk(SelectionSet set, String scope, boolean conditional, Flat flat, Set<String> active) {
+    private void walk(SelectionSet set, String scope, boolean conditional, Flat flat, Set<String> active, Set<String> expanded) {
         for (Selection<?> selection : set.getSelections()) {
             if (selection instanceof Field field) {
                 Group group = flat.groups.computeIfAbsent(field.getResultKey(), key -> new Group(key, field.getName()));
@@ -495,7 +495,7 @@ final class ClientLowering {
             } else if (selection instanceof InlineFragment fragment) {
                 String condition = fragment.getTypeCondition() == null ? null : fragment.getTypeCondition().getName();
                 if (condition == null || applies(condition, scope)) {
-                    walk(fragment.getSelectionSet(), scope, conditional || conditional(fragment.getDirectives()), flat, active);
+                    walk(fragment.getSelectionSet(), scope, conditional || conditional(fragment.getDirectives()), flat, active, expanded);
                 }
             } else if (selection instanceof FragmentSpread spread) {
                 FragmentDefinition fragment = canonical.get(spread.getName());
@@ -504,7 +504,11 @@ final class ClientLowering {
                     if (!skipped) {
                         flat.fragments.add(spread.getName());
                     }
-                    walk(fragment.getSelectionSet(), scope, skipped, flat, active);
+                    // a fragment that two spreads reach is walked once for each state of the condition: its fields, and the conditions that
+                    // they get, do not change by a second walk, and a deep chain of fragments that spread each other twice is not exponential
+                    if (expanded.add(spread.getName() + "|" + skipped)) {
+                        walk(fragment.getSelectionSet(), scope, skipped, flat, active, expanded);
+                    }
                     active.remove(spread.getName());
                 }
             }
@@ -545,14 +549,14 @@ final class ClientLowering {
         }
     }
 
-    // the selections below a response key. When every occurrence of the key can be removed, the object below exists exactly when its
-    // fields do, so they are present; when another occurrence always stays, the fields of an occurrence that can be removed can be
-    // missing from the object
+    // the selections below a response key. The object below is merged from every occurrence of the key, and an occurrence that can be
+    // removed contributes fields that can be missing from it, unless it is the only occurrence: the object then exists exactly when its
+    // fields do
     private static List<Sub> selections(Group group) {
         List<Sub> sets = new ArrayList<>();
         for (int i = 0; i < group.nodes.size(); i++) {
             if (group.nodes.get(i).getSelectionSet() != null) {
-                sets.add(new Sub(group.nodes.get(i).getSelectionSet(), !group.conditional && group.removable.get(i)));
+                sets.add(new Sub(group.nodes.get(i).getSelectionSet(), group.nodes.size() > 1 && group.removable.get(i)));
             }
         }
         return sets;

@@ -285,7 +285,7 @@ the `sdlName` of a field is the name in the schema. The `sdlName` of a result mo
   selection extends is not declared on the sealed interface.
 - A field that carries `@skip` or `@include`, or sits in an inline fragment or a spread that does, is absent from the response when it is
   skipped even when its schema type is non-null, so its type is nullable and an emitter never turns it into a primitive that reads
-  `0` or `false`. A field that another selection of the same record always selects stays non-null. The same holds below a field that is selected twice, once always and once under `@include`: the fields of the second selection can be missing from the object. An introspection field at the root (`__schema`, `__type`) is the error `operation-invalid`; `__typename` at the root is a `String`. The field keeps the directives, and so does the
+  `0` or `false`. A field that another selection of the same record always selects stays non-null. The same holds below a field that is selected more than once: the fields of an occurrence that carries `@skip` or `@include` can be missing from the merged object, so they are nullable. An introspection field at the root (`__schema`, `__type`) is the error `operation-invalid`; `__typename` at the root is a `String`. The field keeps the directives, and so does the
   `SelectedField`.
 - A leaf field is a `Builtin`, a `Mapped` class (`typeMappings`, also `Type.field`, the same as the server) or a reference to an enum that the
   generator emits.
