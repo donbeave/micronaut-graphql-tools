@@ -16,6 +16,8 @@
 package example.graphql.query;
 
 import example.AbstractTest;
+import example.client.ExampleClient.ValidationError;
+import example.client.ExampleClient.SecurityError;
 import example.client.ExampleClient.AuthPayload;
 import example.client.ExampleClient.SecurityErrorCode;
 import example.client.ExampleClient.ValidationErrorCode;
@@ -24,6 +26,7 @@ import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -52,10 +55,9 @@ class SignInMutationTest extends AbstractTest {
         assertNotNull(response.data());
         assertNull(response.data().data());
         assertNotNull(response.data().error());
-        assertNull(response.data().error().securityCode());
-        assertEquals("ValidationError", response.data().error().__typename());
-        assertEquals(ValidationErrorCode.NOT_FOUND, response.data().error().validationCode());
-        assertEquals("User unknown-user not found.", response.data().error().message());
+        ValidationError error = assertInstanceOf(ValidationError.class, response.data().error());
+        assertEquals(ValidationErrorCode.NOT_FOUND, error.validationCode());
+        assertEquals("User unknown-user not found.", error.message());
     }
 
     @Test
@@ -66,10 +68,9 @@ class SignInMutationTest extends AbstractTest {
         assertNotNull(response.data());
         assertNull(response.data().data());
         assertNotNull(response.data().error());
-        assertNull(response.data().error().validationCode());
-        assertEquals("SecurityError", response.data().error().__typename());
-        assertEquals(SecurityErrorCode.INCORRECT_CREDENTIALS, response.data().error().securityCode());
-        assertEquals("Password is incorrect.", response.data().error().message());
+        SecurityError error = assertInstanceOf(SecurityError.class, response.data().error());
+        assertEquals(SecurityErrorCode.INCORRECT_CREDENTIALS, error.securityCode());
+        assertEquals("Password is incorrect.", error.message());
     }
 
 }
