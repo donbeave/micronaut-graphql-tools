@@ -2,11 +2,11 @@
 # a clean build, a body-only edit and a schema edit (both made by an init script task inside the measured build), with the checks on and with the checks off (the control).
 # The client samples (`*-client-*`, #664) have a document edit (the client operation file) in place of the schema edit.
 # Scenario names are <sample>-<edit>-<on|off>. `run.sh` (and the Gradle task compileTimeProfile) runs them against copies of
-# the samples; the control is -PgraphqlChecks=false, which keeps the processor on the compile path and turns its checks off.
+# the samples; the control is -PgraphqlChecks=false and -PgraphqlClientChecks=false, which keep the processor on the compile path and turn its checks (both the resolver and the client ones) off.
 
 common = ["-I", "profiler.init.gradle.kts"]
 on = ["-PgraphqlChecks=true"]
-off = ["-PgraphqlChecks=false"]
+off = ["-PgraphqlChecks=false", "-PgraphqlClientChecks=false"]
 
 java-gradle-clean-on {
   tasks = ["classes"]
